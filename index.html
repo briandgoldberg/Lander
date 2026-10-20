@@ -140,8 +140,7 @@ label.name input{width:150px}
   <p class="hero">Launch from one planet. Land on another. <em>Touch down with the most fuel in the tank and you win.</em></p>
 
   <div class="ctarow">
-    <button class="cta" id="cta">Edit your flight path</button>
-    <button class="cta ghost" id="signupBtn">Sign up with your email · first launch free</button>
+    <button class="cta" id="cta">Enter your email and launch your rocket</button>
   </div>
 
   <div class="stagegrid">
@@ -163,13 +162,12 @@ label.name input{width:150px}
         <h2>Your flight path</h2>
         <div class="row">
           <label class="name">Name it <input id="botName" type="text" value="My bot" maxlength="24"></label>
-          <button class="btn" id="practiceBtn">Practice run · free</button>
-          <button class="cta" id="launchBtn">Sign up to launch</button>
           <button class="btn" id="resetBtn">Reset to sample</button>
-          <button class="btn" id="buyBtn">Buy launches · $1 each</button>
+          <button class="btn" id="copyPromptBtn">Copy a prompt for ChatGPT or Claude</button>
         </div>
       </div>
       <p class="hint">A flight path is a short JavaScript program. It gets the star system, plans for ten seconds, and steers the rocket. Launch it and we fly it live for everyone. The sample reaches the target but arrives too fast. Make it land, then make it thrifty. Win, and your code is published when the game ends.</p>
+      <p class="hint">Not a programmer? Paste the sample into ChatGPT or Claude and say: <em>"This is a flight path for a rocket game. It reaches the target planet but crashes. Add a braking burn so it touches down below world.safeLandingSpeed, then use as little fuel as you can. Keep the bot(world, sim) shape and the API."</em> The copy button grabs that prompt with the API reference attached.</p>
       <div class="status" id="status">Start from the sample. It already reaches the target planet; it just doesn't slow down.</div>
       <textarea id="code" spellcheck="false" aria-label="Flight path source code"></textarea>
       <pre class="err" id="err" hidden></pre>
@@ -267,17 +265,17 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replayBtn','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','signupBtn','status','buyBtn','feed','feedEmpty','feedCount','board','boardEmpty','boardNote','editor','botName','practiceBtn','launchBtn','resetBtn','code','err','signin','signinForm','email','signinMsg','signinClose','buy','qty','payWallet','payTotal','treasury','hashForm','txhash','buyMsg','buyClose'].forEach(id => els[id] = $(id));
+  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replayBtn','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','status','feed','feedEmpty','feedCount','board','boardEmpty','boardNote','editor','botName','resetBtn','copyPromptBtn','code','err','signin','signinForm','email','signinMsg','signinClose','buy','qty','payWallet','payTotal','treasury','hashForm','txhash','buyMsg','buyClose'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null;
-  let ENGINE_SRC = '', STARTER = '';
+  let STARTER = '';
   let run = null, lastRun = null, idleT = 0, fast = false;
   let feed = [], seen = new Set(), playQueue = [], busyLaunch = null;
   let W = 0, H = 0, CW = 0, CH = 0, dpr = 1, lastDraw = 0, last = 0, tnow = 0;
   const fx = { smoke: [], debris: [], rings: [], sparks: [], flash: 0, skyFlash: 0, shake: 0, label: null, labelT: 0 };
   let stars = [], nebula = [], textures = {};
-  let payCfg = null, qtyN = 1, holdTimer = null, practiceWorker = null;
+  let payCfg = null, qtyN = 1, holdTimer = null;
 
   function fmt(n, d){ return (+n).toFixed(d); }
   function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -323,13 +321,19 @@ label.name input{width:150px}
   }
 
   // ---------- auth ----------
+  // One call to action. What it says and does depends on where the visitor is.
+  function renderCta(){
+    if (!session) { els.cta.textContent = 'Enter your email and launch your rocket'; els.cta.onclick = openSignin; return; }
+    if (profile && profile.credits < 1) { els.cta.textContent = 'Buy credits and launch your rocket'; els.cta.onclick = openBuy; return; }
+    els.cta.textContent = 'Launch your rocket' + (profile ? ' · ' + profile.credits + ' credit' + (profile.credits === 1 ? '' : 's') : '');
+    els.cta.onclick = () => { clearTimeout(holdTimer); launch(); };
+  }
   function renderAuth(){
-    els.signupBtn.hidden = !!session;
-    if (!session) { els.authArea.innerHTML = '<button class="btn" id="signinBtn">Sign in</button>'; $('signinBtn').onclick = openSignin; els.launchBtn.textContent = 'Sign up to launch'; return; }
+    if (!session) { els.authArea.innerHTML = '<button class="btn" id="signinBtn">Sign in</button>'; $('signinBtn').onclick = openSignin; renderCta(); return; }
     const n = profile ? profile.credits : '…';
-    els.authArea.innerHTML = '<span class="chip">' + esc(session.user.email) + '</span><span class="chip hot">' + n + ' launch' + (n === 1 ? '' : 'es') + '</span><button class="btn small" id="signoutBtn">Sign out</button>';
+    els.authArea.innerHTML = '<span class="chip">' + esc(session.user.email) + '</span><span class="chip hot">' + n + ' credit' + (n === 1 ? '' : 's') + '</span><button class="btn small" id="signoutBtn">Sign out</button>';
     $('signoutBtn').onclick = async () => { await sb.auth.signOut(); };
-    els.launchBtn.textContent = (profile && profile.credits < 1) ? 'Buy a launch' : 'Launch · 1 credit';
+    renderCta();
   }
   async function refreshProfile(){
     if (!session) { profile = null; renderAuth(); return; }
@@ -355,7 +359,6 @@ label.name input{width:150px}
     if (!payCfg || !payCfg.configured) { els.treasury.textContent = 'Payments switch on soon. Until then, every account gets one free launch.'; els.payWallet.disabled = true; }
     else { els.treasury.textContent = payCfg.treasury; els.payWallet.disabled = false; }
   }
-  els.buyBtn.onclick = openBuy;
   els.buyClose.onclick = () => { els.buy.hidden = true; };
   els.qty.querySelectorAll('button').forEach(b => b.onclick = () => { qtyN = +b.dataset.n; els.qty.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); els.payTotal.textContent = '$' + qtyN + ' USDC'; });
   async function verifyTx(hash){
@@ -387,22 +390,25 @@ label.name input{width:150px}
   };
 
   // ---------- editor / launch ----------
-  function openEditor(){ els.editor.scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => els.code.focus(), 300); }
-  els.cta.onclick = openEditor;
-  els.signupBtn.onclick = openSignin;
   els.resetBtn.onclick = () => { els.code.value = STARTER; saveCode(); };
+  els.copyPromptBtn.onclick = async () => {
+    const api = Array.from(document.querySelectorAll('.api li')).map(li => '- ' + li.textContent.trim()).join('\n');
+    const prompt = 'This is a flight path for a rocket game. It is JavaScript: bot(world, sim) receives the star system and returns a controller(state) that steers the rocket. The sample below reaches the target planet but crashes into it. Add a braking burn so it touches down at a relative speed below world.safeLandingSpeed, then use as little fuel as you can. Keep the bot(world, sim) shape and only use the API described here. Return the complete code.\n\nAPI:\n' + api + '\n\nCode:\n' + els.code.value;
+    try { await navigator.clipboard.writeText(prompt); els.copyPromptBtn.textContent = 'Copied. Paste it into ChatGPT or Claude.'; }
+    catch (e) { els.copyPromptBtn.textContent = 'Copy failed. Select the code and the API reference by hand.'; }
+    setTimeout(() => { els.copyPromptBtn.textContent = 'Copy a prompt for ChatGPT or Claude'; }, 4000);
+  };
   function saveCode(){ try { localStorage.setItem('lander.code', els.code.value); localStorage.setItem('lander.name', els.botName.value); } catch (e) {} }
   function loadCode(){ let c = null, n = null; try { c = localStorage.getItem('lander.code'); n = localStorage.getItem('lander.name'); } catch (e) {} els.code.value = c || STARTER; if (n) els.botName.value = n; }
   els.code.addEventListener('keydown', e => { if (e.key === 'Tab') { e.preventDefault(); const s = els.code.selectionStart, t = els.code.selectionEnd; els.code.value = els.code.value.slice(0,s) + '  ' + els.code.value.slice(t); els.code.selectionStart = els.code.selectionEnd = s + 2; } });
 
   let launching = false;
-  els.launchBtn.onclick = () => { clearTimeout(holdTimer); launch(); };
   async function launch(){
     if (launching) return;
     if (!session) return openSignin();
     if (!profile || profile.credits < 1) { setStatus('You are out of launches.', true); return openBuy(); }
     saveCode(); showErr('');
-    launching = true; els.launchBtn.disabled = true;
+    launching = true; els.cta.disabled = true;
     try {
       setStatus('Asking for the launch slot…');
       const { data, error } = await sb.rpc('claim_launch', { p_game: game.id, p_bot_name: els.botName.value, p_code: els.code.value });
@@ -411,7 +417,7 @@ label.name input{width:150px}
         if (data.reason === 'hold') {
           setStatus('Please hold. Another launch is in flight. Yours goes automatically when it is done.', true);
           els.bannerText.textContent = 'Holding for the pad…';
-          launching = false; els.launchBtn.disabled = false;
+          launching = false; els.cta.disabled = false;
           holdTimer = setTimeout(launch, Math.min(data.wait_ms || 3000, 4000));
           return;
         }
@@ -437,34 +443,8 @@ label.name input{width:150px}
       refreshFeed(); refreshBoard();
     } catch (e) {
       setStatus('Launch failed: ' + (e.message || e), true);
-    } finally { launching = false; els.launchBtn.disabled = false; }
+    } finally { launching = false; els.cta.disabled = false; renderCta(); }
   }
-
-  // practice run: the same sandbox, in the browser, on a random system
-  els.practiceBtn.onclick = () => {
-    if (practiceWorker) { practiceWorker.terminate(); practiceWorker = null; }
-    saveCode(); showErr('');
-    const pw = makeWorld((Math.random() * 4294967295) >>> 0);
-    const glue = "self.onmessage=function(e){var code=e.data.code,world=e.data.world,budgetMs=e.data.budgetMs;var t0=Date.now(),flights=0;var sim={fly:function(c){if(typeof c!=='function')throw new Error('sim.fly needs a controller function');flights++;var r=fly(world,c,{record:false});if(flights%4===0)postMessage({type:'progress',flights:flights});return r;},timeLeft:function(){return budgetMs-(Date.now()-t0);},get flights(){return flights;}};var ctrl;try{var g=new Function(code+\"\\n;if(typeof bot!=='function')throw new Error('Define function bot(world, sim)');return bot;\");ctrl=g()(world,sim);if(typeof ctrl!=='function')throw new Error('bot() must return a controller function');}catch(err){postMessage({type:'error',message:String(err&&err.stack||err)});return;}var thinkMs=Date.now()-t0;var result;try{result=fly(world,ctrl,{record:true});}catch(err){postMessage({type:'error',message:'Controller threw during the flight: '+(err&&err.message||err)});return;}postMessage({type:'result',result:result,flights:flights,thinkMs:thinkMs});};";
-    const url = URL.createObjectURL(new Blob([ENGINE_SRC, '\n', glue], { type: 'text/javascript' }));
-    const w = new Worker(url); practiceWorker = w;
-    const started = performance.now();
-    const timer = setTimeout(() => { w.terminate(); practiceWorker = null; showErr('Out of time. bot() did not return a controller within 10 s.'); setStatus('Practice run rejected.', true); }, BUDGET_MS + 1500);
-    setStatus('Practice run on a random ' + pw.name + ' system: compiling…');
-    w.onmessage = e => {
-      const m = e.data;
-      if (m.type === 'progress') setStatus('Practice: ' + m.flights + ' test flights · ' + ((performance.now() - started) / 1000).toFixed(1) + ' s of 10');
-      else if (m.type === 'error') { clearTimeout(timer); w.terminate(); practiceWorker = null; showErr(m.message); setStatus('Practice run rejected.', true); }
-      else { clearTimeout(timer); w.terminate(); practiceWorker = null;
-        const r = m.result;
-        playReplay({ id: 0, bot_name: els.botName.value || 'My bot', outcome: r.outcome, body: r.body, fuelUsed: r.fuelUsed, fuelLeft: +(pw.rocket.fuel - r.fuelUsed).toFixed(4), landingSpeed: r.landingSpeed, closestApproach: r.closestApproach, flights: m.flights, thinkMs: m.thinkMs, samples: r.samples }, { practice: true, world: pw });
-        setStatus('Practice flight computed in ' + (m.thinkMs / 1000).toFixed(1) + ' s after ' + m.flights + ' test flights. Nothing recorded.');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    };
-    w.onerror = e => { clearTimeout(timer); showErr('Worker error: ' + (e.message || e)); };
-    w.postMessage({ code: els.code.value, world: pw, budgetMs: BUDGET_MS });
-  };
 
   // ---------- feed / board / live ----------
   async function refreshGame(){
@@ -848,8 +828,7 @@ label.name input{width:150px}
 
   // ---------- boot ----------
   async function boot(){
-    const [eng, st] = await Promise.all([fetch('lib/engine.js').then(r => r.text()), fetch('lib/starter.js').then(r => r.text())]);
-    ENGINE_SRC = eng; STARTER = st; loadCode();
+    STARTER = await fetch('lib/starter.js').then(r => r.text()); loadCode();
     const { data } = await sb.auth.getSession(); session = data.session; renderAuth(); refreshProfile();
     await refreshGame();
     if (!world) { els.status.textContent = 'No game is running. Check back soon.'; els.tagline.textContent = 'No game is running.'; }
