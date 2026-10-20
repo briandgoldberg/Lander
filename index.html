@@ -265,7 +265,7 @@ label.name input{width:150px}
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null;
   let ENGINE_SRC = '', STARTER = '';
-  let run = null, idleT = 0, fast = false;
+  let run = null, lastRun = null, idleT = 0, fast = false;
   let feed = [], seen = new Set(), playQueue = [], busyLaunch = null;
   let W = 0, H = 0, CW = 0, CH = 0, dpr = 1, lastDraw = 0, last = 0, tnow = 0;
   const fx = { smoke: [], debris: [], rings: [], sparks: [], flash: 0, skyFlash: 0, shake: 0, label: null, labelT: 0 };
@@ -530,7 +530,7 @@ label.name input{width:150px}
     els.bannerText.textContent = opts.practice ? 'Practice run · random ' + w.name + ' system' : opts.mine ? 'Your launch · ' + run.name : (opts.live ? 'LIVE · ' : (opts.label || 'Replay') + ' · ') + (run.pilot ? run.pilot + "'s " : '') + run.name;
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
   }
-  function restartReplay(){ if (!run) return; run.tau = 0; run.idx = 0; run.done = false; run.held = false; run.hold = null; resetFx(); els.verdict.hidden = true; }
+  function restartReplay(){ if (!run && lastRun) run = lastRun; if (!run) return; run.tau = 0; run.idx = 0; run.done = false; run.doneAt = 0; run.held = false; run.hold = null; resetFx(); els.verdict.hidden = true; }
   els.replayBtn.onclick = restartReplay;
   els.speedBtn.onclick = () => { fast = !fast; els.speedBtn.setAttribute('aria-pressed', String(fast)); };
   function outcomeText(r, w){
@@ -806,7 +806,11 @@ label.name input{width:150px}
     const w = displayWorld();
     if (w) {
       if (!run) idleT += dts * w.bodies[0].period / 30;
-      else if (!run.done) {
+      else if (run.done) {
+        // after the verdict has had its moment, hand back to the live system; Replay brings it back
+        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); els.bannerText.textContent = busyLaunch ? 'Launch in progress…' : 'Waiting for the next launch'; els.banner.classList.toggle('live', !!busyLaunch); }
+      }
+      else {
         const S = run.samples, end = S[S.length-1][0];
         if (run.hold) { if (now >= run.hold.until) { run.hold = null; ignite(w); } }
         else {
@@ -816,7 +820,7 @@ label.name input{width:150px}
           if (!run.held && run.tLaunch != null && run.tau < run.tLaunch && next >= run.tLaunch) { next = run.tLaunch; run.held = true; run.hold = { until: now + 3200 }; }
           run.tau = next;
           if (run.tau >= end) {
-            run.tau = end; run.idx = S.length - 2; run.done = true;
+            run.tau = end; run.idx = S.length - 2; run.done = true; run.doneAt = now;
             const stEnd = sampleState(), nrEnd = nearest(w, stEnd);
             if (run.result.outcome === 'crashed' || run.result.outcome === 'burned') explode(w, stEnd, nrEnd);
             if (run.result.outcome === 'landed') touchdown(w, stEnd, nrEnd);
