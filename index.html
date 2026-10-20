@@ -496,7 +496,7 @@ label.name input{width:150px}
       if (firstLoad) { seen.add(f.id); continue; }
       if (!seen.has(f.id)) { seen.add(f.id); playQueue.push(f.id); }
     }
-    if (firstLoad && feed.length && !run) { const latest = feed.find(f => f.status === 'done'); if (latest) watch(latest.id, false, 'Latest launch'); }
+    if (firstLoad && feed.length) els.bannerText.textContent = 'Waiting for the next launch';
     if (playQueue.length && !(run && !run.done)) { const id = playQueue.shift(); watch(id, true); }
   }
   async function watch(id, live, label){
