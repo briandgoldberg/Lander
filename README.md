@@ -1,34 +1,31 @@
 # Lander
 
-A proof of concept for a daily bot competition: launch from one planet, land on another, least fuel wins.
+Launch from one planet, land on another. Your JavaScript gets 10 seconds to plan the path. Most fuel left wins.
 
-Live: https://briandgoldberg.github.io/Lander/
-
-Open `index.html` in a browser. Everything is in that one file.
-
-## The day's system
-
-A sun with four to six planets on circular orbits. Each day picks a start planet and a target planet, a fuel budget, an engine and a deadline. Gravity is exaggerated so flybys bend a path visibly, the way Kerbal Space Program does it.
-
-What you see matches the numbers:
-
-- Orbits are drawn to scale.
-- All planets are drawn at the same magnification (printed on the screen), so a planet that looks three times wider is three times wider.
-- Planets share one density, so mass goes with radius cubed. A planet twice as wide is eight times as heavy.
-- The approach cam is at true scale.
+Live: https://lander-briandgoldbergs-projects.vercel.app
 
 ## How it works
 
-- You submit JavaScript that defines `bot(world, sim)` and returns a controller `(state) => { throttle, dx, dy }`.
-- The sandbox is a sealed Web Worker that owns the physics. Your code gets the day's system and a 10 second clock, can test-fly ideas with `sim.fly(controller)`, then returns a controller. The sandbox flies that controller for real, and the replay you watch is that flight.
-- Score is fuel used. Lowest among safe landings wins. A safe landing means touching the target planet at a relative speed of at most `world.safeLandingSpeed`.
+1. Sign up with your email. A magic link signs you in. Your first launch is free, more are $1 each in USDC on Base.
+2. Submit JavaScript that defines `bot(world, sim)` and returns a controller. On launch, the server runs it in a sealed worker with no network and a 10 second clock, then flies the controller you returned through the game's physics.
+3. Everyone watching the site sees each launch as it happens. One launch flies at a time; if two people launch together, one is asked to hold and goes automatically next.
+4. A game lasts 10 days. The safe landing with the most fuel left wins, and the winning code is published in Previous winners. Entering means agreeing to that.
 
-The starter bot finds a launch window, flies to the target and arrives too fast. Landing is your job.
+## Pieces
 
-## The real game
+- `index.html` is the whole site: system view, approach cam, telemetry, sign-in, credits, launch queue, live feed, leaderboard, previous winners, and a free practice sandbox that runs in the browser on a random system.
+- `lib/engine.js` is the physics: a star, four or five planets on circular orbits, a rocket with a delta-v budget, adaptive steps. The same file runs in the browser and on the server.
+- `lib/starter.js` is the starter bot. It reaches the target and arrives too fast.
+- `lib/runner.js` runs an entrant's bot in a worker thread with a bare VM context and a wall-clock cap.
+- `api/launch.js` runs a claimed launch and records the official flight. `api/pay.js` verifies a USDC transfer on Base and credits launches. `api/winner.js` reveals the winning code once a game ends.
+- Supabase holds games, profiles, launches and payments. The server has no privileged key: it calls database functions as the signed-in user and proves server-only writes with an HMAC signature over a shared secret.
 
-In the real game the day's system stays hidden until midnight, when every uploaded bot gets its clock on it blind. Then the system, replays and leaderboard are published for 24 hours while entrants improve their bots for tomorrow. This page shows today's system up front, so it is practice mode.
+## Running it
+
+Vercel, with these production environment variables: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GAME_SECRET` (must match `private.config` in the database), and optionally `TREASURY_ADDRESS` (a Base address that receives USDC; payments stay off until it is set) and `BASE_RPC_URL`.
+
+One manual step in Supabase: Authentication → URL Configuration → set the Site URL to the live URL, so magic links come back to the site.
 
 ## Units
 
-Sun mass 1, G 1, the innermost orbit is about 1. Fuel is a delta-v budget: throttle 1 burns `maxThrust` per time unit. Physics steps are adaptive, finer near planets and during burns. See the API reference on the page for `world`, `state` and `sim`.
+Star mass 1, G 1, the innermost orbit is about 1. Planets share one density, so mass goes with radius cubed. Fuel is a delta-v budget: throttle 1 burns `maxThrust` per time unit. Gravity is exaggerated so flybys matter.

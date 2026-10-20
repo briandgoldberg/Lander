@@ -1,0 +1,41 @@
+// POST /api/launch { launch_id }  — runs a claimed launch's bot on the server and records the official flight.
+const { rpc, getUser, bearer, json, readJson, sign, configured } = require('../lib/db');
+const { runBot } = require('../lib/runner');
+
+const BUDGET_MS = 10000;
+
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') return json(res, 405, { error: 'POST only' });
+  if (!configured) return json(res, 503, { error: 'Server is not configured yet (SUPABASE_URL, SUPABASE_ANON_KEY, GAME_SECRET).' });
+  try {
+    const token = bearer(req);
+    const user = await getUser(token);
+    if (!user) return json(res, 401, { error: 'Sign in first.' });
+    const { launch_id } = await readJson(req);
+    const id = Number(launch_id);
+    if (!id) return json(res, 400, { error: 'launch_id required' });
+    const owner = await rpc('launch_owner', { p_launch: id });
+    if (owner !== user.id) return json(res, 403, { error: 'Not your launch.' });
+    const entry = await rpc('get_launch_code', { p_launch: id, p_sig: sign('code|' + id) });
+    if (!entry || entry.status !== 'running') return json(res, 409, { error: 'This launch already ran.' });
+    const state = await rpc('game_state', {});
+    if (!state || !state.game || state.game.id !== entry.game_id) return json(res, 409, { error: 'Game mismatch.' });
+    const world = state.world;
+
+    const out = await runBot(entry.code, world, BUDGET_MS);
+    let result;
+    if (out.type === 'result') {
+      const r = out.result;
+      result = { outcome: r.outcome, body: r.body, fuelUsed: r.fuelUsed, fuelLeft: +(world.rocket.fuel - r.fuelUsed).toFixed(4),
+        landingSpeed: r.landingSpeed, closestApproach: r.closestApproach, time: r.time, flights: out.flights, thinkMs: out.thinkMs, samples: r.samples, error: null };
+    } else {
+      result = { outcome: 'error', body: null, fuelUsed: 0, fuelLeft: 0, landingSpeed: null, closestApproach: null, time: 0, flights: 0, thinkMs: 0, samples: null, error: out.message };
+    }
+    const payload = JSON.stringify(result);
+    await rpc('finish_launch', { p_launch: id, p_result: payload, p_sig: sign(id + '|' + payload) });
+    const { samples, ...summary } = result;
+    return json(res, 200, { ok: true, launch_id: id, result: summary });
+  } catch (e) {
+    return json(res, e.status || 500, { error: e.message || String(e) });
+  }
+};

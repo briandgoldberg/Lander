@@ -1,0 +1,7 @@
+{
+  "name": "lander",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Launch from one planet, land on another. Least fuel wins. Your code flies it.",
+  "engines": { "node": "22.x" }
+}
