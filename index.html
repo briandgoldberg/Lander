@@ -170,12 +170,11 @@ label.name input{width:150px}
         <div class="row">
           <label class="name">Name it <input id="botName" type="text" value="My bot" maxlength="24"></label>
           <button class="btn" id="resetBtn">Reset to sample</button>
-          <button class="btn" id="copyPromptBtn">Copy a prompt for ChatGPT or Claude</button>
           <button class="cta" id="launchBtn">Launch your rocket</button>
         </div>
       </div>
       <p class="hint">Your flight path is a small JavaScript program that steers the rocket. This sample reaches the target but crashes. Make it land, then save fuel. Winning code is published when the game ends.</p>
-      <p class="hint">Not a coder? Hit the copy button, paste into ChatGPT or Claude, and ask it to make the rocket land softly using less fuel.</p>
+      <p class="hint">Not a coder? Paste the code into ChatGPT or Claude and ask it to make the rocket land softly using less fuel.</p>
       <div class="status" id="status">Start from the sample. It already reaches the target planet; it just doesn't slow down.</div>
       <textarea id="code" spellcheck="false" aria-label="Flight path source code"></textarea>
       <pre class="err" id="err" hidden></pre>
@@ -273,7 +272,7 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replayBtn','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaForm','ctaEmail','ctaMsg','launchBtn','status','feed','feedEmpty','feedCount','board','boardEmpty','boardNote','editor','botName','resetBtn','copyPromptBtn','code','err','signin','signinForm','email','signinMsg','signinClose','buy','qty','payWallet','payTotal','treasury','hashForm','txhash','buyMsg','buyClose'].forEach(id => els[id] = $(id));
+  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replayBtn','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaForm','ctaEmail','ctaMsg','launchBtn','status','feed','feedEmpty','feedCount','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','signinForm','email','signinMsg','signinClose','buy','qty','payWallet','payTotal','treasury','hashForm','txhash','buyMsg','buyClose'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null;
@@ -411,13 +410,6 @@ label.name input{width:150px}
 
   // ---------- editor / launch ----------
   els.resetBtn.onclick = () => { els.code.value = STARTER; saveCode(); };
-  els.copyPromptBtn.onclick = async () => {
-    const api = Array.from(document.querySelectorAll('.api li')).map(li => '- ' + li.textContent.trim()).join('\n');
-    const prompt = 'This is a flight path for a rocket game. It is JavaScript: bot(world, sim) receives the star system and returns a controller(state) that steers the rocket. The sample below reaches the target planet but crashes into it. Add a braking burn so it touches down at a relative speed below world.safeLandingSpeed, then use as little fuel as you can. Keep the bot(world, sim) shape and only use the API described here. Return the complete code.\n\nAPI:\n' + api + '\n\nCode:\n' + els.code.value;
-    try { await navigator.clipboard.writeText(prompt); els.copyPromptBtn.textContent = 'Copied. Paste it into ChatGPT or Claude.'; }
-    catch (e) { els.copyPromptBtn.textContent = 'Copy failed. Select the code and the API reference by hand.'; }
-    setTimeout(() => { els.copyPromptBtn.textContent = 'Copy a prompt for ChatGPT or Claude'; }, 4000);
-  };
   function saveCode(){ try { localStorage.setItem('lander.code', els.code.value); localStorage.setItem('lander.name', els.botName.value); } catch (e) {} }
   function loadCode(){ let c = null, n = null; try { c = localStorage.getItem('lander.code'); n = localStorage.getItem('lander.name'); } catch (e) {} els.code.value = c || STARTER; if (n) els.botName.value = n; }
   els.code.addEventListener('keydown', e => { if (e.key === 'Tab') { e.preventDefault(); const s = els.code.selectionStart, t = els.code.selectionEnd; els.code.value = els.code.value.slice(0,s) + '  ' + els.code.value.slice(t); els.code.selectionStart = els.code.selectionEnd = s + 2; } });
