@@ -749,7 +749,7 @@ function bot(world, sim) {
   // ---------- loop ----------
   let last = 0;
   function frame(now){
-    const dts = Math.min(0.1, (now - last) / 1000 || 0); last = now;
+    const dts = Math.min(1, (now - last) / 1000 || 0); last = now;   // wall-clock pacing, survives throttled frames
     if (!run) idleT += dts * world.bodies[0].period / 30;
     else if (!run.done) {
       const S = run.samples, end = S[S.length-1][0];
