@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Moonshot Sandbox</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: mission-control console. Sky on the left, telemetry stack on the right, code bay below. Single dark look by choice. */
+:root{
+  --bg:#0a0e1a; --sky:#05070f; --panel:#121829; --panel-2:#0d1222; --line:#27304d;
+  --fg:#e9ecf6; --muted:#8f98b8; --accent:#f3b457; --accent-ink:#1a1206;
+  --good:#6ad59a; --bad:#f2706e; --planet:#3b78e3; --moon:#cfd5e3;
+  --display:'Chakra Petch','Segoe UI',sans-serif;
+  --body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',Consolas,'Courier New',monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.45}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+.app{min-height:100%;display:flex;flex-direction:column;gap:14px;max-width:1240px;margin:0 auto;
+  padding-block:14px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:.16em;text-transform:uppercase;line-height:1.1}
+.brand small{display:block;font-family:var(--body);font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted);font-size:13px;margin-top:4px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.btn{font-family:var(--body);font-size:13px;background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,390px);gap:14px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:1fr}}
+.stage{position:relative;background:var(--sky);border:1px solid var(--line);border-radius:8px;overflow:hidden;aspect-ratio:1/1;max-width:100%}
+.stage canvas{display:block;width:100%;height:100%}
+.verdict{position:absolute;left:12px;right:12px;top:12px;padding:10px 14px;border-radius:6px;font-family:var(--display);font-size:19px;letter-spacing:.08em;text-transform:uppercase;background:rgba(10,14,26,.88);border:1px solid var(--line)}
+.verdict.good{border-color:var(--good);color:var(--good)}
+.verdict.bad{border-color:var(--bad);color:var(--bad)}
+.verdict span{display:block;font-family:var(--mono);font-size:12px;letter-spacing:0;text-transform:none;color:var(--fg);margin-top:4px}
+.controls{position:absolute;left:12px;bottom:12px;display:flex;gap:6px}
+.controls .btn{background:rgba(10,14,26,.85);padding:5px 10px;font-size:12px}
+.panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;min-width:0}
+.card h2{margin:0 0 8px;font-family:var(--display);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.facts{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px;margin:0}
+.facts dt{color:var(--muted)}
+.facts dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.cta{width:100%;font-family:var(--display);font-size:16px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:14px;cursor:pointer}
+.cta:hover{filter:brightness(1.07)}
+.cta.small{width:auto;font-size:13px;padding:9px 14px}
+.cta:disabled{opacity:.55;cursor:default;filter:none}
+.cta:focus-visible,.btn:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.status{font-family:var(--mono);font-size:12px;color:var(--muted);min-height:18px;margin-top:8px}
+.gauge{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+.bar{height:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:100%}
+.burn{color:var(--accent);visibility:hidden}
+.burn.on{visibility:visible}
+.tele{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 14px;font-size:13px;margin-top:10px}
+.tele div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:3px 0;min-width:0}
+.tele span{color:var(--muted)}
+.tele b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.runs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:12px}
+.runs li{display:flex;gap:8px;align-items:baseline;min-width:0}
+.runs li b{font-weight:500;flex:none}
+.runs li .r{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;position:relative;top:-1px}
+.dot.good{background:var(--good)}
+.dot.bad{background:var(--bad)}
+.empty{color:var(--muted);font-size:13px;margin:0}
+.editor{display:flex;flex-direction:column;gap:10px}
+.editor-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.editor-head h2{margin:0}
+.hint{margin:0;color:var(--muted);font-size:13px;max-width:70ch}
+.hint code,.api code{font-family:var(--mono);font-size:12px;color:var(--fg);background:var(--panel-2);padding:1px 5px;border-radius:4px}
+textarea{width:100%;min-height:360px;resize:vertical;background:var(--sky);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:12px;font-family:var(--mono);font-size:12.5px;line-height:1.5;white-space:pre;overflow:auto;tab-size:2}
+.err{margin:0;background:rgba(242,112,110,.08);border:1px solid var(--bad);color:var(--fg);border-radius:6px;padding:10px 12px;font-family:var(--mono);font-size:12px;white-space:pre-wrap;overflow-x:auto}
+.api summary{cursor:pointer;color:var(--muted);font-size:13px}
+.api ul{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--muted)}
+.api li{margin:3px 0}
+.note{font-size:12px;color:var(--muted);margin:0}
+label.name{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+label.name input{background:var(--sky);border:1px solid var(--line);color:var(--fg);border-radius:6px;padding:6px 9px;font-family:var(--body);font-size:13px;width:150px}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="brand">Moonshot<small>Least fuel from the pad to a soft landing on the moon. Your code flies it.</small></div>
+    <div class="row">
+      <span class="chip" id="dayChip">Day —</span>
+      <button class="btn" id="todayBtn" aria-pressed="true">Today's system</button>
+      <button class="btn" id="randomBtn">Random day</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="stage" aria-label="Mission view">
+      <canvas id="sky"></canvas>
+      <div class="verdict" id="verdict" hidden></div>
+      <div class="controls" id="controls" hidden>
+        <button class="btn" id="replayBtn">Replay</button>
+        <button class="btn" id="speedBtn" aria-pressed="false">Fast</button>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="card">
+        <h2>Today's mission</h2>
+        <dl class="facts" id="facts"></dl>
+      </div>
+
+      <div class="card">
+        <button class="cta" id="cta">Submit your bot to the sandbox</button>
+        <div class="status" id="status">The sandbox owns the physics. Your code gets the system and 10 seconds to plan.</div>
+      </div>
+
+      <div class="card">
+        <h2>Telemetry</h2>
+        <div class="gauge"><span>Fuel</span><div class="bar"><i id="fuelBar"></i></div><span id="fuelText">2.80 left</span></div>
+        <div class="tele">
+          <div><span>T+</span><b id="tT">0.0</b></div>
+          <div><span>Phase</span><b id="tPhase">On pad</b></div>
+          <div><span>Speed</span><b id="tSpeed">0.000</b></div>
+          <div><span>Altitude</span><b id="tAlt">0.00</b></div>
+          <div><span>Moon range</span><b id="tRange">—</b></div>
+          <div><span>Rel. to moon</span><b id="tRel">—</b></div>
+          <div><span>Burn</span><b class="burn" id="tBurn">● THRUST</b></div>
+          <div><span>Fuel used</span><b id="tUsed">0.00</b></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Flights this session</h2>
+        <ul class="runs" id="runs"></ul>
+        <p class="empty" id="runsEmpty">No flights yet. Submit a bot and watch it go.</p>
+      </div>
+    </aside>
+  </div>
+
+  <section class="card editor" id="editor" hidden>
+    <div class="editor-head">
+      <h2>Sandbox entry</h2>
+      <div class="row">
+        <label class="name">Bot name <input id="botName" value="My bot" maxlength="24"></label>
+        <button class="cta small" id="runBtn">Run in sandbox</button>
+        <button class="btn" id="resetBtn">Reset to starter</button>
+        <button class="btn" id="closeBtn">Close</button>
+      </div>
+    </div>
+    <p class="hint">JavaScript. Define <code>bot(world, sim)</code> and return a controller. The sandbox runs your code in a sealed worker with no network and a 10 second clock, then flies the controller you returned through its own physics. That flight is your entry. The starter below lands, wastefully. Beat it on fuel.</p>
+    <textarea id="code" spellcheck="false" aria-label="Bot source code"></textarea>
+    <pre class="err" id="err" hidden></pre>
+    <details class="api">
+      <summary>API reference</summary>
+      <ul>
+        <li><code>world.planet</code> {mass, radius} · <code>world.moon</code> {mass, radius, dist, angle0, omega} · <code>world.rocket</code> {maxThrust, fuel, launchAngle} · <code>world.deadline</code> · <code>world.safeLandingSpeed</code> · <code>world.hints</code> {transferTime, moonPeriod, hillRadius}</li>
+        <li>Units: planet radius = 1, planet mass = 1, G = 1. The moon moves counterclockwise on a circular orbit. Fuel is a delta-v budget: throttle 1 burns maxThrust per time unit.</li>
+        <li><code>controller(state)</code> is called every step (dt 0.01). <code>state</code> = {t, x, y, vx, vy, fuel, onPad, moon:{x,y,vx,vy}}. Return <code>{throttle, dx, dy}</code>: throttle 0 to 1, (dx, dy) the thrust direction in world coordinates, any length.</li>
+        <li><code>sim.fly(controller)</code> flies a test flight and returns {outcome, fuelUsed, time, closestApproach, landingSpeed}. Outcomes: landed, crashed_moon, crashed_planet, lost, timeout. <code>sim.timeLeft()</code> is your remaining budget in ms. <code>sim.flights</code> counts test flights.</li>
+        <li>Landed means touching the moon at a speed relative to it of at most <code>safeLandingSpeed</code>. Lowest fuel used among landings wins.</li>
+      </ul>
+    </details>
+    <p class="note">In the real game the day's system is hidden until midnight, when every uploaded bot gets its clock on it blind. Here you can see today's system, so this is practice mode.</p>
+  </section>
+</div>
+
+<script id="engine" type="text/x-engine">
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function makeWorld(seed){
+  const rnd=mulberry32(seed>>>0);
+  const planet={mass:1,radius:1};
+  const dist=7+rnd()*3;
+  const moon={mass:0.008+rnd()*0.014,radius:0.22+rnd()*0.1,dist:dist,angle0:rnd()*Math.PI*2};
+  moon.omega=Math.sqrt((planet.mass+moon.mass)/(dist*dist*dist));
+  const a=(planet.radius*1.05+dist)/2;
+  const transferTime=Math.PI*Math.sqrt(a*a*a/planet.mass);
+  const moonPeriod=2*Math.PI/moon.omega;
+  const hillRadius=dist*Math.cbrt(moon.mass/(3*planet.mass));
+  return {
+    seed:seed>>>0,G:1,planet:planet,moon:moon,
+    rocket:{maxThrust:3,fuel:2.8,launchAngle:rnd()*Math.PI*2},
+    deadline:Math.round(moonPeriod+1.6*transferTime+15),
+    safeLandingSpeed:0.05,dt:0.01,
+    hints:{transferTime:transferTime,moonPeriod:moonPeriod,hillRadius:hillRadius}
+  };
+}
+function moonAt(w,t){
+  const a=w.moon.angle0+w.moon.omega*t,c=Math.cos(a),s=Math.sin(a),d=w.moon.dist,v=d*w.moon.omega;
+  return {x:d*c,y:d*s,vx:-v*s,vy:v*c};
+}
+function fly(w,ctrl,opts){
+  opts=opts||{};
+  const dt=w.dt,steps=Math.ceil(w.deadline/dt);
+  const M=w.planet.mass,mm=w.moon.mass,Rp=w.planet.radius,Rm=w.moon.radius;
+  const d0=w.moon.dist,om=w.moon.omega,a0=w.moon.angle0,vm=d0*om,maxA=w.rocket.maxThrust;
+  let x=Rp*Math.cos(w.rocket.launchAngle),y=Rp*Math.sin(w.rocket.launchAngle),vx=0,vy=0,t=0;
+  let fuel=w.rocket.fuel,onPad=true,outcome='timeout',minD=Infinity,landingSpeed=null;
+  const samples=opts.record?[]:null,every=4;
+  const state={t:0,x:0,y:0,vx:0,vy:0,fuel:0,onPad:true,moon:{x:0,y:0,vx:0,vy:0}};
+  let gx=0,gy=0;
+  function grav(tt,px,py){
+    const r2=px*px+py*py,r=Math.sqrt(r2),gp=-M/(r2*r);
+    const ang=a0+om*tt,mx=d0*Math.cos(ang),my=d0*Math.sin(ang);
+    const ddx=px-mx,ddy=py-my,dd2=ddx*ddx+ddy*ddy,dd=Math.sqrt(dd2),gm=-mm/(dd2*dd);
+    gx=gp*px+gm*ddx;gy=gp*py+gm*ddy;
+  }
+  for(let i=0;i<steps;i++){
+    const ang=a0+om*t,mx=d0*Math.cos(ang),my=d0*Math.sin(ang);
+    state.t=t;state.x=x;state.y=y;state.vx=vx;state.vy=vy;state.fuel=fuel;state.onPad=onPad;
+    state.moon.x=mx;state.moon.y=my;state.moon.vx=-vm*Math.sin(ang);state.moon.vy=vm*Math.cos(ang);
+    const c=ctrl(state)||{};
+    let thr=+c.throttle;if(!(thr>0))thr=0;else if(thr>1)thr=1;
+    let dx=+c.dx,dy=+c.dy;const dn=Math.sqrt(dx*dx+dy*dy);
+    if(!(dn>0)){dx=0;dy=0;thr=0;}else{dx/=dn;dy/=dn;}
+    if(fuel<=0)thr=0;
+    const aT=thr*maxA;
+    if(samples&&i%every===0)samples.push([t,x,y,vx,vy,thr,dx,dy,fuel]);
+    if(onPad){
+      const r=Math.sqrt(x*x+y*y),up=aT*(dx*x+dy*y)/r;
+      if(up<=M/(r*r)){fuel-=aT*dt;if(fuel<0)fuel=0;t+=dt;continue;}
+      onPad=false;
+    }
+    const ax=aT*dx,ay=aT*dy,h=dt/2;
+    grav(t,x,y);const k1vx=gx+ax,k1vy=gy+ay,k1x=vx,k1y=vy;
+    grav(t+h,x+k1x*h,y+k1y*h);const k2vx=gx+ax,k2vy=gy+ay,k2x=vx+k1vx*h,k2y=vy+k1vy*h;
+    grav(t+h,x+k2x*h,y+k2y*h);const k3vx=gx+ax,k3vy=gy+ay,k3x=vx+k2vx*h,k3y=vy+k2vy*h;
+    grav(t+dt,x+k3x*dt,y+k3y*dt);const k4vx=gx+ax,k4vy=gy+ay,k4x=vx+k3vx*dt,k4y=vy+k3vy*dt;
+    x+=dt/6*(k1x+2*k2x+2*k3x+k4x);y+=dt/6*(k1y+2*k2y+2*k3y+k4y);
+    vx+=dt/6*(k1vx+2*k2vx+2*k3vx+k4vx);vy+=dt/6*(k1vy+2*k2vy+2*k3vy+k4vy);
+    fuel-=aT*dt;if(fuel<0)fuel=0;
+    t+=dt;
+    const r=Math.sqrt(x*x+y*y);
+    if(r<Rp){outcome='crashed_planet';break;}
+    const ang2=a0+om*t,mx2=d0*Math.cos(ang2),my2=d0*Math.sin(ang2);
+    const ddx=x-mx2,ddy=y-my2,d=Math.sqrt(ddx*ddx+ddy*ddy);
+    if(d<minD)minD=d;
+    if(d<=Rm){
+      const rs=Math.sqrt((vx+vm*Math.sin(ang2))*(vx+vm*Math.sin(ang2))+(vy-vm*Math.cos(ang2))*(vy-vm*Math.cos(ang2)));
+      landingSpeed=rs;outcome=rs<=w.safeLandingSpeed?'landed':'crashed_moon';break;
+    }
+    if(r>d0*3.5){outcome='lost';break;}
+  }
+  if(samples)samples.push([t,x,y,vx,vy,0,0,0,fuel]);
+  return {outcome:outcome,fuelUsed:+(w.rocket.fuel-fuel).toFixed(4),time:+t.toFixed(2),
+    closestApproach:+(minD-Rm).toFixed(3),landingSpeed:landingSpeed==null?null:+landingSpeed.toFixed(4),samples:samples};
+}
+</script>
+
+<script id="starter" type="text/plain">
+// Moonshot starter bot. It lands, but it wastes fuel. Beat it.
+//
+// The sandbox calls bot(world, sim) once. bot must return a controller:
+//   controller(state) -> { throttle: 0..1, dx, dy }   (dx, dy: thrust direction, any length)
+// Use sim.fly(controller) to test-fly ideas in the sandbox's own physics first.
+// You have a wall-clock budget (sim.timeLeft() in ms). When bot() returns, the
+// sandbox flies the controller you returned for real. That flight is your entry.
+
+function bot(world, sim) {
+  const { planet, moon, rocket } = world;
+  const mu = planet.mass;
+  const TWO_PI = 2 * Math.PI;
+
+  // Rough time from launch to the far side of a lob that just reaches the moon.
+  // The moon's own pull shortens the trip, hence the 0.85.
+  const a = (planet.radius * 0.6 + moon.dist) / 2;
+  const tTransfer = 0.85 * Math.PI * Math.sqrt(a * a * a / mu);
+
+  // We arrive roughly opposite the launch site, so launch when the moon
+  // will be there at arrival. The guess is crude, so search widely around it.
+  const target = rocket.launchAngle + Math.PI;
+  const base = ((((target - moon.angle0 - moon.omega * tTransfer) % TWO_PI) + TWO_PI) % TWO_PI) / moon.omega;
+
+  let best = null;
+  function attempt(p) {
+    // The moon comes back around every period, so wrap launch times into the day.
+    const period = world.hints.moonPeriod, latest = world.deadline - tTransfer - 10;
+    if (p.wait < 0) p = { wait: p.wait + period, apo: p.apo };
+    if (p.wait > latest) p = { wait: p.wait - period, apo: p.apo };
+    if (p.wait < 0 || p.wait > latest) return;
+    const r = sim.fly(make(p));
+    const score = r.outcome === 'landed' ? r.fuelUsed : 100 + r.closestApproach;
+    if (!best || score < best.score) best = { score, p, r };
+  }
+  for (let lead = -1.6; lead <= 1.0; lead += 0.1)
+    for (const apo of [0.98, 1.01, 1.04])
+      attempt({ wait: base + lead / moon.omega, apo });
+  const b = best.p;
+  for (let lead = -0.08; lead <= 0.08; lead += 0.02)
+    for (const apo of [b.apo - 0.015, b.apo, b.apo + 0.015])
+      if (sim.timeLeft() > 1500) attempt({ wait: b.wait + lead / moon.omega, apo });
+
+  return make(best.p);
+
+  // Autopilot: wait on the pad, gravity-turn ascent until the orbit's high
+  // point reaches the moon's distance, coast, then steer and brake onto the moon.
+  function make(p) {
+    let phase = 'pad';
+    const hill = moon.dist * Math.cbrt(moon.mass / (3 * mu));
+    const gMoon = moon.mass / (moon.radius * moon.radius);
+    return function controller(s) {
+      const r = Math.hypot(s.x, s.y);
+      const ux = s.x / r, uy = s.y / r;            // up, away from the planet
+      const tx = -uy, ty = ux;                     // counterclockwise, the moon's direction
+      const mx = s.moon.x - s.x, my = s.moon.y - s.y;
+      const dm = Math.hypot(mx, my);
+      const alt = dm - moon.radius;                // height above the moon
+      const rvx = s.vx - s.moon.vx, rvy = s.vy - s.moon.vy;   // velocity relative to the moon
+
+      if (phase === 'pad') {
+        if (s.t < p.wait) return { throttle: 0, dx: ux, dy: uy };
+        phase = 'ascent';
+      }
+      if (phase === 'ascent') {
+        const v2 = s.vx * s.vx + s.vy * s.vy;
+        const eps = v2 / 2 - mu / r;
+        const h = s.x * s.vy - s.y * s.vx;
+        let apo = Infinity;
+        if (eps < 0) {
+          const sma = -mu / (2 * eps);
+          const e = Math.sqrt(Math.max(0, 1 + 2 * eps * h * h / (mu * mu)));
+          apo = sma * (1 + e);
+        }
+        if (apo >= moon.dist * p.apo) phase = 'coast';
+        else {
+          const pitch = Math.min(1, (r - planet.radius) / 0.25) * 1.45;   // tip over as we climb
+          return { throttle: 1, dx: ux * Math.cos(pitch) + tx * Math.sin(pitch), dy: uy * Math.cos(pitch) + ty * Math.sin(pitch) };
+        }
+      }
+      if (phase === 'coast') {
+        if (dm < hill * 1.2) phase = 'approach';
+        else return { throttle: 0, dx: tx, dy: ty };
+      }
+      // Approach and landing, all relative to the moon.
+      const dnx = mx / dm, dny = my / dm;                      // down, toward the moon's center
+      const vDown = rvx * dnx + rvy * dny;                     // closing speed
+      const latx = rvx - vDown * dnx, laty = rvy - vDown * dny;
+      const lat = Math.hypot(latx, laty);
+      // Speed profile: fall freely, then brake at a planned deceleration so the
+      // closing speed reaches a slow touchdown exactly at the surface.
+      const aBrake = (rocket.maxThrust - gMoon) * 0.4;
+      const vTouch = world.safeLandingSpeed * 0.3;
+      const vTarget = Math.sqrt(2 * aBrake * Math.max(alt, 0)) + vTouch;
+      let ax = 0, ay = 0;
+      const timeToGo = Math.max(alt, 0) / Math.max(vDown, 0.05);
+      if (lat * timeToGo > moon.radius * 0.4 || alt < moon.radius) { ax -= latx * 6; ay -= laty * 6; }   // steer onto the moon, kill drift
+      if (vDown > vTarget) {                                                   // braking: harder than the profile, so we converge onto it
+        const k = 1.3 * aBrake + gMoon + (vDown - vTarget) * 15;
+        ax -= dnx * k; ay -= dny * k;
+      } else if (alt < 0.03) {                                                 // last moment: hover down at touchdown speed
+        const k = gMoon + (vDown - vTouch) * 10;
+        if (k > 0) { ax -= dnx * k; ay -= dny * k; }
+      }
+      if (vDown < 0.02 && alt > 0.05) { ax += dnx * 0.4; ay += dny * 0.4; }   // don't drift away
+      const am = Math.hypot(ax, ay);
+      if (am < 0.03) return { throttle: 0, dx: -dnx, dy: -dny };
+      return { throttle: Math.min(1, am / rocket.maxThrust), dx: ax, dy: ay };
+    };
+  }
+}
+</script>
+
+<script>
+(function(){
+  const ENGINE_SRC = document.getElementById('engine').textContent;
+  const STARTER = document.getElementById('starter').textContent.replace(/^\n+/, '');
+  const Engine = new Function(ENGINE_SRC + '\n;return {makeWorld:makeWorld, moonAt:moonAt};')();
+  const BUDGET_MS = 10000;
+  const TAU = Math.PI * 2;
+
+  const WORKER_GLUE = [
+    'self.onmessage = function(e){',
+    '  var code = e.data.code, world = e.data.world, budgetMs = e.data.budgetMs;',
+    '  var t0 = Date.now(), flights = 0;',
+    '  var sim = {',
+    '    fly: function(ctrl){',
+    '      if (typeof ctrl !== "function") throw new Error("sim.fly needs a controller function");',
+    '      flights++;',
+    '      var r = fly(world, ctrl, {record:false});',
+    '      if (flights % 4 === 0) postMessage({type:"progress", flights:flights});',
+    '      return r;',
+    '    },',
+    '    timeLeft: function(){ return budgetMs - (Date.now() - t0); },',
+    '    get flights(){ return flights; }',
+    '  };',
+    '  var controller;',
+    '  try {',
+    '    var getBot = new Function(code + "\\n;if (typeof bot !== \'function\') throw new Error(\'Define function bot(world, sim)\'); return bot;");',
+    '    controller = getBot()(world, sim);',
+    '    if (typeof controller !== "function") throw new Error("bot() must return a controller function");',
+    '  } catch (err) {',
+    '    postMessage({type:"error", message: String(err && err.stack || err)}); return;',
+    '  }',
+    '  var thinkMs = Date.now() - t0;',
+    '  var result;',
+    '  try { result = fly(world, controller, {record:true}); }',
+    '  catch (err) { postMessage({type:"error", message:"Controller threw during the official flight: " + (err && err.message || err)}); return; }',
+    '  postMessage({type:"result", result:result, flights:flights, thinkMs:thinkMs});',
+    '};'
+  ].join('\n');
+
+  // ---------- DOM ----------
+  const $ = id => document.getElementById(id);
+  const cv = $('sky'), ctx = cv.getContext('2d');
+  const els = {
+    dayChip:$('dayChip'), facts:$('facts'), status:$('status'), cta:$('cta'), verdict:$('verdict'), controls:$('controls'),
+    fuelBar:$('fuelBar'), fuelText:$('fuelText'), tT:$('tT'), tPhase:$('tPhase'), tSpeed:$('tSpeed'), tAlt:$('tAlt'),
+    tRange:$('tRange'), tRel:$('tRel'), tBurn:$('tBurn'), tUsed:$('tUsed'), runs:$('runs'), runsEmpty:$('runsEmpty'),
+    editor:$('editor'), code:$('code'), err:$('err'), botName:$('botName'), runBtn:$('runBtn'), resetBtn:$('resetBtn'),
+    closeBtn:$('closeBtn'), replayBtn:$('replayBtn'), speedBtn:$('speedBtn'), todayBtn:$('todayBtn'), randomBtn:$('randomBtn')
+  };
+
+  // ---------- state ----------
+  let world = null, dayLabel = '', stars = [];
+  let run = null;           // {samples, result, tau, idx, done, name}
+  let idleT = 0, fast = false, runs = [], runCount = 0, worker = null;
+  let W = 0, H = 0, dpr = 1;
+
+  function todaySeed(){
+    const d = new Date(), s = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return { seed: h >>> 0, label: s };
+  }
+  function loadWorld(seed, label){
+    world = Engine.makeWorld(seed);
+    dayLabel = label;
+    const rnd = (function(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; })(seed ^ 0x9e3779b9);
+    stars = []; for (let i = 0; i < 170; i++) stars.push([rnd(), rnd(), 0.4 + rnd()*1.3, 0.25 + rnd()*0.6]);
+    run = null; idleT = 0;
+    els.verdict.hidden = true; els.controls.hidden = true;
+    els.dayChip.textContent = 'Day ' + label + ' · system #' + (seed % 100000).toString().padStart(5,'0');
+    const m = world.moon, deg = (world.rocket.launchAngle * 180 / Math.PI).toFixed(0);
+    els.facts.innerHTML = [
+      ['Moon mass', '1/' + (1/m.mass).toFixed(0) + ' of planet'],
+      ['Moon distance', m.dist.toFixed(2) + ' planet radii'],
+      ['Moon radius', m.radius.toFixed(2)],
+      ['Moon period', world.hints.moonPeriod.toFixed(0) + ' time units'],
+      ['Transfer estimate', world.hints.transferTime.toFixed(0) + ' time units'],
+      ['Deadline', world.deadline + ' time units'],
+      ['Fuel budget (Δv)', world.rocket.fuel.toFixed(2)],
+      ['Soft landing', '≤ ' + world.safeLandingSpeed.toFixed(2) + ' rel. speed'],
+      ['Launch site', deg + '°']
+    ].map(([k,v]) => '<dt>' + k + '</dt><dd>' + v + '</dd>').join('');
+    setTelemetry(idleState());
+    setStatus('The sandbox owns the physics. Your code gets the system and 10 seconds to plan.');
+  }
+  function setStatus(s){ els.status.textContent = s; }
+
+  // ---------- sandbox ----------
+  function runSandbox(code, name){
+    if (worker) { worker.terminate(); worker = null; }
+    els.err.hidden = true;
+    els.cta.disabled = true; els.runBtn.disabled = true;
+    setStatus('Sandbox: sealed worker started. Compiling your bot…');
+    const blob = new Blob([ENGINE_SRC, '\n', WORKER_GLUE], {type:'text/javascript'});
+    const url = URL.createObjectURL(blob);
+    const w = new Worker(url); worker = w;
+    const started = performance.now();
+    const timer = setTimeout(() => { finish(); fail('Out of time. bot() did not return a controller within ' + (BUDGET_MS/1000) + ' s.'); }, BUDGET_MS + 1500);
+    function finish(){ clearTimeout(timer); w.terminate(); URL.revokeObjectURL(url); worker = null; els.cta.disabled = false; els.runBtn.disabled = false; }
+    function fail(msg){
+      setStatus('Sandbox rejected the entry.');
+      els.err.textContent = msg; els.err.hidden = false;
+      els.editor.hidden = false;
+    }
+    w.onmessage = e => {
+      const m = e.data;
+      if (m.type === 'progress') { setStatus('Sandbox: ' + m.flights + ' test flights · ' + ((performance.now()-started)/1000).toFixed(1) + ' s of ' + (BUDGET_MS/1000) + ' s used'); }
+      else if (m.type === 'error') { finish(); fail(m.message); }
+      else if (m.type === 'result') { finish(); startReplay(m.result, m.flights, m.thinkMs, name); }
+    };
+    w.onerror = e => { finish(); fail('Worker error: ' + (e.message || e)); };
+    w.postMessage({code, world, budgetMs: BUDGET_MS});
+  }
+
+  function startReplay(result, flights, thinkMs, name){
+    runCount++;
+    run = { samples: result.samples, result, tau: 0, idx: 0, done: false, name, flights, thinkMs, n: runCount };
+    els.verdict.hidden = true; els.controls.hidden = false;
+    setStatus('Flight computed in ' + (thinkMs/1000).toFixed(1) + ' s after ' + flights + ' test flights. Replaying the official flight.');
+    runs.unshift(run); if (runs.length > 8) runs.pop();
+    renderRuns();
+  }
+  function outcomeText(r){
+    switch (r.outcome) {
+      case 'landed': return ['Safe landing', 'Fuel used ' + r.fuelUsed.toFixed(3) + ' of ' + world.rocket.fuel.toFixed(2) + ' · touchdown ' + r.landingSpeed.toFixed(3) + ' (limit ' + world.safeLandingSpeed.toFixed(2) + ') · T+' + r.time.toFixed(1)];
+      case 'crashed_moon': return ['Crashed into the moon', 'Hit at ' + r.landingSpeed.toFixed(3) + ', limit ' + world.safeLandingSpeed.toFixed(2) + ' · fuel used ' + r.fuelUsed.toFixed(3)];
+      case 'crashed_planet': return ['Crashed into the planet', 'Fuel used ' + r.fuelUsed.toFixed(3) + ' · T+' + r.time.toFixed(1)];
+      case 'lost': return ['Lost in space', 'Left the system · closest approach to the moon ' + r.closestApproach.toFixed(2)];
+      default: return ['Deadline missed', 'Closest approach to the moon ' + r.closestApproach.toFixed(2) + ' · fuel used ' + r.fuelUsed.toFixed(3)];
+    }
+  }
+  function renderRuns(){
+    els.runsEmpty.hidden = runs.length > 0;
+    els.runs.innerHTML = runs.map(r => {
+      const ok = r.result.outcome === 'landed';
+      const head = outcomeText(r.result)[0];
+      return '<li><i class="dot ' + (ok?'good':'bad') + '"></i><b>#' + r.n + ' ' + escapeHtml(r.name) + '</b><span class="r">' + (ok ? 'fuel ' + r.result.fuelUsed.toFixed(3) : head.toLowerCase()) + ' · ' + r.flights + ' test flights</span></li>';
+    }).join('');
+  }
+  function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  // ---------- replay state ----------
+  function idleState(){
+    const la = world.rocket.launchAngle;
+    return { t: idleT, x: Math.cos(la), y: Math.sin(la), vx: 0, vy: 0, thr: 0, dx: Math.cos(la), dy: Math.sin(la), fuel: world.rocket.fuel, onPad: true };
+  }
+  function sampleState(){
+    const S = run.samples;
+    let i = run.idx;
+    while (i < S.length - 2 && S[i+1][0] <= run.tau) i++;
+    run.idx = i;
+    const a = S[i], b = S[Math.min(i+1, S.length-1)];
+    const span = b[0] - a[0], f = span > 0 ? Math.min(1, Math.max(0, (run.tau - a[0]) / span)) : 0;
+    const st = { t: run.tau, x: a[1] + (b[1]-a[1])*f, y: a[2] + (b[2]-a[2])*f, vx: a[3], vy: a[4], thr: a[5], dx: a[6], dy: a[7], fuel: a[8] + (b[8]-a[8])*f };
+    const la = world.rocket.launchAngle;
+    st.onPad = Math.hypot(st.x - Math.cos(la), st.y - Math.sin(la)) < 1e-6 && st.thr === 0;
+    return st;
+  }
+  function phaseOf(st){
+    if (run && run.done) return outcomeText(run.result)[0];
+    if (st.onPad) return 'On pad';
+    const m = Engine.moonAt(world, st.t), dm = Math.hypot(st.x - m.x, st.y - m.y);
+    if (dm < world.hints.hillRadius * 1.3) return 'Moon approach';
+    if (st.thr > 0) return 'Ascent burn';
+    return 'Coast';
+  }
+  function setTelemetry(st){
+    const m = Engine.moonAt(world, st.t);
+    const dm = Math.hypot(st.x - m.x, st.y - m.y);
+    const rel = Math.hypot(st.vx - m.vx, st.vy - m.vy);
+    const left = Math.max(0, st.fuel), used = world.rocket.fuel - left;
+    els.fuelBar.style.width = (100 * left / world.rocket.fuel).toFixed(1) + '%';
+    els.fuelText.textContent = left.toFixed(2) + ' left';
+    els.tT.textContent = st.t.toFixed(1);
+    els.tPhase.textContent = phaseOf(st);
+    els.tSpeed.textContent = Math.hypot(st.vx, st.vy).toFixed(3);
+    els.tAlt.textContent = Math.max(0, Math.hypot(st.x, st.y) - 1).toFixed(2);
+    els.tRange.textContent = Math.max(0, dm - world.moon.radius).toFixed(2);
+    els.tRel.textContent = rel.toFixed(3);
+    els.tBurn.classList.toggle('on', st.thr > 0);
+    els.tUsed.textContent = used.toFixed(2);
+  }
+
+  // ---------- drawing ----------
+  function resize(){
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  }
+  function drawRocket(x, y, dirx, diry, thr, size, flicker){
+    const ang = Math.atan2(-diry, dirx);  // screen y is flipped
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    if (thr > 0) {
+      const L = size * (0.8 + thr * 1.6) * (0.85 + 0.3 * flicker);
+      const g = ctx.createLinearGradient(-size*0.5, 0, -size*0.5 - L, 0);
+      g.addColorStop(0, 'rgba(255,236,190,0.95)'); g.addColorStop(0.35, 'rgba(243,180,87,0.9)'); g.addColorStop(1, 'rgba(243,120,60,0)');
+      ctx.fillStyle = g; ctx.beginPath();
+      ctx.moveTo(-size*0.5, -size*0.28); ctx.lineTo(-size*0.5 - L, 0); ctx.lineTo(-size*0.5, size*0.28); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = '#f4f6fb'; ctx.beginPath();
+    ctx.moveTo(size*0.9, 0); ctx.lineTo(-size*0.5, -size*0.42); ctx.lineTo(-size*0.3, 0); ctx.lineTo(-size*0.5, size*0.42); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#f3b457'; ctx.beginPath(); ctx.arc(size*0.2, 0, size*0.14, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  function drawMoon(x, y, r){
+    ctx.fillStyle = '#cfd5e3'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    if (r > 6) {
+      ctx.fillStyle = 'rgba(80,90,120,0.35)';
+      [[-0.35,-0.2,0.28],[0.3,0.25,0.2],[0.1,-0.45,0.14],[-0.1,0.5,0.1]].forEach(([cx2,cy2,cr]) => { ctx.beginPath(); ctx.arc(x + cx2*r, y + cy2*r, cr*r, 0, TAU); ctx.fill(); });
+    }
+  }
+  function draw(){
+    const st = run ? sampleState() : idleState();
+    const m = Engine.moonAt(world, st.t);
+    const flicker = Math.random();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#05070f'; ctx.fillRect(0, 0, W, H);
+    for (const s of stars) { ctx.fillStyle = 'rgba(233,236,246,' + s[3] + ')'; ctx.fillRect(s[0]*W, s[1]*H, s[2], s[2]); }
+
+    const D = world.moon.dist, scale = (Math.min(W, H) / 2) / (D * 1.22), cx = W/2, cy = H/2;
+    const sx = x => cx + x*scale, sy = y => cy - y*scale;
+
+    ctx.setLineDash([3,6]); ctx.strokeStyle = 'rgba(143,152,184,0.28)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, D*scale, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(243,180,87,0.12)'; ctx.beginPath(); ctx.arc(sx(m.x), sy(m.y), world.hints.hillRadius*scale, 0, TAU); ctx.stroke();
+
+    const pr = Math.max(10, scale);
+    const pg = ctx.createRadialGradient(cx - pr*0.4, cy - pr*0.4, pr*0.1, cx, cy, pr);
+    pg.addColorStop(0, '#6fa3ff'); pg.addColorStop(0.6, '#3b78e3'); pg.addColorStop(1, '#17306a');
+    ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(cx, cy, pr, 0, TAU); ctx.fill();
+    const la = world.rocket.launchAngle;
+    ctx.strokeStyle = '#f3b457'; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.moveTo(sx(Math.cos(la)*0.96), sy(Math.sin(la)*0.96)); ctx.lineTo(sx(Math.cos(la)*1.08), sy(Math.sin(la)*1.08)); ctx.stroke();
+
+    if (run) {
+      const S = run.samples, n = run.idx;
+      ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+      let mode = -1;
+      for (let i = 0; i <= n; i++) {
+        const p = S[i], burn = p[5] > 0 ? 1 : 0;
+        if (burn !== mode) {
+          if (mode >= 0) ctx.stroke();
+          mode = burn; ctx.strokeStyle = burn ? 'rgba(243,180,87,0.95)' : 'rgba(143,152,184,0.7)';
+          ctx.beginPath(); ctx.moveTo(sx(p[1]), sy(p[2]));
+        } else ctx.lineTo(sx(p[1]), sy(p[2]));
+      }
+      if (mode >= 0) { ctx.lineTo(sx(st.x), sy(st.y)); ctx.stroke(); }
+    }
+
+    drawMoon(sx(m.x), sy(m.y), Math.max(4, world.moon.radius*scale));
+
+    let dirx, diry;
+    if (st.thr > 0) { dirx = st.dx; diry = st.dy; }
+    else if (Math.hypot(st.vx, st.vy) > 1e-4) { dirx = st.vx; diry = st.vy; }
+    else { dirx = st.x; diry = st.y; }
+    const dn = Math.hypot(dirx, diry) || 1; dirx /= dn; diry /= dn;
+    const crashed = run && run.done && (run.result.outcome === 'crashed_moon' || run.result.outcome === 'crashed_planet');
+    if (!crashed) drawRocket(sx(st.x), sy(st.y), dirx, diry, st.thr, 9, flicker);
+    else { ctx.fillStyle = 'rgba(242,112,110,0.85)'; ctx.beginPath(); ctx.arc(sx(st.x), sy(st.y), 5 + 3*flicker, 0, TAU); ctx.fill(); }
+
+    // landing cam
+    const dm = Math.hypot(st.x - m.x, st.y - m.y), alt = dm - world.moon.radius;
+    if (dm < world.hints.hillRadius * 1.4) {
+      const size = Math.min(230, Math.floor(W*0.42)), pad = 12, x0 = W - size - pad, y0 = H - size - pad;
+      const close = alt < world.moon.radius * 1.6;
+      const viewR = close ? world.moon.radius * 2.4 : world.hints.hillRadius * 1.4, sc = (size/2) / viewR;
+      ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, size, size); ctx.clip();
+      ctx.fillStyle = 'rgba(5,7,15,0.94)'; ctx.fillRect(x0, y0, size, size);
+      const icx = x0 + size/2, icy = y0 + size/2;
+      drawMoon(icx, icy, world.moon.radius*sc);
+      const rx = icx + (st.x - m.x)*sc, ry = icy - (st.y - m.y)*sc;
+      if (crashed) { ctx.fillStyle = 'rgba(242,112,110,0.9)'; ctx.beginPath(); ctx.arc(rx, ry, 8 + 4*flicker, 0, TAU); ctx.fill(); }
+      else drawRocket(rx, ry, dirx, diry, st.thr, close ? 10 : 7, flicker);
+      ctx.restore();
+      ctx.strokeStyle = '#27304d'; ctx.lineWidth = 1; ctx.strokeRect(x0 + .5, y0 + .5, size - 1, size - 1);
+      ctx.fillStyle = '#8f98b8'; ctx.font = '700 10px "Chakra Petch", sans-serif';
+      ctx.fillText('LANDING CAM', x0 + 8, y0 + 15);
+      ctx.font = '11px "IBM Plex Mono", monospace';
+      ctx.fillText('alt ' + Math.max(0, alt).toFixed(3) + '  rel ' + Math.hypot(st.vx - m.vx, st.vy - m.vy).toFixed(3), x0 + 8, y0 + size - 8);
+    }
+    setTelemetry(st);
+  }
+
+  // ---------- loop ----------
+  let last = 0;
+  function frame(now){
+    const dts = Math.min(0.1, (now - last) / 1000 || 0); last = now;
+    if (!run) idleT += dts * world.hints.moonPeriod / 40;
+    else if (!run.done) {
+      const S = run.samples, end = S[S.length-1][0];
+      const st = sampleState(), m = Engine.moonAt(world, st.t);
+      const near = Math.hypot(st.x - m.x, st.y - m.y) < world.hints.hillRadius * 1.4;
+      const base = world.deadline / 26;
+      const mult = st.onPad ? 10 : near ? 0.14 : st.thr > 0 ? 0.45 : 1;
+      run.tau += dts * base * mult * (fast ? 3 : 1);
+      if (run.tau >= end) {
+        run.tau = end; run.idx = S.length - 2; run.done = true;
+        const txt = outcomeText(run.result);
+        els.verdict.className = 'verdict ' + (run.result.outcome === 'landed' ? 'good' : 'bad');
+        els.verdict.innerHTML = escapeHtml(txt[0]) + '<span>' + escapeHtml(txt[1]) + '</span>';
+        els.verdict.hidden = false;
+        setStatus(run.result.outcome === 'landed' ? 'Entry scored: ' + run.result.fuelUsed.toFixed(3) + ' fuel. Lower wins.' : 'Entry scored zero. Fix the bot and resubmit.');
+      }
+    }
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- wiring ----------
+  function openEditor(){ els.editor.hidden = false; els.editor.scrollIntoView({behavior:'smooth', block:'start'}); setTimeout(() => els.code.focus(), 300); }
+  els.cta.addEventListener('click', openEditor);
+  els.closeBtn.addEventListener('click', () => { els.editor.hidden = true; });
+  els.resetBtn.addEventListener('click', () => { els.code.value = STARTER; saveCode(); });
+  els.runBtn.addEventListener('click', () => { saveCode(); runSandbox(els.code.value, els.botName.value.trim() || 'My bot'); window.scrollTo({top:0, behavior:'smooth'}); });
+  els.replayBtn.addEventListener('click', () => { if (run) { run.tau = 0; run.idx = 0; run.done = false; els.verdict.hidden = true; } });
+  els.speedBtn.addEventListener('click', () => { fast = !fast; els.speedBtn.setAttribute('aria-pressed', String(fast)); });
+  els.todayBtn.addEventListener('click', () => { const d = todaySeed(); loadWorld(d.seed, d.label); els.todayBtn.setAttribute('aria-pressed','true'); });
+  els.randomBtn.addEventListener('click', () => { const s = (Math.random()*4294967295) >>> 0; loadWorld(s, 'random'); els.todayBtn.setAttribute('aria-pressed','false'); });
+  els.code.addEventListener('keydown', e => {
+    if (e.key === 'Tab') { e.preventDefault(); const s = els.code.selectionStart, t = els.code.selectionEnd; els.code.value = els.code.value.slice(0,s) + '  ' + els.code.value.slice(t); els.code.selectionStart = els.code.selectionEnd = s + 2; }
+  });
+  function saveCode(){ try { localStorage.setItem('moonshot.code', els.code.value); localStorage.setItem('moonshot.name', els.botName.value); } catch (e) {} }
+  function loadCode(){ let c = null, n = null; try { c = localStorage.getItem('moonshot.code'); n = localStorage.getItem('moonshot.name'); } catch (e) {} els.code.value = c || STARTER; if (n) els.botName.value = n; }
+
+  function start(data){
+    loadCode();
+    if (data && data.code) els.code.value = data.code;
+    const d = todaySeed(); loadWorld(d.seed, d.label);
+    resize();
+    new ResizeObserver(resize).observe(cv);
+    requestAnimationFrame(frame);
+  }
+  if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => ({ code: els.code.value }));
+  if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(start); else start((window.claude && window.claude.hot && window.claude.hot.data) || {});
+})();
+</script>
+</body>
+</html>
