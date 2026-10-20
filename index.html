@@ -39,7 +39,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .cta:focus-visible,.btn:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .hero{margin:0;font-family:var(--display);font-weight:700;font-size:clamp(22px,3.2vw,34px);letter-spacing:.04em;line-height:1.15;color:var(--fg);text-wrap:balance}
 .hero em{font-style:normal;color:var(--accent)}
-.how{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.how{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.livebadge{position:absolute;right:12px;top:12px;display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:12px;letter-spacing:.14em;background:rgba(7,10,20,.85);border:1px solid var(--live);border-radius:999px;padding:6px 12px;color:var(--fg)}
+.livebadge i{width:8px;height:8px;border-radius:50%;background:var(--live);box-shadow:0 0 10px var(--live);animation:pulse 1.2s infinite;flex:none}
+.livebadge small{font-family:var(--body);letter-spacing:0;color:var(--muted);font-size:12px}
+@media (max-width:640px){.livebadge small{display:none}}
 @media (max-width:760px){.how{grid-template-columns:1fr}}
 .how div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:15px;color:var(--fg);display:flex;gap:12px;align-items:center}
 .how b{font-family:var(--display);color:var(--accent);font-size:22px;line-height:1;min-width:24px}
@@ -136,13 +140,13 @@ label.name input{width:150px}
   <section class="how">
     <div><b>1</b><span>Sign up with your email. Your first launch is free.</span></div>
     <div><b>2</b><span>Edit the sample flight path and launch it. It gets ten seconds to plan.</span></div>
-    <div><button class="cta" id="liveBtn">● Watch live</button><span>Every launch plays here as it happens.</span></div>
   </section>
 
   <div class="stagegrid">
     <section class="stage" aria-label="System view">
       <canvas id="sky"></canvas>
       <div class="banner" id="banner"><i></i><span id="bannerText">Waiting for the first launch</span></div>
+      <div class="livebadge"><i></i>LIVE<small>every launch plays here as it happens</small></div>
       <div class="verdict" id="verdict" hidden></div>
       <div class="controls" id="controls" hidden>
         <button class="btn" id="replayBtn">Replay</button>
@@ -386,7 +390,6 @@ label.name input{width:150px}
   // ---------- editor / launch ----------
   function openEditor(){ els.editor.hidden = false; els.editor.scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => els.code.focus(), 300); }
   els.cta.onclick = openEditor;
-  $('liveBtn').onclick = () => { document.querySelector('.stage').scrollIntoView({ behavior: 'smooth', block: 'start' }); if (!run && lastRun) restartReplay(); };
   els.closeBtn.onclick = () => { els.editor.hidden = true; };
   els.resetBtn.onclick = () => { els.code.value = STARTER; saveCode(); };
   function saveCode(){ try { localStorage.setItem('lander.code', els.code.value); localStorage.setItem('lander.name', els.botName.value); } catch (e) {} }
