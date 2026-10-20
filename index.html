@@ -762,7 +762,7 @@ label.name input{width:150px}
       g.fillText(b.name + (k === w.start ? ' ▲ start' : k === w.target ? ' ◎ target' : ''), px, py - r - 8);
     });
     g.textAlign = 'start';
-    if (!ended) { drawRocket(g, sx(st.x), sy(st.y), dirx, diry, st.thr, 7, flicker); g.fillStyle = '#f3b457'; g.font = '600 11px "IBM Plex Sans", sans-serif'; g.fillText('you', sx(st.x) + 11, sy(st.y) - 9); }
+    if (!ended) { drawRocket(g, sx(st.x), sy(st.y), dirx, diry, st.thr, 7, flicker); g.fillStyle = '#f3b457'; g.font = '600 11px "IBM Plex Sans", sans-serif'; g.fillText('you ▲', sx(st.x) + 9, sy(st.y) + 15); }
     else if (fx.flash > 0) { g.fillStyle = 'rgba(255,220,160,' + fx.flash + ')'; g.beginPath(); g.arc(sx(st.x), sy(st.y), 6 + 40*(1 - fx.flash), 0, TAU); g.fill(); }
     let label = null, sub = null;
     if (run && run.hold) { const left = Math.max(0, (run.hold.until - performance.now()) / 1000); label = 'T-' + Math.ceil(left); sub = 'Launching from ' + w.bodies[w.start].name; }
