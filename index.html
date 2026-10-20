@@ -906,7 +906,7 @@ function bot(world, sim) {
         const st = sampleState(), nr = nearest(st);
         const near = nr.d < nr.body.hill * 1.6;
         const base = world.deadline / 24;
-        const mult = st.onPad ? 8 : near ? 0.08 : st.thr > 0 ? 0.3 : 1;
+        const mult = st.onPad ? 8 : near ? (nr.k === world.target ? 0.08 : 0.35) : st.thr > 0 ? 0.3 : 1;
         let next = run.tau + dts * base * mult * (fast ? 3 : 1);
         if (!run.held && run.tLaunch != null && run.tau < run.tLaunch && next >= run.tLaunch) {
           next = run.tLaunch; run.held = true; run.hold = { until: now + 3200 };
