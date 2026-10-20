@@ -57,6 +57,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .stage{position:relative;background:var(--sky);border:1px solid var(--line);border-radius:10px;overflow:hidden;aspect-ratio:1/1;max-width:100%}
 .stage canvas,.camwrap canvas{display:block;width:100%;height:100%}
 .verdict{position:absolute;left:12px;right:12px;top:48px;padding:10px 14px;border-radius:6px;font-family:var(--display);font-size:20px;letter-spacing:.08em;text-transform:uppercase;background:rgba(7,10,20,.88);border:1px solid var(--line);pointer-events:none}
+.verdict{transition:opacity .9s ease}
+.verdict.fade{opacity:0}
 .verdict.good{border-color:var(--good);color:var(--good)}
 .verdict.bad{border-color:var(--bad);color:var(--bad)}
 .verdict span{display:block;font-family:var(--mono);font-size:12px;letter-spacing:0;text-transform:none;color:var(--fg);margin-top:4px}
@@ -825,7 +827,7 @@ label.name input{width:150px}
       if (!run) idleT += dts * w.bodies[0].period / 30;
       else if (run.done) {
         // after the verdict has had its moment, hand back to the live system; Replay brings it back
-        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); idleBanner(); }
+        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); idleBanner(); els.verdict.classList.add('fade'); setTimeout(() => { if (!run) els.verdict.hidden = true; }, 950); }
       }
       else {
         const S = run.samples, end = S[S.length-1][0];
@@ -843,7 +845,7 @@ label.name input{width:150px}
             if (run.result.outcome === 'landed') touchdown(w, stEnd, nrEnd);
             const txt = outcomeText(run.result, w);
             els.verdict.className = 'verdict ' + (run.result.outcome === 'landed' ? 'good' : 'bad');
-            els.verdict.innerHTML = esc(txt[0]) + '<span>' + esc(txt[1]) + '</span>'; els.verdict.hidden = false;
+            els.verdict.innerHTML = esc(txt[0]) + '<span>' + esc(txt[1]) + '</span>'; els.verdict.classList.remove('fade'); els.verdict.hidden = false;
             els.banner.classList.remove('live');
             if (playQueue.length) { const id = playQueue.shift(); setTimeout(() => watch(id, true), 2500); }
           }
