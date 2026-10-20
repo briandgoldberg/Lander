@@ -181,22 +181,23 @@ label.name input{background:var(--sky);border:1px solid var(--line);color:var(--
 
 <script id="engine" type="text/x-engine">
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
-var SYL=['ka','ri','to','ve','na','lo','sy','dra','mi','ul','pe','ron','ta','xi','or','qu','en','ash','ber','il','os','ty','gar','ne'];
+var GREEK=['Alpha','Beta','Gamma','Delta','Epsilon','Zeta'];
+var SYSTEMS=['Centauri','Eridani','Cygni','Draconis','Lyrae','Orionis','Tauri','Hydri','Ceti','Persei','Aquilae','Pegasi','Carinae','Vela'];
 var PALETTE=['#d98c5f','#7fb7e6','#c9c3b6','#b3d39a','#e3c36e','#9f8fd6','#e08aa8','#8ad0c8'];
 function makeWorld(seed){
   var rnd=mulberry32(seed>>>0);
   var sun={mass:1,radius:0.06};
-  var n=4+Math.floor(rnd()*3);
-  var bodies=[],used={},R=0.9+rnd()*0.3,DENSITY=100;
+  var systemName=SYSTEMS[Math.floor(rnd()*SYSTEMS.length)];
+  var n=4+(rnd()<0.5?0:1);
+  var bodies=[],R=0.9+rnd()*0.3,DENSITY=100;
   var colors=PALETTE.slice();
   for(var k=0;k<n;k++){
-    var name;do{var s=2+(rnd()<0.4?1:0),w='';for(var i=0;i<s;i++)w+=SYL[Math.floor(rnd()*SYL.length)];name=w[0].toUpperCase()+w.slice(1);}while(used[name]);used[name]=1;
     var radius=0.012+rnd()*0.022;
     var mass=DENSITY*radius*radius*radius;
     var omega=Math.sqrt(sun.mass/(R*R*R));
     var ci=Math.floor(rnd()*colors.length),color=colors.splice(ci,1)[0];
-    bodies.push({name:name,mass:+mass.toPrecision(4),radius:+radius.toFixed(4),orbitR:+R.toFixed(3),omega:omega,angle0:rnd()*Math.PI*2,period:2*Math.PI/omega,hill:R*Math.cbrt(mass/(3*sun.mass)),color:color});
-    R*=1.45+rnd()*0.45;
+    bodies.push({name:GREEK[k],mass:+mass.toPrecision(4),radius:+radius.toFixed(4),orbitR:+R.toFixed(3),omega:omega,angle0:rnd()*Math.PI*2,period:2*Math.PI/omega,hill:R*Math.cbrt(mass/(3*sun.mass)),color:color});
+    R*=1.6+rnd()*0.5;
   }
   var st=Math.floor(rnd()*n),tg=Math.floor(rnd()*(n-1));if(tg>=st)tg++;
   var A=bodies[st],B=bodies[tg];
@@ -215,7 +216,7 @@ function makeWorld(seed){
   var w0=(((need-phase0)/dw)%synodic+synodic)%synodic;
   var deadline=+(w0+1.6*tH+2).toFixed(1);
   return {
-    seed:seed>>>0,G:1,sun:sun,bodies:bodies,start:st,target:tg,
+    seed:seed>>>0,G:1,name:systemName,sun:sun,bodies:bodies,start:st,target:tg,
     rocket:{maxThrust:+(3*Math.max(gA,gB)).toFixed(3),fuel:fuel,padAngle:rnd()*Math.PI*2},
     deadline:deadline,safeLandingSpeed:0.03,
     hints:{transferTime:tH,synodic:synodic,hohmannDv:dv1+dv2,escapeStart:vescA,escapeTarget:vescB}
@@ -438,7 +439,7 @@ function bot(world, sim) {
   const Engine = new Function(ENGINE_SRC + '\n;return {makeWorld:makeWorld, bodyAt:bodyAt};')();
   const BUDGET_MS = 10000;
   const TAU = Math.PI * 2;
-  const PLANET_MAG = 40, SUN_MAG = 4;
+  const SUN_MAG = 4;
 
   const WORKER_GLUE = [
     'self.onmessage = function(e){',
@@ -483,9 +484,12 @@ function bot(world, sim) {
   };
 
   // ---------- state ----------
-  let world = null, stars = [];
+  let world = null, stars = [], planetMag = 20;
   let run = null, idleT = 0, fast = false, runs = [], runCount = 0, worker = null;
   let W = 0, H = 0, dpr = 1;
+  // visual effects live in wall-clock time, in coordinates relative to a planet's center
+  const fx = { smoke: [], debris: [], rings: [], flash: 0, shake: 0, label: null, labelT: 0 };
+  let lastDraw = 0;
 
   function todaySeed(){
     const d = new Date(), s = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -494,13 +498,18 @@ function bot(world, sim) {
     return { seed: h >>> 0, label: s };
   }
   function fmt(n, d){ return (+n).toFixed(d); }
+  function resetFx(){ fx.smoke.length = 0; fx.debris.length = 0; fx.rings.length = 0; fx.flash = 0; fx.shake = 0; fx.label = null; fx.labelT = 0; }
   function loadWorld(seed, label){
     world = Engine.makeWorld(seed);
     const rnd = (function(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; })(seed ^ 0x9e3779b9);
-    stars = []; for (let i = 0; i < 220; i++) stars.push([rnd(), rnd(), 0.4 + rnd()*1.3, 0.2 + rnd()*0.6]);
-    run = null; idleT = 0;
+    stars = []; for (let i = 0; i < 260; i++) stars.push([rnd(), rnd(), 0.4 + rnd()*1.4, 0.15 + rnd()*0.6]);
+    run = null; idleT = 0; resetFx();
     els.verdict.hidden = true; els.controls.hidden = true;
-    els.dayChip.textContent = 'Day ' + label + ' · system #' + (seed % 100000).toString().padStart(5,'0');
+    // one magnification for every planet, chosen so no two discs can touch
+    let minGap = world.bodies[0].orbitR - world.sun.radius * SUN_MAG, maxR = 0;
+    world.bodies.forEach((b, k) => { maxR = Math.max(maxR, b.radius); if (k > 0) minGap = Math.min(minGap, b.orbitR - world.bodies[k-1].orbitR); });
+    planetMag = Math.max(5, Math.min(30, Math.floor(0.42 * minGap / maxR)));
+    els.dayChip.textContent = world.name + ' system · ' + label + ' · #' + (seed % 100000).toString().padStart(5,'0');
     const A = world.bodies[world.start], B = world.bodies[world.target];
     els.brief.innerHTML = 'Launch from <b>' + A.name + '</b>, land on <b>' + B.name + '</b>. ' +
       (B.orbitR > A.orbitR ? 'Outward' : 'Inward') + ', ' + fmt(Math.abs(B.orbitR - A.orbitR), 2) + ' units of orbit to cross.';
@@ -512,12 +521,12 @@ function bot(world, sim) {
       ['Hohmann estimate', fmt(world.hints.transferTime, 1) + ' time units, Δv ' + fmt(world.hints.hohmannDv, 3)],
       ['Launch window repeats', 'every ' + fmt(world.hints.synodic, 1)],
       ['Escape speed, start / target', fmt(world.hints.escapeStart, 3) + ' / ' + fmt(world.hints.escapeTarget, 3)],
-      ['Sun', 'mass 1, radius ' + fmt(world.sun.radius, 2)]
+      ['Star', 'mass 1, radius ' + fmt(world.sun.radius, 2)]
     ].map(([k,v]) => '<dt>' + k + '</dt><dd>' + v + '</dd>').join('');
-    els.bodies.innerHTML = '<tr><th>Body</th><th>Orbit</th><th>Period</th><th>Radius</th><th>Mass ‰</th><th>Surface g</th></tr>' +
+    els.bodies.innerHTML = '<tr><th>Planet</th><th>Orbit</th><th>Period</th><th>Radius</th><th>Mass ‰</th><th>Surface g</th></tr>' +
       world.bodies.map((b, k) => '<tr' + (k === world.start || k === world.target ? ' class="hi"' : '') + '><td><i class="sw" style="background:' + b.color + '"></i>' + b.name +
         (k === world.start ? ' · start' : k === world.target ? ' · target' : '') + '</td><td>' + fmt(b.orbitR, 2) + '</td><td>' + fmt(b.period, 1) + '</td><td>' + fmt(b.radius, 4) + '</td><td>' + fmt(b.mass * 1000, 2) + '</td><td>' + fmt(b.mass / (b.radius * b.radius), 1) + '</td></tr>').join('');
-    els.scalebar.innerHTML = 'orbits to scale · planets ×' + PLANET_MAG + ' · sun ×' + SUN_MAG + '<br>approach cam at true scale';
+    els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMag + ' · star ×' + SUN_MAG + '<br>approach cam at true scale';
     setTelemetry(idleState());
     setStatus('The sandbox owns the physics. Your code gets the system and 10 seconds to plan.');
   }
@@ -548,18 +557,23 @@ function bot(world, sim) {
 
   function startReplay(result, flights, thinkMs, name){
     runCount++;
-    run = { samples: result.samples, result, tau: 0, idx: 0, done: false, name, flights, thinkMs, n: runCount };
+    const S = result.samples;
+    let tLaunch = null;
+    for (let i = 0; i < S.length; i++) if (S[i][5] > 0) { tLaunch = S[i][0]; break; }
+    run = { samples: S, result, tau: 0, idx: 0, done: false, name, flights, thinkMs, n: runCount, tLaunch, held: false, hold: null };
+    resetFx();
     els.verdict.hidden = true; els.controls.hidden = false;
     setStatus('Flight computed in ' + (thinkMs/1000).toFixed(1) + ' s after ' + flights + ' test flights. Replaying the official flight.');
     runs.unshift(run); if (runs.length > 8) runs.pop();
     renderRuns();
   }
+  function restartReplay(){ if (!run) return; run.tau = 0; run.idx = 0; run.done = false; run.held = false; run.hold = null; resetFx(); els.verdict.hidden = true; }
   function outcomeText(r){
     const B = world.bodies[world.target];
     switch (r.outcome) {
       case 'landed': return ['Safe landing on ' + B.name, 'Fuel used ' + fmt(r.fuelUsed, 3) + ' of ' + fmt(world.rocket.fuel, 2) + ' · touchdown ' + fmt(r.landingSpeed, 3) + ' (limit ' + fmt(world.safeLandingSpeed, 2) + ') · T+' + fmt(r.time, 1)];
       case 'crashed': return ['Crashed into ' + r.body, 'Hit at ' + fmt(r.landingSpeed, 3) + (r.body === B.name ? ', limit ' + fmt(world.safeLandingSpeed, 2) : ', wrong planet') + ' · fuel used ' + fmt(r.fuelUsed, 3) + ' · T+' + fmt(r.time, 1)];
-      case 'burned': return ['Flew into the sun', 'Fuel used ' + fmt(r.fuelUsed, 3) + ' · T+' + fmt(r.time, 1)];
+      case 'burned': return ['Flew into the star', 'Fuel used ' + fmt(r.fuelUsed, 3) + ' · T+' + fmt(r.time, 1)];
       case 'lost': return ['Lost in space', 'Left the system · closest approach to ' + B.name + ' ' + (r.closestApproach == null ? 'never' : fmt(r.closestApproach, 3))];
       default: return ['Deadline missed', 'Closest approach to ' + B.name + ' ' + (r.closestApproach == null ? 'never' : fmt(r.closestApproach, 3)) + ' · fuel used ' + fmt(r.fuelUsed, 3)];
     }
@@ -601,6 +615,7 @@ function bot(world, sim) {
   }
   function phaseOf(st, nr){
     if (run && run.done) return outcomeText(run.result)[0];
+    if (run && run.hold) return 'Countdown';
     if (st.onPad) return 'On pad';
     if (nr.d < nr.body.hill * 1.5) return (nr.k === world.target ? 'Approach ' : nr.k === world.start ? 'Leaving ' : 'Flyby ') + nr.body.name;
     return st.thr > 0 ? 'Burn' : 'Cruise';
@@ -621,37 +636,115 @@ function bot(world, sim) {
     els.tUsed.textContent = fmt(used, 3);
   }
 
+  // ---------- effects ----------
+  function ignite(st){
+    fx.shake = 1.0; fx.flash = 0.35; fx.label = 'IGNITION'; fx.labelT = 1.0;
+    const A = world.bodies[world.start], pa = world.rocket.padAngle;
+    const px = A.radius*Math.cos(pa), py = A.radius*Math.sin(pa), tx = -Math.sin(pa), ty = Math.cos(pa);
+    for (let i = 0; i < 46; i++) {
+      const side = i % 2 ? 1 : -1, sp = (0.3 + Math.random()*0.9) * A.radius;
+      fx.smoke.push({ k: world.start, x: px, y: py, vx: tx*side*sp + Math.cos(pa)*A.radius*0.15*Math.random(), vy: ty*side*sp + Math.sin(pa)*A.radius*0.15*Math.random(),
+        size: A.radius*(0.08 + Math.random()*0.12), grow: A.radius*0.25, life: 1.6 + Math.random()*1.4, age: 0, tone: 150 + Math.random()*60 });
+    }
+  }
+  function explode(st, nr){
+    fx.shake = 1.3; fx.flash = 0.7; fx.label = null;
+    const b = nr.body, rx = st.x - nr.b.x, ry = st.y - nr.b.y, d = Math.hypot(rx, ry) || 1, ux = rx/d, uy = ry/d;
+    for (let i = 0; i < 70; i++) {
+      const ang = Math.atan2(uy, ux) + (Math.random() - 0.5) * 2.4, sp = (0.15 + Math.random()*1.1) * b.radius;
+      const hot = Math.random() < 0.55;
+      fx.debris.push({ k: nr.k, x: rx + ux*b.radius*0.01, y: ry + uy*b.radius*0.01, vx: Math.cos(ang)*sp + nr.b.vx*0, vy: Math.sin(ang)*sp, life: 1.2 + Math.random()*1.8, age: 0,
+        size: hot ? 1.2 + Math.random()*2.2 : 0.8 + Math.random()*1.6, color: hot ? (Math.random() < 0.5 ? '#ffd27a' : '#ff8c4a') : '#b9c0d2' });
+    }
+    for (let i = 0; i < 22; i++) {
+      const ang = Math.atan2(uy, ux) + (Math.random() - 0.5) * 2.0, sp = (0.1 + Math.random()*0.5) * b.radius;
+      fx.smoke.push({ k: nr.k, x: rx, y: ry, vx: Math.cos(ang)*sp, vy: Math.sin(ang)*sp, size: b.radius*(0.05 + Math.random()*0.1), grow: b.radius*0.3, life: 1.5 + Math.random()*1.5, age: 0, tone: 70 + Math.random()*50 });
+    }
+    fx.rings.push({ k: nr.k, x: rx, y: ry, r: 0, speed: b.radius*2.2, life: 0.9, age: 0, width: 3 });
+    fx.rings.push({ k: nr.k, x: rx, y: ry, r: 0, speed: b.radius*1.3, life: 1.3, age: 0, width: 1.5 });
+  }
+  function updateFx(dt){
+    fx.flash = Math.max(0, fx.flash - dt * 1.6);
+    fx.shake = Math.max(0, fx.shake - dt * 1.4);
+    if (fx.label) { fx.labelT -= dt; if (fx.labelT <= 0) fx.label = null; }
+    for (const p of fx.smoke) { p.age += dt; p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= Math.pow(0.35, dt); p.vy *= Math.pow(0.35, dt); p.size += p.grow*dt; }
+    fx.smoke = fx.smoke.filter(p => p.age < p.life);
+    for (const p of fx.debris) {
+      p.age += dt;
+      const b = world.bodies[p.k], d = Math.hypot(p.x, p.y) || 1;
+      if (d > b.radius) { const g = b.radius * 1.2; p.vx -= p.x/d * g * dt; p.vy -= p.y/d * g * dt; p.x += p.vx*dt; p.y += p.vy*dt; }
+      else { const s = b.radius / d; p.x *= s; p.y *= s; p.vx = 0; p.vy = 0; }
+    }
+    fx.debris = fx.debris.filter(p => p.age < p.life);
+    for (const r of fx.rings) { r.age += dt; r.r += r.speed*dt; }
+    fx.rings = fx.rings.filter(r => r.age < r.life);
+  }
+
   // ---------- drawing ----------
   function resize(){
     dpr = Math.min(2, window.devicePixelRatio || 1);
     W = cv.clientWidth; H = cv.clientHeight;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   }
-  function drawRocket(x, y, dirx, diry, thr, size, flicker){
-    const ang = Math.atan2(-diry, dirx);
-    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
-    if (thr > 0) {
-      const L = size * (0.8 + thr * 1.8) * (0.85 + 0.3 * flicker);
-      const g = ctx.createLinearGradient(-size*0.5, 0, -size*0.5 - L, 0);
-      g.addColorStop(0, 'rgba(255,236,190,0.95)'); g.addColorStop(0.35, 'rgba(243,180,87,0.9)'); g.addColorStop(1, 'rgba(243,120,60,0)');
-      ctx.fillStyle = g; ctx.beginPath();
-      ctx.moveTo(-size*0.5, -size*0.28); ctx.lineTo(-size*0.5 - L, 0); ctx.lineTo(-size*0.5, size*0.28); ctx.closePath(); ctx.fill();
-    }
-    ctx.fillStyle = '#f4f6fb'; ctx.beginPath();
-    ctx.moveTo(size*0.9, 0); ctx.lineTo(-size*0.5, -size*0.42); ctx.lineTo(-size*0.3, 0); ctx.lineTo(-size*0.5, size*0.42); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#f3b457'; ctx.beginPath(); ctx.arc(size*0.2, 0, size*0.14, 0, TAU); ctx.fill();
-    ctx.restore();
-  }
-  function drawPlanet(x, y, r, color){
-    const g = ctx.createRadialGradient(x - r*0.35, y - r*0.35, r*0.1, x, y, r);
-    g.addColorStop(0, lighten(color, 0.35)); g.addColorStop(0.7, color); g.addColorStop(1, darken(color, 0.5));
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
-  }
   function hex(c){ return [parseInt(c.slice(1,3),16), parseInt(c.slice(3,5),16), parseInt(c.slice(5,7),16)]; }
   function lighten(c, f){ const [r,g,b] = hex(c); return 'rgb(' + Math.round(r + (255-r)*f) + ',' + Math.round(g + (255-g)*f) + ',' + Math.round(b + (255-b)*f) + ')'; }
   function darken(c, f){ const [r,g,b] = hex(c); return 'rgb(' + Math.round(r*(1-f)) + ',' + Math.round(g*(1-f)) + ',' + Math.round(b*(1-f)) + ')'; }
 
-  function draw(){
+  // A rocket with a shaded cylindrical body, nose cone, fins, porthole, engine bell and layered flame. Nose points along (dirx, diry).
+  function drawRocket(x, y, dirx, diry, thr, s, flicker){
+    const ang = Math.atan2(-diry, dirx);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    if (thr > 0) {
+      const L = s * (1.2 + thr * 2.6) * (0.8 + 0.4 * flicker);
+      const outer = ctx.createLinearGradient(-s*0.75, 0, -s*0.75 - L, 0);
+      outer.addColorStop(0, 'rgba(255,170,70,0.9)'); outer.addColorStop(0.5, 'rgba(255,110,40,0.55)'); outer.addColorStop(1, 'rgba(255,80,30,0)');
+      ctx.fillStyle = outer; ctx.beginPath();
+      ctx.moveTo(-s*0.72, -s*0.26); ctx.quadraticCurveTo(-s*0.75 - L*0.45, -s*0.5, -s*0.75 - L, 0); ctx.quadraticCurveTo(-s*0.75 - L*0.45, s*0.5, -s*0.72, s*0.26); ctx.closePath(); ctx.fill();
+      const inner = ctx.createLinearGradient(-s*0.75, 0, -s*0.75 - L*0.55, 0);
+      inner.addColorStop(0, 'rgba(255,255,230,0.98)'); inner.addColorStop(0.6, 'rgba(255,220,120,0.8)'); inner.addColorStop(1, 'rgba(255,200,90,0)');
+      ctx.fillStyle = inner; ctx.beginPath();
+      ctx.moveTo(-s*0.72, -s*0.14); ctx.lineTo(-s*0.75 - L*0.55, 0); ctx.lineTo(-s*0.72, s*0.14); ctx.closePath(); ctx.fill();
+    }
+    // engine bell
+    const bell = ctx.createLinearGradient(0, -s*0.3, 0, s*0.3);
+    bell.addColorStop(0, '#6b7084'); bell.addColorStop(0.5, '#2a2f3f'); bell.addColorStop(1, '#14171f');
+    ctx.fillStyle = bell; ctx.beginPath();
+    ctx.moveTo(-s*0.55, -s*0.2); ctx.lineTo(-s*0.78, -s*0.3); ctx.lineTo(-s*0.78, s*0.3); ctx.lineTo(-s*0.55, s*0.2); ctx.closePath(); ctx.fill();
+    // fins
+    const fin = ctx.createLinearGradient(0, -s*0.7, 0, s*0.7);
+    fin.addColorStop(0, '#ff9a5c'); fin.addColorStop(0.5, '#e05a3a'); fin.addColorStop(1, '#7a2a1c');
+    ctx.fillStyle = fin;
+    ctx.beginPath(); ctx.moveTo(-s*0.62, -s*0.3); ctx.lineTo(-s*0.2, -s*0.3); ctx.lineTo(-s*0.72, -s*0.68); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-s*0.62, s*0.3); ctx.lineTo(-s*0.2, s*0.3); ctx.lineTo(-s*0.72, s*0.68); ctx.closePath(); ctx.fill();
+    // body, shaded across its width so it reads as a cylinder
+    const body = ctx.createLinearGradient(0, -s*0.32, 0, s*0.32);
+    body.addColorStop(0, '#b9c0cf'); body.addColorStop(0.3, '#ffffff'); body.addColorStop(0.7, '#d7dbe6'); body.addColorStop(1, '#6f7689');
+    ctx.fillStyle = body; ctx.beginPath();
+    ctx.moveTo(-s*0.62, -s*0.32); ctx.lineTo(s*0.42, -s*0.32); ctx.lineTo(s*0.42, s*0.32); ctx.lineTo(-s*0.62, s*0.32); ctx.closePath(); ctx.fill();
+    // stripe
+    ctx.fillStyle = '#e05a3a'; ctx.fillRect(-s*0.1, -s*0.32, s*0.16, s*0.64);
+    // nose cone
+    const nose = ctx.createLinearGradient(0, -s*0.32, 0, s*0.32);
+    nose.addColorStop(0, '#ffd48a'); nose.addColorStop(0.35, '#f3b457'); nose.addColorStop(1, '#7d5620');
+    ctx.fillStyle = nose; ctx.beginPath();
+    ctx.moveTo(s*0.42, -s*0.32); ctx.quadraticCurveTo(s*0.95, -s*0.12, s*1.05, 0); ctx.quadraticCurveTo(s*0.95, s*0.12, s*0.42, s*0.32); ctx.closePath(); ctx.fill();
+    // porthole
+    ctx.fillStyle = '#2b3550'; ctx.beginPath(); ctx.arc(s*0.16, 0, s*0.13, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#8fc5ff'; ctx.beginPath(); ctx.arc(s*0.16, 0, s*0.09, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(s*0.13, -s*0.035, s*0.03, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  // Planet lit by the star: (lx, ly) is the screen-space direction toward the star.
+  function drawPlanet(x, y, r, color, lx, ly){
+    const g = ctx.createRadialGradient(x + lx*r*0.45, y + ly*r*0.45, r*0.05, x + lx*r*0.15, y + ly*r*0.15, r*1.25);
+    g.addColorStop(0, lighten(color, 0.5)); g.addColorStop(0.45, color); g.addColorStop(0.8, darken(color, 0.55)); g.addColorStop(1, darken(color, 0.85));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  }
+  function lightDir(px, py){ const d = Math.hypot(px, py) || 1; return [-px/d, py/d]; }
+
+  function draw(now){
+    const fxDt = Math.min(0.1, (now - lastDraw) / 1000 || 0); lastDraw = now;
+    updateFx(fxDt);
     const st = run ? sampleState() : idleState();
     const flicker = Math.random();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -659,20 +752,23 @@ function bot(world, sim) {
     for (const s of stars) { ctx.fillStyle = 'rgba(233,236,246,' + s[3] + ')'; ctx.fillRect(s[0]*W, s[1]*H, s[2], s[2]); }
 
     const outer = world.bodies[world.bodies.length-1].orbitR;
-    const scale = (Math.min(W, H) / 2) / (outer * 1.12), cx = W/2, cy = H/2;
+    const scale = (Math.min(W, H) / 2) / (outer * 1.1), cx = W/2, cy = H/2;
     const sx = x => cx + x*scale, sy = y => cy - y*scale;
+    const nr = nearest(st);
 
     // orbits
     ctx.lineWidth = 1; ctx.setLineDash([3,6]);
     for (const b of world.bodies) { ctx.strokeStyle = 'rgba(143,152,184,0.22)'; ctx.beginPath(); ctx.arc(cx, cy, b.orbitR*scale, 0, TAU); ctx.stroke(); }
     ctx.setLineDash([]);
 
-    // sun: true disc at SUN_MAG, plus glow
-    const sr = world.sun.radius * scale * SUN_MAG;
-    const sg = ctx.createRadialGradient(cx, cy, sr*0.5, cx, cy, sr*4);
-    sg.addColorStop(0, 'rgba(255,214,120,0.55)'); sg.addColorStop(1, 'rgba(255,170,60,0)');
-    ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(cx, cy, sr*4, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#ffe9a8'; ctx.beginPath(); ctx.arc(cx, cy, sr, 0, TAU); ctx.fill();
+    // star
+    const sr = Math.max(3, world.sun.radius * scale * SUN_MAG);
+    const sg = ctx.createRadialGradient(cx, cy, sr*0.6, cx, cy, sr*3.2);
+    sg.addColorStop(0, 'rgba(255,214,120,0.5)'); sg.addColorStop(1, 'rgba(255,170,60,0)');
+    ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(cx, cy, sr*3.2, 0, TAU); ctx.fill();
+    const sc0 = ctx.createRadialGradient(cx - sr*0.3, cy - sr*0.3, sr*0.1, cx, cy, sr);
+    sc0.addColorStop(0, '#fff6d6'); sc0.addColorStop(1, '#ffc24a');
+    ctx.fillStyle = sc0; ctx.beginPath(); ctx.arc(cx, cy, sr, 0, TAU); ctx.fill();
 
     // trail
     if (run) {
@@ -691,36 +787,50 @@ function bot(world, sim) {
       if (mode >= 0) { ctx.lineTo(sx(st.x), sy(st.y)); ctx.stroke(); }
     }
 
-    // planets at PLANET_MAG, labels
+    // planets
     ctx.font = '500 11px "IBM Plex Sans", sans-serif'; ctx.textAlign = 'center';
     world.bodies.forEach((b, k) => {
-      const p = Engine.bodyAt(world, k, st.t), px = sx(p.x), py = sy(p.y), r = b.radius * scale * PLANET_MAG;
-      drawPlanet(px, py, r, b.color);
+      const p = Engine.bodyAt(world, k, st.t), px = sx(p.x), py = sy(p.y), r = b.radius * scale * planetMag;
+      const [lx, ly] = lightDir(p.x, p.y);
+      drawPlanet(px, py, r, b.color, lx, ly);
       if (k === world.start || k === world.target) { ctx.strokeStyle = 'rgba(243,180,87,0.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(px, py, r + 5, 0, TAU); ctx.stroke(); }
       ctx.fillStyle = k === world.start || k === world.target ? '#f3b457' : '#8f98b8';
       ctx.fillText(b.name + (k === world.start ? ' ▲' : k === world.target ? ' ◎' : ''), px, py - r - 7);
     });
     ctx.textAlign = 'start';
 
-    // rocket in system view
+    // rocket heading
     let dirx, diry;
-    const nr = nearest(st);
     if (st.thr > 0) { dirx = st.dx; diry = st.dy; }
     else { const rvx = st.vx - nr.b.vx, rvy = st.vy - nr.b.vy; if (nr.d < nr.body.hill*1.5 && Math.hypot(rvx, rvy) > 1e-5) { dirx = rvx; diry = rvy; } else { dirx = st.vx; diry = st.vy; } }
+    if (st.onPad) { dirx = st.x - nr.b.x; diry = st.y - nr.b.y; }
     const dn = Math.hypot(dirx, diry) || 1; dirx /= dn; diry /= dn;
     const ended = run && run.done && (run.result.outcome === 'crashed' || run.result.outcome === 'burned');
-    if (!ended) drawRocket(sx(st.x), sy(st.y), dirx, diry, st.thr, 8, flicker);
-    else { ctx.fillStyle = 'rgba(242,112,110,0.9)'; ctx.beginPath(); ctx.arc(sx(st.x), sy(st.y), 5 + 3*flicker, 0, TAU); ctx.fill(); }
+    if (!ended) drawRocket(sx(st.x), sy(st.y), dirx, diry, st.thr, 7, flicker);
+    else if (fx.flash > 0) { ctx.fillStyle = 'rgba(255,220,160,' + fx.flash + ')'; ctx.beginPath(); ctx.arc(sx(st.x), sy(st.y), 6 + 30*(0.7 - fx.flash), 0, TAU); ctx.fill(); }
+
+    // launch smoke while the engine runs near the start planet's surface
+    if (run && !run.done && st.thr > 0 && nr.k === world.start && nr.d - nr.body.radius < nr.body.radius * 1.5) {
+      const A = nr.body, rx = st.x - nr.b.x, ry = st.y - nr.b.y;
+      for (let i = 0; i < 4; i++) {
+        const sp = (0.2 + Math.random()*0.5) * A.radius;
+        fx.smoke.push({ k: world.start, x: rx - dirx*A.radius*0.05, y: ry - diry*A.radius*0.05, vx: -dirx*sp + (Math.random()-0.5)*sp*0.8, vy: -diry*sp + (Math.random()-0.5)*sp*0.8,
+          size: A.radius*(0.03 + Math.random()*0.05), grow: A.radius*0.18, life: 0.9 + Math.random()*0.9, age: 0, tone: 170 + Math.random()*50 });
+      }
+    }
 
     // approach cam: true scale, centered on the nearest planet when close
     if (nr.d < nr.body.hill * 1.6) {
       const b = nr.body, p = nr.b, alt = nr.d - b.radius;
-      const size = Math.min(300, Math.floor(W*0.48)), pad = 12, x0 = W - size - pad, y0 = H - size - pad;
+      const size = Math.min(340, Math.floor(W*0.5)), pad = 12, x0 = W - size - pad, y0 = H - size - pad;
       const close = alt < b.radius * 2.5;
-      const viewR = close ? b.radius * 3.2 : b.hill * 1.6, sc = (size/2) / viewR;
+      const viewR = close ? b.radius * 3.0 : b.hill * 1.6, sc = (size/2) / viewR;
+      const shx = (Math.random()-0.5) * 14 * fx.shake * fx.shake, shy = (Math.random()-0.5) * 14 * fx.shake * fx.shake;
       ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, size, size); ctx.clip();
       ctx.fillStyle = 'rgba(4,6,13,0.96)'; ctx.fillRect(x0, y0, size, size);
+      ctx.translate(shx, shy);
       const icx = x0 + size/2, icy = y0 + size/2;
+      const [lx, ly] = lightDir(p.x, p.y);
       if (!close) { ctx.strokeStyle = 'rgba(243,180,87,0.15)'; ctx.setLineDash([3,5]); ctx.beginPath(); ctx.arc(icx, icy, b.hill*sc, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
       if (run) {
         const S = run.samples; let started = false;
@@ -732,10 +842,32 @@ function bot(world, sim) {
         }
         ctx.stroke();
       }
-      drawPlanet(icx, icy, b.radius*sc, b.color);
+      drawPlanet(icx, icy, b.radius*sc, b.color, lx, ly);
+      // smoke and dust
+      for (const q of fx.smoke) if (q.k === nr.k) {
+        const a = Math.max(0, 1 - q.age / q.life) * 0.5;
+        ctx.fillStyle = 'rgba(' + Math.round(q.tone) + ',' + Math.round(q.tone) + ',' + Math.round(q.tone + 20) + ',' + a.toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(icx + q.x*sc, icy - q.y*sc, Math.max(1, q.size*sc), 0, TAU); ctx.fill();
+      }
       const rx = icx + (st.x - p.x)*sc, ry = icy - (st.y - p.y)*sc;
-      if (ended) { ctx.fillStyle = 'rgba(242,112,110,0.9)'; ctx.beginPath(); ctx.arc(rx, ry, 9 + 5*flicker, 0, TAU); ctx.fill(); }
-      else drawRocket(rx, ry, dirx, diry, st.thr, close ? 11 : 8, flicker);
+      if (!ended) drawRocket(rx, ry, dirx, diry, st.thr, close ? 16 : 10, flicker);
+      // explosion
+      for (const r of fx.rings) if (r.k === nr.k) {
+        const a = Math.max(0, 1 - r.age / r.life);
+        ctx.strokeStyle = 'rgba(255,200,120,' + (a*0.9).toFixed(3) + ')'; ctx.lineWidth = r.width;
+        ctx.beginPath(); ctx.arc(icx + r.x*sc, icy - r.y*sc, r.r*sc, 0, TAU); ctx.stroke();
+      }
+      for (const q of fx.debris) if (q.k === nr.k) {
+        const a = Math.max(0, 1 - q.age / q.life);
+        ctx.fillStyle = q.color; ctx.globalAlpha = a;
+        ctx.beginPath(); ctx.arc(icx + q.x*sc, icy - q.y*sc, q.size, 0, TAU); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      if (ended && fx.flash > 0) {
+        const fg = ctx.createRadialGradient(rx, ry, 0, rx, ry, size*0.6);
+        fg.addColorStop(0, 'rgba(255,240,200,' + fx.flash + ')'); fg.addColorStop(1, 'rgba(255,120,60,0)');
+        ctx.fillStyle = fg; ctx.fillRect(x0 - 20, y0 - 20, size + 40, size + 40);
+      }
       ctx.restore();
       ctx.strokeStyle = '#27304d'; ctx.lineWidth = 1; ctx.strokeRect(x0 + .5, y0 + .5, size - 1, size - 1);
       ctx.fillStyle = '#8f98b8'; ctx.font = '700 10px "Chakra Petch", sans-serif';
@@ -743,6 +875,21 @@ function bot(world, sim) {
       ctx.font = '11px "IBM Plex Mono", monospace';
       ctx.fillText('alt ' + fmt(Math.max(0, alt), 4) + '  rel ' + fmt(Math.hypot(st.vx - p.vx, st.vy - p.vy), 3), x0 + 8, y0 + size - 8);
     }
+
+    // countdown and ignition callouts
+    let label = null, sub = null;
+    if (run && run.hold) { const left = Math.max(0, (run.hold.until - now) / 1000); label = 'T-' + Math.ceil(left); sub = 'Launch from ' + world.bodies[world.start].name; }
+    else if (fx.label) label = fx.label;
+    if (label) {
+      ctx.save(); ctx.textAlign = 'center';
+      ctx.font = '700 44px "Chakra Petch", sans-serif';
+      ctx.shadowColor = 'rgba(243,180,87,0.8)'; ctx.shadowBlur = 24;
+      ctx.fillStyle = '#f3b457'; ctx.fillText(label, W/2, H*0.16);
+      ctx.shadowBlur = 0;
+      if (sub) { ctx.font = '500 13px "IBM Plex Sans", sans-serif'; ctx.fillStyle = '#e9ecf6'; ctx.fillText(sub, W/2, H*0.16 + 22); }
+      ctx.restore();
+    }
+    if (fx.flash > 0 && !ended) { ctx.fillStyle = 'rgba(255,230,190,' + (fx.flash*0.35).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }
     setTelemetry(st);
   }
 
@@ -753,21 +900,31 @@ function bot(world, sim) {
     if (!run) idleT += dts * world.bodies[0].period / 30;
     else if (!run.done) {
       const S = run.samples, end = S[S.length-1][0];
-      const st = sampleState(), nr = nearest(st);
-      const near = nr.d < nr.body.hill * 1.6;
-      const base = world.deadline / 24;
-      const mult = st.onPad ? 8 : near ? 0.08 : st.thr > 0 ? 0.3 : 1;
-      run.tau += dts * base * mult * (fast ? 3 : 1);
-      if (run.tau >= end) {
-        run.tau = end; run.idx = S.length - 2; run.done = true;
-        const txt = outcomeText(run.result);
-        els.verdict.className = 'verdict ' + (run.result.outcome === 'landed' ? 'good' : 'bad');
-        els.verdict.innerHTML = escapeHtml(txt[0]) + '<span>' + escapeHtml(txt[1]) + '</span>';
-        els.verdict.hidden = false;
-        setStatus(run.result.outcome === 'landed' ? 'Entry scored: ' + fmt(run.result.fuelUsed, 3) + ' fuel. Lower wins.' : 'Entry scored zero. Fix the bot and resubmit.');
+      if (run.hold) {
+        if (now >= run.hold.until) { run.hold = null; ignite(sampleState()); }
+      } else {
+        const st = sampleState(), nr = nearest(st);
+        const near = nr.d < nr.body.hill * 1.6;
+        const base = world.deadline / 24;
+        const mult = st.onPad ? 8 : near ? 0.08 : st.thr > 0 ? 0.3 : 1;
+        let next = run.tau + dts * base * mult * (fast ? 3 : 1);
+        if (!run.held && run.tLaunch != null && run.tau < run.tLaunch && next >= run.tLaunch) {
+          next = run.tLaunch; run.held = true; run.hold = { until: now + 3200 };
+        }
+        run.tau = next;
+        if (run.tau >= end) {
+          run.tau = end; run.idx = S.length - 2; run.done = true;
+          const stEnd = sampleState(), nrEnd = nearest(stEnd);
+          if (run.result.outcome === 'crashed' || run.result.outcome === 'burned') explode(stEnd, nrEnd);
+          const txt = outcomeText(run.result);
+          els.verdict.className = 'verdict ' + (run.result.outcome === 'landed' ? 'good' : 'bad');
+          els.verdict.innerHTML = escapeHtml(txt[0]) + '<span>' + escapeHtml(txt[1]) + '</span>';
+          els.verdict.hidden = false;
+          setStatus(run.result.outcome === 'landed' ? 'Entry scored: ' + fmt(run.result.fuelUsed, 3) + ' fuel. Lower wins.' : 'Entry scored zero. Fix the bot and resubmit.');
+        }
       }
     }
-    draw();
+    draw(now);
     requestAnimationFrame(frame);
   }
 
@@ -777,7 +934,7 @@ function bot(world, sim) {
   els.closeBtn.addEventListener('click', () => { els.editor.hidden = true; });
   els.resetBtn.addEventListener('click', () => { els.code.value = STARTER; saveCode(); });
   els.runBtn.addEventListener('click', () => { saveCode(); runSandbox(els.code.value, els.botName.value.trim() || 'My bot'); window.scrollTo({top:0, behavior:'smooth'}); });
-  els.replayBtn.addEventListener('click', () => { if (run) { run.tau = 0; run.idx = 0; run.done = false; els.verdict.hidden = true; } });
+  els.replayBtn.addEventListener('click', restartReplay);
   els.speedBtn.addEventListener('click', () => { fast = !fast; els.speedBtn.setAttribute('aria-pressed', String(fast)); });
   els.todayBtn.addEventListener('click', () => { const d = todaySeed(); loadWorld(d.seed, d.label); els.todayBtn.setAttribute('aria-pressed','true'); });
   els.randomBtn.addEventListener('click', () => { const s = (Math.random()*4294967295) >>> 0; loadWorld(s, 'random'); els.todayBtn.setAttribute('aria-pressed','false'); });
