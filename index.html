@@ -62,6 +62,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .banner{position:absolute;left:12px;top:12px;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;background:rgba(7,10,20,.8);border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--fg);max-width:calc(100% - 24px)}
 .banner span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .banner i{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.banner.replay{cursor:pointer;border-color:var(--accent);color:var(--accent)}
+.banner.replay:hover{background:rgba(243,180,87,.12)}
 .banner.live i{background:var(--live);box-shadow:0 0 10px var(--live);animation:pulse 1.2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .controls{position:absolute;left:12px;bottom:12px;display:flex;gap:6px}
@@ -447,6 +449,17 @@ label.name input{width:150px}
   }
 
   // ---------- feed / board / live ----------
+  // The idle banner: waiting for the first launch, or an offer to replay the last one.
+  function idleBanner(){
+    if (run) return;
+    els.banner.hidden = false; els.banner.onclick = null;
+    if (busyLaunch) { const f = feed.find(x => x.id === busyLaunch); els.banner.classList.add('live'); els.banner.classList.remove('replay'); els.bannerText.textContent = 'Launch in progress' + (f ? ': ' + f.pilot + "'s " + f.bot_name : '…'); return; }
+    els.banner.classList.remove('live');
+    const last = feed.find(f => f.status === 'done' && f.outcome !== 'error');
+    if (!last) { els.banner.classList.remove('replay'); els.bannerText.textContent = 'Waiting for the first launch'; return; }
+    els.banner.classList.add('replay'); els.bannerText.textContent = '▶ Replay last launch · ' + (last.pilot || 'pilot') + "'s " + last.bot_name;
+    els.banner.onclick = () => watch(last.id, false, 'Replay');
+  }
   async function refreshGame(){
     const { data, error } = await sb.rpc('game_state');
     if (error || !data || !data.game) return;
@@ -454,8 +467,7 @@ label.name input{width:150px}
     game = data.game; busyLaunch = game.busy ? game.busy_launch : null;
     if (first) { world = data.world; buildSky(1); renderMission(); }
     renderEnds();
-    if (busyLaunch && !(run && !run.done)) { const f = feed.find(x => x.id === busyLaunch); els.banner.hidden = false; els.bannerText.textContent = 'Launch in progress' + (f ? ': ' + f.pilot + "'s " + f.bot_name : '…'); els.banner.classList.add('live'); }
-    else if (!busyLaunch && !run) els.banner.hidden = true;
+    if (!run) idleBanner();
   }
   async function refreshFeed(){
     if (!game) return;
@@ -477,6 +489,7 @@ label.name input{width:150px}
       if (!seen.has(f.id)) { seen.add(f.id); playQueue.push(f.id); }
     }
     if (playQueue.length && !(run && !run.done)) { const id = playQueue.shift(); watch(id, true); }
+    else if (!run) idleBanner();
   }
   async function watch(id, live, label){
     const { data } = await sb.rpc('get_replay', { p_launch: id });
@@ -515,7 +528,7 @@ label.name input{width:150px}
     run = { world: w, samples: S, result: rep, tau: 0, idx: 0, done: false, tLaunch, held: false, hold: null, mine: !!opts.mine, practice: !!opts.practice, live: !!opts.live, pilot: opts.pilot || '', name: rep.bot_name || 'bot', label: opts.label };
     resetFx();
     els.verdict.hidden = true; els.controls.hidden = false;
-    els.banner.hidden = false; els.banner.classList.toggle('live', !!opts.live || !!opts.mine);
+    els.banner.hidden = false; els.banner.onclick = null; els.banner.classList.remove('replay'); els.banner.classList.toggle('live', !!opts.live || !!opts.mine);
     els.bannerText.textContent = opts.practice ? 'Practice run · random ' + w.name + ' system' : opts.mine ? 'Your launch · ' + run.name : (opts.live ? 'LIVE · ' : (opts.label || 'Replay') + ' · ') + (run.pilot ? run.pilot + "'s " : '') + run.name;
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
   }
@@ -797,7 +810,7 @@ label.name input{width:150px}
       if (!run) idleT += dts * w.bodies[0].period / 30;
       else if (run.done) {
         // after the verdict has had its moment, hand back to the live system; Replay brings it back
-        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); els.banner.hidden = !busyLaunch; els.bannerText.textContent = 'Launch in progress…'; els.banner.classList.toggle('live', !!busyLaunch); }
+        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); idleBanner(); }
       }
       else {
         const S = run.samples, end = S[S.length-1][0];
