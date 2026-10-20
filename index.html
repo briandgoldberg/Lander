@@ -36,9 +36,12 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .cta:hover{filter:brightness(1.07)}
 .cta.wide{width:100%;padding:14px}
 .cta:disabled{opacity:.55;cursor:default;filter:none}
+.cta.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
 .cta:focus-visible,.btn:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .hero{margin:0;font-family:var(--display);font-weight:700;font-size:clamp(22px,3.2vw,34px);letter-spacing:.04em;line-height:1.15;color:var(--fg);text-wrap:balance}
 .hero em{font-style:normal;color:var(--accent)}
+.ctarow{display:flex;gap:10px;flex-wrap:wrap}
+.maincol{display:flex;flex-direction:column;gap:14px;min-width:0}
 .how{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .livebadge{position:absolute;right:12px;top:12px;display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:12px;letter-spacing:.14em;background:rgba(7,10,20,.85);border:1px solid var(--live);border-radius:999px;padding:6px 12px;color:var(--fg)}
 .livebadge i{width:8px;height:8px;border-radius:50%;background:var(--live);box-shadow:0 0 10px var(--live);animation:pulse 1.2s infinite;flex:none}
@@ -80,9 +83,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .tele div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:3px 0;min-width:0}
 .tele span{color:var(--muted)}
 .tele b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.grid2{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:start}
-@media (max-width:1100px){.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:640px){.grid2{grid-template-columns:1fr}}
+.grid2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:980px){.grid2{grid-template-columns:1fr}}
 .brief{margin:0 0 8px;font-size:14px;line-height:1.5}
 .brief b{font-family:var(--display);letter-spacing:.04em}
 .facts{display:grid;grid-template-columns:1fr auto;gap:3px 12px;font-size:12.5px;margin:0}
@@ -103,7 +105,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .editor{display:flex;flex-direction:column;gap:10px}
 .editor-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .editor-head h2{margin:0}
-.hint{margin:0;color:var(--muted);font-size:13px;max-width:78ch}
+.hint{margin:0;color:var(--fg);font-size:15px;line-height:1.5;max-width:78ch}
 .hint code,.api code{font-family:var(--mono);font-size:12px;color:var(--fg);background:var(--panel-2);padding:1px 5px;border-radius:4px}
 textarea{width:100%;min-height:380px;resize:vertical;background:var(--sky);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:12px;font-family:var(--mono);font-size:12.5px;line-height:1.5;white-space:pre;overflow:auto;tab-size:2}
 .err{margin:0;background:rgba(242,112,110,.08);border:1px solid var(--bad);color:var(--fg);border-radius:6px;padding:10px 12px;font-family:var(--mono);font-size:12px;white-space:pre-wrap;overflow-x:auto}
@@ -137,12 +139,13 @@ label.name input{width:150px}
 
   <p class="hero">Launch from one planet. Land on another. <em>Touch down with the most fuel in the tank and you win.</em></p>
 
-  <section class="how">
-    <div><b>1</b><span>Sign up with your email. Your first launch is free.</span></div>
-    <div><b>2</b><span>Edit the sample flight path and launch it. It gets ten seconds to plan.</span></div>
-  </section>
+  <div class="ctarow">
+    <button class="cta" id="cta">Edit your flight path</button>
+    <button class="cta ghost" id="signupBtn">Sign up with your email · first launch free</button>
+  </div>
 
   <div class="stagegrid">
+    <div class="maincol">
     <section class="stage" aria-label="System view">
       <canvas id="sky"></canvas>
       <div class="banner" id="banner"><i></i><span id="bannerText">Waiting for the first launch</span></div>
@@ -154,6 +157,34 @@ label.name input{width:150px}
       </div>
       <div class="scalebar" id="scalebar"></div>
     </section>
+
+    <section class="card editor" id="editor">
+      <div class="editor-head">
+        <h2>Your flight path</h2>
+        <div class="row">
+          <label class="name">Name it <input id="botName" type="text" value="My bot" maxlength="24"></label>
+          <button class="btn" id="practiceBtn">Practice run · free</button>
+          <button class="cta" id="launchBtn">Sign up to launch</button>
+          <button class="btn" id="resetBtn">Reset to sample</button>
+          <button class="btn" id="buyBtn">Buy launches · $1 each</button>
+        </div>
+      </div>
+      <p class="hint">A flight path is a short JavaScript program. It gets the star system, plans for ten seconds, and steers the rocket. Launch it and we fly it live for everyone. The sample reaches the target but arrives too fast. Make it land, then make it thrifty. Win, and your code is published when the game ends.</p>
+      <div class="status" id="status">Start from the sample. It already reaches the target planet; it just doesn't slow down.</div>
+      <textarea id="code" spellcheck="false" aria-label="Flight path source code"></textarea>
+      <pre class="err" id="err" hidden></pre>
+      <details class="api">
+        <summary>API reference</summary>
+        <ul>
+          <li><code>world.sun</code> {mass, radius} · <code>world.bodies[k]</code> {name, mass, radius, orbitR, omega, angle0, period, hill} · <code>world.start</code>, <code>world.target</code> are indices into bodies · <code>world.rocket</code> {maxThrust, fuel, padAngle} · <code>world.deadline</code> · <code>world.safeLandingSpeed</code> · <code>world.hints</code> {transferTime, synodic, hohmannDv, escapeStart, escapeTarget}</li>
+          <li>Units: star mass 1, G 1, the innermost orbit is about 1. Planets move counterclockwise on circular orbits around a fixed star. Fuel is a delta-v budget: throttle 1 burns maxThrust per time unit. Steps are adaptive, finer near planets and during burns.</li>
+          <li><code>controller(state)</code> is called every step. <code>state</code> = {t, x, y, vx, vy, fuel, onPad, bodies:[{x,y,vx,vy}]}. Return <code>{throttle, dx, dy}</code>: throttle 0 to 1, (dx, dy) the thrust direction in world coordinates, any length.</li>
+          <li><code>sim.fly(controller)</code> flies a test flight and returns {outcome, body, fuelUsed, time, closestApproach, landingSpeed}. Outcomes: landed, crashed (body says into what), burned (the star), lost, timeout. <code>sim.timeLeft()</code> is your remaining budget in ms. <code>sim.flights</code> counts test flights.</li>
+          <li>Landed means touching the target planet at a speed relative to it of at most <code>safeLandingSpeed</code>. Most fuel left among safe landings wins.</li>
+        </ul>
+      </details>
+    </section>
+    </div>
     <aside class="side">
       <div class="camwrap"><canvas id="cam"></canvas><div class="camlabel" id="camLabel">APPROACH CAM</div><div class="camfoot" id="camFoot"></div></div>
       <div class="card">
@@ -170,22 +201,16 @@ label.name input{width:150px}
           <div><span>Fuel used</span><b id="tUsed">0.00</b></div>
         </div>
       </div>
+      <div class="card">
+        <h2>Game #1 <small id="systemName"></small></h2>
+        <p class="brief" id="brief"></p>
+        <dl class="facts" id="facts"></dl>
+        <div class="ranges" id="ranges"></div>
+      </div>
     </aside>
   </div>
 
   <div class="grid2">
-    <div class="card">
-      <h2>Game #1 <small id="systemName"></small></h2>
-      <p class="brief" id="brief"></p>
-      <dl class="facts" id="facts"></dl>
-      <div class="ranges" id="ranges"></div>
-    </div>
-    <div class="card">
-      <h2>Your launch</h2>
-      <button class="cta wide" id="cta">Submit a flight path</button>
-      <div class="status" id="status">Start from the sample. It already reaches the target planet; it just doesn't slow down.</div>
-      <div class="row" style="margin-top:10px"><button class="btn small" id="buyBtn">Buy launches · $1 USDC each</button></div>
-    </div>
     <div class="card">
       <h2>Live launches <small id="feedCount"></small></h2>
       <ul class="list" id="feed"></ul>
@@ -197,39 +222,12 @@ label.name input{width:150px}
       <p class="empty" id="boardEmpty">Nobody has landed yet.</p>
       <p class="status" id="boardNote"></p>
     </div>
-  </div>
-
-  <section class="card" id="winners">
-    <h2>Previous winners <small>winning code is revealed when a game ends</small></h2>
-    <p class="empty" id="winnersEmpty">Game #1 is the first. When it ends, the winner's bot appears here, source and all. Everyone starts the next game from the best code so far.</p>
-    <div id="winnersList"></div>
-  </section>
-
-  <section class="card editor" id="editor" hidden>
-    <div class="editor-head">
-      <h2>Your flight path</h2>
-      <div class="row">
-        <label class="name">Name it <input id="botName" type="text" value="My bot" maxlength="24"></label>
-        <button class="btn" id="practiceBtn">Practice run · free, random system</button>
-        <button class="cta" id="launchBtn">Sign up to launch</button>
-        <button class="btn" id="resetBtn">Reset to starter</button>
-        <button class="btn" id="closeBtn">Close</button>
-      </div>
+    <div class="card" id="winners">
+      <h2>Previous winners <small>code revealed when a game ends</small></h2>
+      <p class="empty" id="winnersEmpty">Game #1 is the first. When it ends, the winning flight path appears here, source and all.</p>
+      <div id="winnersList"></div>
     </div>
-    <p class="hint">A flight path is a short JavaScript program. <code>bot(world, sim)</code> receives the star system and returns a function that steers the rocket, step by step. When you launch, it runs on our server with no network and a ten second clock, and whatever it returns gets flown for real, in front of everyone. The sample below reaches the target but arrives far too fast. Make it land, then make it thrifty. A practice run flies it in your browser on a random system and counts for nothing. <b>Win, and your code is published</b> in Previous winners when the game ends. Entering means agreeing to that.</p>
-    <textarea id="code" spellcheck="false" aria-label="Bot source code"></textarea>
-    <pre class="err" id="err" hidden></pre>
-    <details class="api">
-      <summary>API reference</summary>
-      <ul>
-        <li><code>world.sun</code> {mass, radius} · <code>world.bodies[k]</code> {name, mass, radius, orbitR, omega, angle0, period, hill} · <code>world.start</code>, <code>world.target</code> are indices into bodies · <code>world.rocket</code> {maxThrust, fuel, padAngle} · <code>world.deadline</code> · <code>world.safeLandingSpeed</code> · <code>world.hints</code> {transferTime, synodic, hohmannDv, escapeStart, escapeTarget}</li>
-        <li>Units: star mass 1, G 1, the innermost orbit is about 1. Planets move counterclockwise on circular orbits around a fixed star. Fuel is a delta-v budget: throttle 1 burns maxThrust per time unit. Steps are adaptive, finer near planets and during burns.</li>
-        <li><code>controller(state)</code> is called every step. <code>state</code> = {t, x, y, vx, vy, fuel, onPad, bodies:[{x,y,vx,vy}]}. Return <code>{throttle, dx, dy}</code>: throttle 0 to 1, (dx, dy) the thrust direction in world coordinates, any length.</li>
-        <li><code>sim.fly(controller)</code> flies a test flight and returns {outcome, body, fuelUsed, time, closestApproach, landingSpeed}. Outcomes: landed, crashed (body says into what), burned (the star), lost, timeout. <code>sim.timeLeft()</code> is your remaining budget in ms. <code>sim.flights</code> counts test flights.</li>
-        <li>Landed means touching the target planet at a speed relative to it of at most <code>safeLandingSpeed</code>. Most fuel left among safe landings wins.</li>
-      </ul>
-    </details>
-  </section>
+  </div>
 
   <p class="foot">Lander is an experiment. Physics is exaggerated so flybys matter. Payments are in USDC on Base.</p>
 </div>
@@ -269,7 +267,7 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replayBtn','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','status','buyBtn','feed','feedEmpty','feedCount','board','boardEmpty','boardNote','editor','botName','practiceBtn','launchBtn','resetBtn','closeBtn','code','err','signin','signinForm','email','signinMsg','signinClose','buy','qty','payWallet','payTotal','treasury','hashForm','txhash','buyMsg','buyClose'].forEach(id => els[id] = $(id));
+  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replayBtn','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','signupBtn','status','buyBtn','feed','feedEmpty','feedCount','board','boardEmpty','boardNote','editor','botName','practiceBtn','launchBtn','resetBtn','code','err','signin','signinForm','email','signinMsg','signinClose','buy','qty','payWallet','payTotal','treasury','hashForm','txhash','buyMsg','buyClose'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null;
@@ -326,6 +324,7 @@ label.name input{width:150px}
 
   // ---------- auth ----------
   function renderAuth(){
+    els.signupBtn.hidden = !!session;
     if (!session) { els.authArea.innerHTML = '<button class="btn" id="signinBtn">Sign in</button>'; $('signinBtn').onclick = openSignin; els.launchBtn.textContent = 'Sign up to launch'; return; }
     const n = profile ? profile.credits : '…';
     els.authArea.innerHTML = '<span class="chip">' + esc(session.user.email) + '</span><span class="chip hot">' + n + ' launch' + (n === 1 ? '' : 'es') + '</span><button class="btn small" id="signoutBtn">Sign out</button>';
@@ -388,9 +387,9 @@ label.name input{width:150px}
   };
 
   // ---------- editor / launch ----------
-  function openEditor(){ els.editor.hidden = false; els.editor.scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => els.code.focus(), 300); }
+  function openEditor(){ els.editor.scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => els.code.focus(), 300); }
   els.cta.onclick = openEditor;
-  els.closeBtn.onclick = () => { els.editor.hidden = true; };
+  els.signupBtn.onclick = openSignin;
   els.resetBtn.onclick = () => { els.code.value = STARTER; saveCode(); };
   function saveCode(){ try { localStorage.setItem('lander.code', els.code.value); localStorage.setItem('lander.name', els.botName.value); } catch (e) {} }
   function loadCode(){ let c = null, n = null; try { c = localStorage.getItem('lander.code'); n = localStorage.getItem('lander.name'); } catch (e) {} els.code.value = c || STARTER; if (n) els.botName.value = n; }
