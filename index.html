@@ -9,7 +9,7 @@
 <style>
 :root{
   --bg:#070a14; --sky:#03050c; --panel:#0f1527; --panel-2:#0b1020; --line:#222b47;
-  --fg:#e9ecf6; --muted:#8f98b8; --accent:#f3b457; --accent-ink:#1a1206;
+  --fg:#f6f7fb; --muted:#c3cae0; --accent:#f3b457; --accent-ink:#1a1206;
   --good:#6ad59a; --bad:#f2706e; --live:#ff5c5c;
   --display:'Chakra Petch','Segoe UI',sans-serif;
   --body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
@@ -37,10 +37,13 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .cta.wide{width:100%;padding:14px}
 .cta:disabled{opacity:.55;cursor:default;filter:none}
 .cta:focus-visible,.btn:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hero{margin:0;font-family:var(--display);font-weight:700;font-size:clamp(22px,3.2vw,34px);letter-spacing:.04em;line-height:1.15;color:var(--fg);text-wrap:balance}
+.hero em{font-style:normal;color:var(--accent)}
 .how{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 @media (max-width:760px){.how{grid-template-columns:1fr}}
-.how div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;display:flex;gap:10px;align-items:flex-start}
-.how b{font-family:var(--display);color:var(--accent);font-size:18px;line-height:1;min-width:22px}
+.how div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:15px;color:var(--fg);display:flex;gap:12px;align-items:center}
+.how b{font-family:var(--display);color:var(--accent);font-size:22px;line-height:1;min-width:24px}
+.how .cta{padding:10px 14px;font-size:14px}
 .stagegrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}
 @media (max-width:980px){.stagegrid{grid-template-columns:1fr}}
 .stage{position:relative;background:var(--sky);border:1px solid var(--line);border-radius:10px;overflow:hidden;aspect-ratio:1/1;max-width:100%}
@@ -128,10 +131,12 @@ label.name input{width:150px}
     </div>
   </header>
 
+  <p class="hero">Launch from one planet. Land on another. <em>Touch down with the most fuel in the tank and you win.</em></p>
+
   <section class="how">
-    <div><b>1</b><span>Sign up with your email. Your first launch is free. More launches are $1 each in USDC.</span></div>
-    <div><b>2</b><span>Submit JavaScript. On launch it gets this game's star system and 10 seconds to plan the best path. Then we fly it.</span></div>
-    <div><b>3</b><span>Everyone watches each launch live. After 10 days, the safe landing with the most fuel left wins Game #1, and the winning code is published below in Previous winners.</span></div>
+    <div><b>1</b><span>Sign up with your email. Your first launch is free.</span></div>
+    <div><b>2</b><span>Edit the sample flight path and launch it. It gets ten seconds to plan.</span></div>
+    <div><button class="cta" id="liveBtn">● Watch live</button><span>Every launch plays here as it happens.</span></div>
   </section>
 
   <div class="stagegrid">
@@ -173,8 +178,8 @@ label.name input{width:150px}
     </div>
     <div class="card">
       <h2>Your launch</h2>
-      <button class="cta wide" id="cta">Submit your JavaScript</button>
-      <div class="status" id="status">Sign up, paste your bot, launch. The sandbox has 10 seconds to plan.</div>
+      <button class="cta wide" id="cta">Submit a flight path</button>
+      <div class="status" id="status">Start from the sample. It already reaches the target planet; it just doesn't slow down.</div>
       <div class="row" style="margin-top:10px"><button class="btn small" id="buyBtn">Buy launches · $1 USDC each</button></div>
     </div>
     <div class="card">
@@ -198,16 +203,16 @@ label.name input{width:150px}
 
   <section class="card editor" id="editor" hidden>
     <div class="editor-head">
-      <h2>Your bot</h2>
+      <h2>Your flight path</h2>
       <div class="row">
-        <label class="name">Bot name <input id="botName" type="text" value="My bot" maxlength="24"></label>
+        <label class="name">Name it <input id="botName" type="text" value="My bot" maxlength="24"></label>
         <button class="btn" id="practiceBtn">Practice run · free, random system</button>
-        <button class="cta" id="launchBtn">Launch · 1 credit</button>
+        <button class="cta" id="launchBtn">Sign up to launch</button>
         <button class="btn" id="resetBtn">Reset to starter</button>
         <button class="btn" id="closeBtn">Close</button>
       </div>
     </div>
-    <p class="hint">JavaScript. Define <code>bot(world, sim)</code> and return a controller. A launch runs your code on our server with no network and a 10 second clock, then flies the controller you returned through the game's physics, live, for everyone. A practice run does the same thing in your browser on a random system and counts for nothing. The starter below reaches the target and arrives too fast. Landing is your job. <b>If you win, your code is published</b> in Previous winners when the game ends. Entering means agreeing to that.</p>
+    <p class="hint">A flight path is a short JavaScript program. <code>bot(world, sim)</code> receives the star system and returns a function that steers the rocket, step by step. When you launch, it runs on our server with no network and a ten second clock, and whatever it returns gets flown for real, in front of everyone. The sample below reaches the target but arrives far too fast. Make it land, then make it thrifty. A practice run flies it in your browser on a random system and counts for nothing. <b>Win, and your code is published</b> in Previous winners when the game ends. Entering means agreeing to that.</p>
     <textarea id="code" spellcheck="false" aria-label="Bot source code"></textarea>
     <pre class="err" id="err" hidden></pre>
     <details class="api">
@@ -228,7 +233,7 @@ label.name input{width:150px}
 <div class="modal" id="signin" hidden>
   <div class="box">
     <h3>Sign up to launch</h3>
-    <p>Enter your email and we'll send a sign-in link. No password. Your first launch is on us.</p>
+    <p>Enter your email and we'll send a sign-in link. No password. Your first launch is on us, and your flight path stays right here in the editor.</p>
     <form id="signinForm"><input type="email" id="email" placeholder="you@example.com" required autocomplete="email"><button class="cta" type="submit">Send link</button></form>
     <p id="signinMsg"></p>
     <div class="row"><button class="btn small" id="signinClose">Close</button></div>
@@ -317,10 +322,11 @@ label.name input{width:150px}
 
   // ---------- auth ----------
   function renderAuth(){
-    if (!session) { els.authArea.innerHTML = '<button class="btn" id="signinBtn">Sign in</button>'; $('signinBtn').onclick = openSignin; return; }
+    if (!session) { els.authArea.innerHTML = '<button class="btn" id="signinBtn">Sign in</button>'; $('signinBtn').onclick = openSignin; els.launchBtn.textContent = 'Sign up to launch'; return; }
     const n = profile ? profile.credits : '…';
     els.authArea.innerHTML = '<span class="chip">' + esc(session.user.email) + '</span><span class="chip hot">' + n + ' launch' + (n === 1 ? '' : 'es') + '</span><button class="btn small" id="signoutBtn">Sign out</button>';
     $('signoutBtn').onclick = async () => { await sb.auth.signOut(); };
+    els.launchBtn.textContent = (profile && profile.credits < 1) ? 'Buy a launch' : 'Launch · 1 credit';
   }
   async function refreshProfile(){
     if (!session) { profile = null; renderAuth(); return; }
@@ -379,7 +385,8 @@ label.name input{width:150px}
 
   // ---------- editor / launch ----------
   function openEditor(){ els.editor.hidden = false; els.editor.scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => els.code.focus(), 300); }
-  els.cta.onclick = () => { if (!session) return openSignin(); openEditor(); };
+  els.cta.onclick = openEditor;
+  $('liveBtn').onclick = () => { document.querySelector('.stage').scrollIntoView({ behavior: 'smooth', block: 'start' }); if (!run && lastRun) restartReplay(); };
   els.closeBtn.onclick = () => { els.editor.hidden = true; };
   els.resetBtn.onclick = () => { els.code.value = STARTER; saveCode(); };
   function saveCode(){ try { localStorage.setItem('lander.code', els.code.value); localStorage.setItem('lander.name', els.botName.value); } catch (e) {} }
