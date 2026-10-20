@@ -582,8 +582,8 @@ label.name input{width:150px}
   function whereIs(w, st, nr){
     const T = w.bodies[w.target], tp = bodyAt(w, w.target, st.t), dT = Math.hypot(st.x - tp.x, st.y - tp.y) - T.radius;
     if (run && run.done) return outcomeText(run.result, w)[0].toUpperCase();
-    if (run && run.hold) return 'COUNTDOWN ON THE ' + w.bodies[w.start].name.toUpperCase() + ' PLANET LAUNCHPAD';
-    if (st.onPad) return 'ROCKET ON THE ' + w.bodies[w.start].name.toUpperCase() + ' PLANET LAUNCHPAD';
+    if (run && run.hold) return 'COUNTDOWN ON THE PLANET ' + w.bodies[w.start].name.toUpperCase() + ' LAUNCHPAD';
+    if (st.onPad) return 'ROCKET ON THE PLANET ' + w.bodies[w.start].name.toUpperCase() + ' LAUNCHPAD';
     if (nr.d < nr.body.hill * 1.5) return (nr.k === w.target ? 'APPROACHING ' : nr.k === w.start ? 'LEAVING ' : 'FLYBY OF ') + nr.body.name.toUpperCase();
     return 'IN TRANSIT · ' + fmt(Math.max(0, dT), 2) + ' FROM ' + T.name.toUpperCase();
   }
