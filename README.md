@@ -2,7 +2,7 @@
 
 Launch from one planet, land on another. Your JavaScript gets 10 seconds to plan the path. Most fuel left wins.
 
-Live: https://lander-briandgoldbergs-projects.vercel.app
+Live: https://lander-topaz.vercel.app
 
 ## How it works
 
