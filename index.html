@@ -73,8 +73,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .controls .btn{background:rgba(7,10,20,.85);padding:5px 10px;font-size:12px}
 .scalebar{position:absolute;right:12px;bottom:12px;font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(7,10,20,.7);padding:4px 8px;border-radius:4px;text-align:right;line-height:1.5}
 .side{display:flex;flex-direction:column;gap:12px;min-width:0}
-.camwrap{position:relative;background:var(--sky);border:1px solid var(--line);border-radius:10px;overflow:hidden;aspect-ratio:1/1}
-.camlabel{position:absolute;left:10px;top:9px;font-family:var(--display);font-size:10px;letter-spacing:.14em;color:var(--muted)}
+.camwrap{position:relative;background:var(--sky);border:1px solid var(--line);border-radius:10px;overflow:hidden;aspect-ratio:4/3}
+.camlabel{position:absolute;left:10px;top:9px;right:10px;font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--accent);text-shadow:0 0 8px rgba(0,0,0,.9)}
 .camfoot{position:absolute;left:10px;bottom:8px;font-family:var(--mono);font-size:11px;color:var(--muted)}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;min-width:0}
 .card h2{margin:0 0 8px;font-family:var(--display);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -142,7 +142,7 @@ label.name input{width:150px}
     </div>
   </header>
 
-  <p class="hero">Planet to planet. <em>Touch down with the most fuel in the tank and you win.</em></p>
+  <p class="hero" id="hero">Touch down on the target planet with the most fuel in the tank and you win.</p>
 
   <form class="ctarow" id="ctaForm">
     <input type="email" id="ctaEmail" placeholder="you@example.com" autocomplete="email">
@@ -309,6 +309,7 @@ label.name input{width:150px}
   function renderMission(){
     const w = world, A = w.bodies[w.start], B = w.bodies[w.target];
     els.systemName.textContent = w.name + ' system';
+    $('hero').innerHTML = 'Touch down on <em>Planet ' + esc(B.name) + '</em> with the most fuel in the tank and you win.';
     els.brief.innerHTML = 'Launch from <b>' + esc(A.name) + '</b>, land on <b>' + esc(B.name) + '</b>. ' + (B.orbitR > A.orbitR ? 'Outward.' : 'Inward.') + ' Safe landing, most fuel left, wins.';
     els.facts.innerHTML = [
       ['Fuel budget (Δv)', fmt(w.rocket.fuel, 2)],
@@ -586,6 +587,14 @@ label.name input{width:150px}
     for (let k = 0; k < w.bodies.length; k++) { const b = bodyAt(w, k, st.t), d = Math.hypot(st.x - b.x, st.y - b.y); if (!best || d < best.d) best = { k, d, b, body: w.bodies[k] }; }
     return best;
   }
+  function whereIs(w, st, nr){
+    const T = w.bodies[w.target], tp = bodyAt(w, w.target, st.t), dT = Math.hypot(st.x - tp.x, st.y - tp.y) - T.radius;
+    if (run && run.done) return outcomeText(run.result, w)[0].toUpperCase();
+    if (run && run.hold) return 'COUNTDOWN ON THE PAD AT ' + w.bodies[w.start].name.toUpperCase();
+    if (st.onPad) return 'ROCKET ON THE PAD AT ' + w.bodies[w.start].name.toUpperCase();
+    if (nr.d < nr.body.hill * 1.5) return (nr.k === w.target ? 'APPROACHING ' : nr.k === w.start ? 'LEAVING ' : 'FLYBY OF ') + nr.body.name.toUpperCase();
+    return 'IN TRANSIT · ' + fmt(Math.max(0, dT), 2) + ' FROM ' + T.name.toUpperCase();
+  }
   function phaseOf(w, st, nr){
     if (run && run.done) return outcomeText(run.result, w)[0];
     if (run && run.hold) return 'Countdown';
@@ -753,7 +762,7 @@ label.name input{width:150px}
       g.fillText(b.name + (k === w.start ? ' ▲ start' : k === w.target ? ' ◎ target' : ''), px, py - r - 8);
     });
     g.textAlign = 'start';
-    if (!ended) drawRocket(g, sx(st.x), sy(st.y), dirx, diry, st.thr, 7, flicker);
+    if (!ended) { drawRocket(g, sx(st.x), sy(st.y), dirx, diry, st.thr, 7, flicker); g.fillStyle = '#f3b457'; g.font = '600 11px "IBM Plex Sans", sans-serif'; g.fillText('you', sx(st.x) + 11, sy(st.y) - 9); }
     else if (fx.flash > 0) { g.fillStyle = 'rgba(255,220,160,' + fx.flash + ')'; g.beginPath(); g.arc(sx(st.x), sy(st.y), 6 + 40*(1 - fx.flash), 0, TAU); g.fill(); }
     let label = null, sub = null;
     if (run && run.hold) { const left = Math.max(0, (run.hold.until - performance.now()) / 1000); label = 'T-' + Math.ceil(left); sub = 'Launching from ' + w.bodies[w.start].name; }
@@ -797,8 +806,8 @@ label.name input{width:150px}
       g.fillStyle = '#f3b457'; g.save(); g.translate(ex, ey); g.rotate(Math.atan2(-ay, ax)); g.beginPath(); g.moveTo(8, 0); g.lineTo(-6, -5); g.lineTo(-6, 5); g.closePath(); g.fill(); g.restore();
     }
     g.restore();
-    els.camLabel.textContent = (locked ? 'APPROACH CAM · ' : 'TARGET CAM · ') + b.name.toUpperCase() + ' · TRUE SCALE';
-    els.camFoot.textContent = locked ? 'alt ' + fmt(Math.max(0, alt), 4) + '  rel ' + fmt(Math.hypot(st.vx - p.vx, st.vy - p.vy), 3) : 'rocket is ' + fmt(d, 2) + ' away';
+    els.camLabel.textContent = whereIs(w, st, nr);
+    els.camFoot.textContent = (locked ? b.name + ' · alt ' + fmt(Math.max(0, alt), 4) + ' · rel ' + fmt(Math.hypot(st.vx - p.vx, st.vy - p.vy), 3) : 'showing ' + b.name + ' · rocket is ' + fmt(d, 2) + ' away') + ' · true scale';
   }
   function draw(now){
     const w = displayWorld(); if (!w) return;
