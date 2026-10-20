@@ -346,7 +346,7 @@ label.name input{width:150px}
     if (!email) { els.ctaEmail.focus(); return; }
     els.ctaMsg.textContent = 'Sending…';
     const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
-    els.ctaMsg.textContent = error ? 'Could not send: ' + error.message : 'Check your inbox for the sign-in link. It brings you right back here, with your first launch ready.';
+    els.ctaMsg.textContent = error ? 'Could not send: ' + error.message : 'Check your inbox for the sign-in link.';
   };
   function renderAuth(){
     if (!session) { els.authArea.innerHTML = '<button class="btn" id="signinBtn">Sign in</button>'; $('signinBtn').onclick = openSignin; renderCta(); return; }
@@ -367,7 +367,7 @@ label.name input{width:150px}
     const email = els.email.value.trim(); if (!email) return;
     els.signinMsg.textContent = 'Sending…';
     const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
-    els.signinMsg.textContent = error ? 'Could not send: ' + error.message : 'Check your inbox for the sign-in link. It brings you right back here.';
+    els.signinMsg.textContent = error ? 'Could not send: ' + error.message : 'Check your inbox for the sign-in link.';
   };
   sb.auth.onAuthStateChange((event, s) => { session = s; refreshProfile(); if (s && event === 'SIGNED_IN') els.signin.hidden = true; });
 
