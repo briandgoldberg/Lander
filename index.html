@@ -884,7 +884,7 @@ label.name input{width:150px}
       if (!run) idleT += dts * w.bodies[0].period / 30;
       else if (run.done) {
         // after the verdict has had its moment, hand back to the live system; Replay brings it back
-        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); idleBanner(); els.verdict.classList.add('fade'); setTimeout(() => { if (!run) els.verdict.hidden = true; }, 950); }
+        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); camS = null; idleBanner(); els.verdict.classList.add('fade'); setTimeout(() => { if (!run) els.verdict.hidden = true; }, 950); }
       }
       else {
         const S = run.samples, end = S[S.length-1][0];
