@@ -4,7 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lander</title>
-<meta name="description" content="Launch from one planet, land on another. Your JavaScript gets 10 seconds to plan the path. Most fuel left wins.">
+<meta name="description" content="Fly a rocket between planets with JavaScript. The safe landing with the most fuel left wins $100.">
+<meta property="og:title" content="Lander · the classic lander game, your code is the pilot">
+<meta property="og:description" content="Fly a rocket between planets with JavaScript. The safe landing with the most fuel left wins $100. Free to play.">
+<meta property="og:image" content="https://lander-topaz.vercel.app/og.png">
+<meta property="og:url" content="https://lander-topaz.vercel.app/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{
@@ -125,6 +131,13 @@ label.name input{width:150px}
 .modal form{display:flex;gap:8px}
 .modal form input{flex:1;min-width:0}
 .foot{color:var(--muted);font-size:12px;text-align:center}
+.refer{display:flex;flex-direction:column;gap:8px;font-size:13px}
+.refer .link{display:flex;gap:6px}
+.refer .link input{flex:1;min-width:0;font-family:var(--mono);font-size:12px}
+.refer .shares{display:flex;gap:6px;flex-wrap:wrap}
+.refer .shares a,.refer .shares button{font-family:var(--body);font-size:12px;background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 9px;cursor:pointer;text-decoration:none}
+.refer .shares a:hover,.refer .shares button:hover{border-color:var(--accent)}
+.refer .count{color:var(--accent);font-family:var(--mono);font-size:12px}
 </style>
 </head>
 <body>
@@ -206,6 +219,10 @@ label.name input{width:150px}
         <p class="brief" id="brief"></p>
         <dl class="facts" id="facts"></dl>
         <div class="ranges" id="ranges"></div>
+      </div>
+      <div class="card" id="referCard" hidden>
+        <h2>Refer a friend <small>+3 launches each, up to 5 friends</small></h2>
+        <div id="referPanel"></div>
       </div>
     </aside>
   </div>
@@ -342,10 +359,35 @@ label.name input{width:150px}
     $('signoutBtn').onclick = async () => { await sb.auth.signOut(); };
     renderCta();
   }
+  // A referral code arriving as ?ref=CODE is kept in the browser until the first sign-in.
+  function storedRef(){ try { return localStorage.getItem('lander.ref'); } catch (e) { return null; } }
+  try { const ref = new URLSearchParams(location.search).get('ref'); if (ref) localStorage.setItem('lander.ref', ref.trim().toLowerCase()); } catch (e) {}
   async function refreshProfile(){
-    if (!session) { profile = null; renderAuth(); return; }
-    const { data, error } = await sb.rpc('ensure_profile');
-    if (!error) profile = data; renderAuth();
+    if (!session) { profile = null; renderAuth(); renderReferral(); return; }
+    const { data, error } = await sb.rpc('ensure_profile', { p_ref: storedRef() });
+    if (!error) { profile = data; try { localStorage.removeItem('lander.ref'); } catch (e) {} }
+    renderAuth(); renderReferral();
+  }
+  function referralLink(){ return location.origin + location.pathname + '?ref=' + (profile ? profile.referral_code : ''); }
+  function renderReferral(){
+    const card = $('referCard');
+    if (!session || !profile || !profile.referral_code) { card.hidden = true; els.outReferral.innerHTML = ''; return; }
+    const link = referralLink();
+    const msg = "I'm flying rockets between planets with JavaScript. Most fuel left wins $100. Try it: " + link;
+    const enc = encodeURIComponent(msg), encLink = encodeURIComponent(link);
+    const n = profile.referrals_rewarded || 0;
+    const html = '<div class="refer">' +
+      '<div>Friends who launched: <span class="count">' + n + ' of 5 · +3 launches each</span></div>' +
+      '<div class="link"><input type="text" readonly value="' + esc(link) + '" aria-label="Your referral link"><button class="btn small copyRef">Copy</button></div>' +
+      '<div class="shares">' + (navigator.share ? '<button class="shareRef">Share…</button>' : '') +
+      '<a href="https://twitter.com/intent/tweet?text=' + enc + '" target="_blank" rel="noopener">X</a>' +
+      '<a href="https://www.facebook.com/sharer/sharer.php?u=' + encLink + '" target="_blank" rel="noopener">Facebook</a>' +
+      '<a href="https://wa.me/?text=' + enc + '" target="_blank" rel="noopener">WhatsApp</a>' +
+      '<a href="sms:?&body=' + enc + '">SMS</a>' +
+      '<a href="mailto:?subject=' + encodeURIComponent('Fly a rocket with me') + '&body=' + enc + '">Email</a></div></div>';
+    card.hidden = false; $('referPanel').innerHTML = html; els.outReferral.innerHTML = '<p>Earn more right now: each friend who launches gets you 3 launches, up to 5 friends.</p>' + html;
+    document.querySelectorAll('.copyRef').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(link); b.textContent = 'Copied'; } catch (e) { b.previousElementSibling.select(); b.textContent = 'Select and copy'; } setTimeout(() => { b.textContent = 'Copy'; }, 2500); });
+    document.querySelectorAll('.shareRef').forEach(b => b.onclick = () => { navigator.share({ title: 'Lander', text: msg, url: link }).catch(() => {}); });
   }
   function openSignin(){ els.signin.hidden = false; els.signinMsg.textContent = ''; setTimeout(() => els.googleBtn.focus(), 50); }
   els.signinClose.onclick = () => { els.signin.hidden = true; };
