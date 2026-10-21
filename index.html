@@ -4,7 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lander</title>
-<meta name="description" content="Launch from one planet, land on another. Your JavaScript gets 10 seconds to plan the path. Most fuel left wins.">
+<meta name="description" content="Fly a rocket between planets with JavaScript. The safe landing with the most fuel left wins $100.">
+<meta property="og:title" content="Lander · the classic lander game, your code is the pilot">
+<meta property="og:description" content="Fly a rocket between planets with JavaScript. The safe landing with the most fuel left wins $100. Free to play.">
+<meta property="og:image" content="https://lander-topaz.vercel.app/og.png">
+<meta property="og:url" content="https://lander-topaz.vercel.app/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{
@@ -40,8 +46,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .cta:focus-visible,.btn:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .hero{margin:0;font-family:var(--display);font-weight:700;font-size:clamp(22px,3.2vw,34px);letter-spacing:.04em;line-height:1.15;color:var(--fg);text-wrap:balance}
 .hero em{font-style:normal;color:var(--accent)}
+.prize{border:1px solid var(--accent);background:rgba(243,180,87,.08);border-radius:8px;padding:10px 14px;font-size:15px;color:var(--fg)}
+.prize b{font-family:var(--display);letter-spacing:.04em;color:var(--accent)}
+.rules ol{margin:0;padding-left:20px;font-size:13.5px;line-height:1.55;color:var(--fg)}
+.rules li{margin:4px 0}
 .ctarow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.ctarow input{font-size:15px;padding:11px 14px;min-width:260px}
 .maincol{display:flex;flex-direction:column;gap:14px;min-width:0}
 .how{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .livebadge{position:absolute;right:12px;top:12px;display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:12px;letter-spacing:.14em;background:rgba(7,10,20,.85);border:1px solid var(--live);border-radius:999px;padding:6px 12px;color:var(--fg)}
@@ -125,10 +134,14 @@ label.name input{width:150px}
 .modal p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
 .modal form{display:flex;gap:8px}
 .modal form input{flex:1;min-width:0}
-.qty{display:flex;gap:6px}
-.qty .btn[aria-pressed="true"]{background:rgba(243,180,87,.12)}
-.addr{font-family:var(--mono);font-size:11px;word-break:break-all;background:var(--panel-2);padding:8px;border-radius:6px;user-select:all}
 .foot{color:var(--muted);font-size:12px;text-align:center}
+.refer{display:flex;flex-direction:column;gap:8px;font-size:13px}
+.refer .link{display:flex;gap:6px}
+.refer .link input{flex:1;min-width:0;font-family:var(--mono);font-size:12px}
+.refer .shares{display:flex;gap:6px;flex-wrap:wrap}
+.refer .shares a,.refer .shares button{font-family:var(--body);font-size:12px;background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 9px;cursor:pointer;text-decoration:none}
+.refer .shares a:hover,.refer .shares button:hover{border-color:var(--accent)}
+.refer .count{color:var(--accent);font-family:var(--mono);font-size:12px}
 </style>
 </head>
 <body>
@@ -144,11 +157,12 @@ label.name input{width:150px}
 
   <p class="hero" id="hero">Touch down on the target planet with the most fuel in the tank and you win.</p>
 
-  <form class="ctarow" id="ctaForm">
-    <input type="email" id="ctaEmail" placeholder="you@example.com" autocomplete="email">
-    <button class="cta" id="cta" type="submit">Launch your rocket</button>
+  <div class="prize"><b>Round 1 prize: $100 cash.</b> The safe landing with the most fuel left wins. Free to enter.</div>
+
+  <div class="ctarow">
+    <button class="cta" id="cta">Continue with Google to launch</button>
     <span class="status" id="ctaMsg" style="margin:0"></span>
-  </form>
+  </div>
 
   <div class="stagegrid">
     <div class="maincol">
@@ -212,6 +226,10 @@ label.name input{width:150px}
         <dl class="facts" id="facts"></dl>
         <div class="ranges" id="ranges"></div>
       </div>
+      <div class="card" id="referCard" hidden>
+        <h2>Refer a friend <small>+3 launches each, up to 5 friends</small></h2>
+        <div id="referPanel"></div>
+      </div>
     </aside>
   </div>
 
@@ -234,30 +252,38 @@ label.name input{width:150px}
     </div>
   </div>
 
-  <p class="foot">Lander is an experiment. Physics is exaggerated so flybys matter. Payments are in USDC on Base.</p>
+  <section class="card rules" id="rules">
+    <h2>Rules <small>Round 1</small></h2>
+    <ol>
+      <li>Free to enter. No purchase needed. Every account starts with 3 launches, and referrals add more.</li>
+      <li>One account per person, and you must be 18 or older.</li>
+      <li>The game lasts 10 days. The safe landing with the most fuel left wins. Ties go to whoever landed first.</li>
+      <li>The winning code is published in Previous winners when the game ends. Entering means agreeing to that.</li>
+      <li>The winner is contacted at their Google account email and paid $100 by PayPal, Venmo or Wise within 14 days.</li>
+      <li>Accounts that abuse referrals, including fake or duplicate accounts, are disqualified and lose their bonus credits.</li>
+    </ol>
+  </section>
+
+  <p class="foot">Lander is an experiment. Physics is exaggerated so flybys matter.</p>
 </div>
 
 <div class="modal" id="signin" hidden>
   <div class="box">
-    <h3>Sign up to launch</h3>
-    <p>Enter your email and we'll send a sign-in link. No password.</p>
-    <form id="signinForm"><input type="email" id="email" placeholder="you@example.com" required autocomplete="email"><button class="cta" type="submit">Send link</button></form>
+    <h3>Sign in to launch</h3>
+    <p>Sign in with your Google account. Free, no password, and new accounts start with 3 launches.</p>
+    <div class="row"><button class="cta" id="googleBtn">Continue with Google</button></div>
     <p id="signinMsg"></p>
     <div class="row"><button class="btn small" id="signinClose">Close</button></div>
   </div>
 </div>
 
-<div class="modal" id="buy" hidden>
+<div class="modal" id="out" hidden>
   <div class="box">
-    <h3>Buy launches</h3>
-    <p>$1 USDC per launch, on Base. Pay with a wallet, or send USDC to the treasury address and paste the transaction hash.</p>
-    <div class="qty" id="qty"><button class="btn" data-n="1" aria-pressed="true">1</button><button class="btn" data-n="5">5</button><button class="btn" data-n="10">10</button></div>
-    <div class="row"><button class="cta" id="payWallet">Pay with wallet</button><span class="chip" id="payTotal">$1 USDC</span></div>
-    <p>Treasury address</p>
-    <div class="addr" id="treasury">—</div>
-    <form id="hashForm"><input type="text" id="txhash" placeholder="0x… transaction hash"><button class="btn" type="submit">Verify</button></form>
-    <p id="buyMsg"></p>
-    <div class="row"><button class="btn small" id="buyClose">Close</button></div>
+    <h3>Out of launches</h3>
+    <p>You've used your launch credits for now.</p>
+    <p><span class="chip">Buy more launches · coming soon</span></p>
+    <div id="outReferral"></div>
+    <div class="row"><button class="btn small" id="outClose">Close</button></div>
   </div>
 </div>
 
@@ -272,7 +298,7 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replayBtn','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaForm','ctaEmail','ctaMsg','launchBtn','status','feed','feedEmpty','feedCount','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','signinForm','email','signinMsg','signinClose','buy','qty','payWallet','payTotal','treasury','hashForm','txhash','buyMsg','buyClose'].forEach(id => els[id] = $(id));
+  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replayBtn','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','feed','feedEmpty','feedCount','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null;
@@ -282,7 +308,7 @@ label.name input{width:150px}
   let W = 0, H = 0, CW = 0, CH = 0, dpr = 1, lastDraw = 0, last = 0, tnow = 0;
   const fx = { smoke: [], debris: [], rings: [], sparks: [], flash: 0, skyFlash: 0, shake: 0, label: null, labelT: 0 };
   let stars = [], nebula = [], textures = {};
-  let payCfg = null, qtyN = 1, holdTimer = null;
+  let holdTimer = null;
 
   function fmt(n, d){ return (+n).toFixed(d); }
   function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -331,82 +357,67 @@ label.name input{width:150px}
   // ---------- auth ----------
   // One call to action. What it says and does depends on where the visitor is.
   function renderCta(){
-    els.ctaEmail.hidden = !!session;
-    if (!session) { els.cta.textContent = 'Launch your rocket'; els.launchBtn.textContent = 'Launch your rocket'; return; }
-    const label = (profile && profile.credits < 1) ? 'Buy credits and launch your rocket' : 'Launch your rocket' + (profile ? ' · ' + profile.credits + ' credit' + (profile.credits === 1 ? '' : 's') : '');
+    if (!session) { els.cta.textContent = 'Continue with Google to launch'; els.launchBtn.textContent = 'Launch your rocket'; return; }
+    const label = (profile && profile.credits < 1) ? 'Out of launches' : 'Launch your rocket' + (profile ? ' · ' + profile.credits + ' credit' + (profile.credits === 1 ? '' : 's') : '');
     els.cta.textContent = label; els.launchBtn.textContent = label;
   }
-  function go(){ clearTimeout(holdTimer); if (!session) return openSignin(); if (!profile || profile.credits < 1) return openBuy(); launch(); }
+  function go(){ clearTimeout(holdTimer); if (!session) return openSignin(); if (!profile || profile.credits < 1) return openOut(); launch(); }
   els.launchBtn.onclick = go;
-  els.ctaForm.onsubmit = async (e) => {
-    e.preventDefault();
-    if (session) return go();
-    const email = els.ctaEmail.value.trim();
-    if (!email) { els.ctaEmail.focus(); return; }
-    els.ctaMsg.textContent = 'Sending…';
-    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
-    els.ctaMsg.textContent = error ? 'Could not send: ' + error.message : 'Check your inbox for the sign-in link.';
-  };
+  els.cta.onclick = () => { if (!session) return signInGoogle(els.ctaMsg); go(); };
+  async function signInGoogle(msgEl){
+    if (msgEl) msgEl.textContent = 'Opening Google…';
+    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
+    if (error && msgEl) msgEl.textContent = 'Could not start Google sign-in: ' + error.message;
+  }
+  function displayName(u){ const m = u.user_metadata || {}; return m.full_name || m.name || u.email || 'pilot'; }
   function renderAuth(){
     if (!session) { els.authArea.innerHTML = '<button class="btn" id="signinBtn">Sign in</button>'; $('signinBtn').onclick = openSignin; renderCta(); return; }
     const n = profile ? profile.credits : '…';
-    els.authArea.innerHTML = '<span class="chip">' + esc(session.user.email) + '</span><span class="chip hot">' + n + ' credit' + (n === 1 ? '' : 's') + '</span><button class="btn small" id="signoutBtn">Sign out</button>';
+    els.authArea.innerHTML = '<span class="chip">' + esc(displayName(session.user)) + '</span><span class="chip hot">' + n + ' credit' + (n === 1 ? '' : 's') + '</span><button class="btn small" id="signoutBtn">Sign out</button>';
     $('signoutBtn').onclick = async () => { await sb.auth.signOut(); };
     renderCta();
   }
+  // A referral code arriving as ?ref=CODE is kept in the browser until the first sign-in.
+  function storedRef(){ try { return localStorage.getItem('lander.ref'); } catch (e) { return null; } }
+  try { const ref = new URLSearchParams(location.search).get('ref'); if (ref) localStorage.setItem('lander.ref', ref.trim().toLowerCase()); } catch (e) {}
   async function refreshProfile(){
-    if (!session) { profile = null; renderAuth(); return; }
-    const { data, error } = await sb.rpc('ensure_profile');
-    if (!error) profile = data; renderAuth();
+    if (!session) { profile = null; renderAuth(); renderReferral(); return; }
+    const { data, error } = await sb.rpc('ensure_profile', { p_ref: storedRef() });
+    if (!error) { profile = data; try { localStorage.removeItem('lander.ref'); } catch (e) {} }
+    renderAuth(); renderReferral();
   }
-  function openSignin(){ els.signin.hidden = false; els.signinMsg.textContent = ''; setTimeout(() => els.email.focus(), 50); }
+  function referralLink(){ return location.origin + location.pathname + '?ref=' + (profile ? profile.referral_code : ''); }
+  function renderReferral(){
+    const card = $('referCard');
+    if (!session || !profile || !profile.referral_code) { card.hidden = true; els.outReferral.innerHTML = ''; return; }
+    const link = referralLink();
+    const msg = "I'm flying rockets between planets with JavaScript. Most fuel left wins $100. Try it: " + link;
+    const enc = encodeURIComponent(msg), encLink = encodeURIComponent(link);
+    const n = profile.referrals_rewarded || 0;
+    const html = '<div class="refer">' +
+      '<div>Friends who launched: <span class="count">' + n + ' of 5 · +3 launches each</span></div>' +
+      '<div class="link"><input type="text" readonly value="' + esc(link) + '" aria-label="Your referral link"><button class="btn small copyRef">Copy</button></div>' +
+      '<div class="shares">' + (navigator.share ? '<button class="shareRef">Share…</button>' : '') +
+      '<a href="https://twitter.com/intent/tweet?text=' + enc + '" target="_blank" rel="noopener">X</a>' +
+      '<a href="https://www.facebook.com/sharer/sharer.php?u=' + encLink + '" target="_blank" rel="noopener">Facebook</a>' +
+      '<a href="https://wa.me/?text=' + enc + '" target="_blank" rel="noopener">WhatsApp</a>' +
+      '<a href="sms:?&body=' + enc + '">SMS</a>' +
+      '<a href="mailto:?subject=' + encodeURIComponent('Fly a rocket with me') + '&body=' + enc + '">Email</a></div></div>';
+    card.hidden = false; $('referPanel').innerHTML = html; els.outReferral.innerHTML = '<p>Earn more right now: each friend who launches gets you 3 launches, up to 5 friends.</p>' + html;
+    document.querySelectorAll('.copyRef').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(link); b.textContent = 'Copied'; } catch (e) { b.previousElementSibling.select(); b.textContent = 'Select and copy'; } setTimeout(() => { b.textContent = 'Copy'; }, 2500); });
+    document.querySelectorAll('.shareRef').forEach(b => b.onclick = () => { navigator.share({ title: 'Lander', text: msg, url: link }).catch(() => {}); });
+  }
+  function openSignin(){ els.signin.hidden = false; els.signinMsg.textContent = ''; setTimeout(() => els.googleBtn.focus(), 50); }
   els.signinClose.onclick = () => { els.signin.hidden = true; };
-  els.signinForm.onsubmit = async (e) => {
-    e.preventDefault();
-    const email = els.email.value.trim(); if (!email) return;
-    els.signinMsg.textContent = 'Sending…';
-    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
-    els.signinMsg.textContent = error ? 'Could not send: ' + error.message : 'Check your inbox for the sign-in link.';
-  };
+  els.googleBtn.onclick = () => signInGoogle(els.signinMsg);
   sb.auth.onAuthStateChange((event, s) => { session = s; refreshProfile(); if (s && event === 'SIGNED_IN') els.signin.hidden = true; });
 
-  // ---------- buy ----------
-  async function loadPayCfg(){ try { payCfg = await (await fetch('/api/pay')).json(); } catch (e) { payCfg = null; } }
-  function openBuy(){
+  // ---------- out of launches ----------
+  function openOut(){
     if (!session) return openSignin();
-    els.buy.hidden = false; els.buyMsg.textContent = '';
-    if (!payCfg || !payCfg.configured) { els.treasury.textContent = 'Payments switch on soon. Until then, every account gets one free launch.'; els.payWallet.disabled = true; }
-    else { els.treasury.textContent = payCfg.treasury; els.payWallet.disabled = false; }
+    els.out.hidden = false;
   }
-  els.buyClose.onclick = () => { els.buy.hidden = true; };
-  els.qty.querySelectorAll('button').forEach(b => b.onclick = () => { qtyN = +b.dataset.n; els.qty.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); els.payTotal.textContent = '$' + qtyN + ' USDC'; });
-  async function verifyTx(hash){
-    for (let i = 0; i < 14; i++) {
-      els.buyMsg.textContent = 'Checking the chain… (' + (i+1) + ')';
-      const res = await fetch('/api/pay', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ tx_hash: hash }) });
-      const j = await res.json();
-      if (res.ok && j.ok) { profile.credits = j.credits; renderAuth(); els.buyMsg.textContent = 'Credited. You have ' + j.credits + ' launches.'; return; }
-      if (res.status !== 404) { els.buyMsg.textContent = j.error || j.reason || 'Could not verify.'; return; }
-      await new Promise(r => setTimeout(r, 5000));
-    }
-    els.buyMsg.textContent = 'Still not seeing it. Paste the hash again in a minute.';
-  }
-  els.hashForm.onsubmit = (e) => { e.preventDefault(); const h = els.txhash.value.trim(); if (h) verifyTx(h); };
-  els.payWallet.onclick = async () => {
-    if (!window.ethereum) { els.buyMsg.textContent = 'No wallet found in this browser. Send USDC to the treasury address from any wallet and paste the transaction hash.'; return; }
-    try {
-      const eth = window.ethereum;
-      const [from] = await eth.request({ method: 'eth_requestAccounts' });
-      try { await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] }); }
-      catch (err) { if (err && err.code === 4902) await eth.request({ method: 'wallet_addEthereumChain', params: [{ chainId: '0x2105', chainName: 'Base', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: ['https://mainnet.base.org'], blockExplorerUrls: ['https://basescan.org'] }] }); else throw err; }
-      const amount = BigInt(qtyN) * 1000000n;
-      const data = '0xa9059cbb' + payCfg.treasury.slice(2).toLowerCase().padStart(64, '0') + amount.toString(16).padStart(64, '0');
-      els.buyMsg.textContent = 'Confirm the transfer in your wallet…';
-      const hash = await eth.request({ method: 'eth_sendTransaction', params: [{ from, to: payCfg.usdc, data }] });
-      els.txhash.value = hash;
-      await verifyTx(hash);
-    } catch (err) { els.buyMsg.textContent = 'Wallet said: ' + (err && err.message || err); }
-  };
+  els.outClose.onclick = () => { els.out.hidden = true; };
 
   // ---------- editor / launch ----------
   els.resetBtn.onclick = () => { els.code.value = STARTER; saveCode(); };
@@ -418,7 +429,7 @@ label.name input{width:150px}
   async function launch(){
     if (launching) return;
     if (!session) return openSignin();
-    if (!profile || profile.credits < 1) { setStatus('You are out of launches.', true); return openBuy(); }
+    if (!profile || profile.credits < 1) { setStatus('You are out of launches.', true); return openOut(); }
     saveCode(); showErr('');
     launching = true; els.cta.disabled = true; els.launchBtn.disabled = true;
     try {
@@ -433,7 +444,7 @@ label.name input{width:150px}
           holdTimer = setTimeout(launch, Math.min(data.wait_ms || 3000, 4000));
           return;
         }
-        if (data.reason === 'no_credits') { setStatus('You are out of launches.', true); openBuy(); return; }
+        if (data.reason === 'no_credits') { setStatus('You are out of launches.', true); openOut(); return; }
         if (data.reason === 'game_over') { setStatus('Game #1 is over. The winner is being announced.', true); return; }
         throw new Error(data.reason || 'could not claim');
       }
@@ -536,7 +547,7 @@ label.name input{width:150px}
     const S = rep.samples;
     let tLaunch = null; for (let i = 0; i < S.length; i++) if (S[i][5] > 0) { tLaunch = S[i][0]; break; }
     run = { world: w, samples: S, result: rep, tau: 0, idx: 0, done: false, tLaunch, held: false, hold: null, mine: !!opts.mine, practice: !!opts.practice, live: !!opts.live, pilot: opts.pilot || '', name: rep.bot_name || 'bot', label: opts.label };
-    resetFx();
+    resetFx(); camS = null;
     els.verdict.hidden = true; els.controls.hidden = false;
     els.banner.hidden = false; els.banner.onclick = null; els.banner.classList.remove('replay'); els.banner.classList.toggle('live', !!opts.live || !!opts.mine);
     els.bannerText.textContent = opts.practice ? 'Practice run · random ' + w.name + ' system' : opts.mine ? 'Your launch · ' + run.name : (opts.live ? 'LIVE · ' : (opts.label || 'Replay') + ' · ') + (run.pilot ? run.pilot + "'s " : '') + run.name;
@@ -585,7 +596,7 @@ label.name input{width:150px}
     if (run && run.hold) return 'COUNTDOWN ON THE PLANET ' + w.bodies[w.start].name.toUpperCase() + ' LAUNCHPAD';
     if (st.onPad) return 'ROCKET ON THE PLANET ' + w.bodies[w.start].name.toUpperCase() + ' LAUNCHPAD';
     if (nr.d < nr.body.hill * 1.5) return (nr.k === w.target ? 'APPROACHING ' : nr.k === w.start ? 'LEAVING ' : 'FLYBY OF ') + nr.body.name.toUpperCase();
-    return 'IN TRANSIT · ' + fmt(Math.max(0, dT), 2) + ' FROM ' + T.name.toUpperCase();
+    return (st.thr > 0 ? 'BURNING · ' : 'CRUISING · ') + T.name + ' in ' + fmt(Math.max(0, dT), 2);
   }
   function phaseOf(w, st, nr){
     if (run && run.done) return outcomeText(run.result, w)[0];
@@ -762,44 +773,89 @@ label.name input{width:150px}
     if (label) { g.save(); g.textAlign = 'center'; g.font = '700 48px "Chakra Petch", sans-serif'; g.shadowColor = 'rgba(243,180,87,0.9)'; g.shadowBlur = 28; g.fillStyle = label === 'TOUCHDOWN' ? '#6ad59a' : '#f3b457'; g.fillText(label, W/2, H*0.18); g.shadowBlur = 0; if (sub) { g.font = '500 13px "IBM Plex Sans", sans-serif'; g.fillStyle = '#e9ecf6'; g.fillText(sub, W/2, H*0.18 + 24); } g.restore(); }
     if (fx.skyFlash > 0) { g.fillStyle = 'rgba(255,230,190,' + (fx.skyFlash*0.5).toFixed(3) + ')'; g.fillRect(0, 0, W, H); }
   }
-  function drawCam(w, st, nr, dirx, diry, ended, flicker){
+  // The cam: locked on a planet when the rocket is near one, a chase cam on the rocket otherwise.
+  // Everything is drawn in absolute coordinates at true scale; the camera center and zoom ease between targets.
+  let camS = null, prevThr = 0, camStars = null;
+  function camStarsInit(){ const rnd = seededRnd(777); camStars = [0, 1, 2].map(l => { const arr = []; for (let i = 0; i < 60; i++) arr.push([rnd(), rnd(), 0.6 + l * 0.5 + rnd() * 0.7, 0.2 + rnd() * 0.5]); return arr; }); }
+  function drawCam(w, st, nr, dirx, diry, ended, flicker, dt){
     const g = cctx;
+    if (!camStars) camStarsInit();
+    const T = w.bodies[w.target], tp = bodyAt(w, w.target, st.t), dT = Math.hypot(st.x - tp.x, st.y - tp.y) - T.radius;
+    const locked = nr.d < nr.body.hill * 2.0;
+    const k = locked ? nr.k : -1, b = locked ? nr.body : null, p = locked ? nr.b : null;
+    const alt = locked ? nr.d - b.radius : Infinity, close = locked && alt < b.radius * 2.5;
+    const speed = Math.hypot(st.vx, st.vy);
+    const tgt = locked ? { cx: p.x, cy: p.y, r: close ? b.radius * 3.0 : b.hill * 1.7 } : { cx: st.x, cy: st.y, r: Math.min(1.6, Math.max(0.22, speed * 1.1)) };
+    if (!camS) camS = { cx: tgt.cx, cy: tgt.cy, r: tgt.r };
+    const ease = 1 - Math.exp(-(dt || 0.016) / 0.16);
+    camS.cx += (tgt.cx - camS.cx) * ease; camS.cy += (tgt.cy - camS.cy) * ease; camS.r += (tgt.r - camS.r) * ease;
+    const sc = (Math.min(CW, CH) / 2) / camS.r, icx = CW / 2, icy = CH / 2;
+    const X = x => icx + (x - camS.cx) * sc, Y = y => icy - (y - camS.cy) * sc;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.fillStyle = '#03050c'; g.fillRect(0, 0, CW, CH);
-    for (let i = 0; i < stars.length; i += 3) { const s = stars[i]; g.fillStyle = 'rgba(233,236,246,' + (s[3]*0.6).toFixed(3) + ')'; g.fillRect(s[0]*CW, s[1]*CH, s[2], s[2]); }
-    const locked = nr.d < nr.body.hill * 2.0;
-    const k = locked ? nr.k : w.target, b = w.bodies[k], p = locked ? nr.b : bodyAt(w, k, st.t);
-    const d = Math.hypot(st.x - p.x, st.y - p.y), alt = d - b.radius;
-    const close = alt < b.radius * 2.5;
-    const viewR = !locked ? b.radius * 3.0 : close ? b.radius * 3.0 : b.hill * 1.7, sc = (Math.min(CW, CH)/2) / viewR;
-    const shx = (Math.random()-0.5) * 16 * fx.shake * fx.shake, shy = (Math.random()-0.5) * 16 * fx.shake * fx.shake;
+    for (let l = 0; l < 3; l++) {
+      const par = [0.06, 0.14, 0.3][l], ox = ((camS.cx * par * 220) % CW + CW) % CW, oy = ((-camS.cy * par * 220) % CH + CH) % CH;
+      for (const s of camStars[l]) { let x = (s[0] * CW - ox + CW) % CW, y = (s[1] * CH - oy + CH) % CH; g.fillStyle = 'rgba(233,236,246,' + (s[3] * (0.5 + l * 0.25)).toFixed(3) + ')'; g.fillRect(x, y, s[2], s[2]); }
+    }
+    const shx = (Math.random() - 0.5) * 16 * fx.shake * fx.shake, shy = (Math.random() - 0.5) * 16 * fx.shake * fx.shake;
     g.save(); g.translate(shx, shy);
-    const icx = CW/2, icy = CH/2, [lx, ly] = lightDir(p.x, p.y);
-    if (locked && !close) { g.strokeStyle = 'rgba(243,180,87,0.15)'; g.setLineDash([3,5]); g.beginPath(); g.arc(icx, icy, b.hill*sc, 0, TAU); g.stroke(); g.setLineDash([]); }
-    if (run && locked) {
-      const S = run.samples; let started = false;
+    const sunR = w.sun.radius * sc;
+    if (Math.abs(X(0) - icx) < CW + sunR * 5 && Math.abs(Y(0) - icy) < CH + sunR * 5) drawStar(g, X(0), Y(0), Math.max(2, sunR), tnow);
+    if (run) {
+      const S = run.samples; let started = false; const from = Math.max(0, run.idx - (locked ? 1500 : 500));
       g.strokeStyle = 'rgba(170,180,210,0.55)'; g.lineWidth = 1.2; g.beginPath();
-      for (let i = Math.max(0, run.idx - 1500); i <= run.idx; i++) { const q = S[i], bp = bodyAt(w, k, q[0]); const rx = icx + (q[1] - bp.x)*sc, ry = icy - (q[2] - bp.y)*sc; if (!started) { g.moveTo(rx, ry); started = true; } else g.lineTo(rx, ry); }
+      for (let i = from; i <= run.idx; i++) {
+        const q = S[i]; let qx = q[1], qy = q[2];
+        if (locked) { const bp = bodyAt(w, k, q[0]); qx += p.x - bp.x; qy += p.y - bp.y; }   // planet-relative near a planet
+        const rx = X(qx), ry = Y(qy); if (!started) { g.moveTo(rx, ry); started = true; } else g.lineTo(rx, ry);
+      }
       g.stroke();
     }
-    drawPlanet(g, b, icx, icy, b.radius*sc, lx, ly, true);
-    for (const q of fx.smoke) if (q.k === k) { const a = Math.max(0, 1 - q.age / q.life) * 0.5; g.fillStyle = 'rgba(' + Math.round(q.tone) + ',' + Math.round(q.tone) + ',' + Math.round(q.tone + 20) + ',' + a.toFixed(3) + ')'; g.beginPath(); g.arc(icx + q.x*sc, icy - q.y*sc, Math.max(1, q.size*sc), 0, TAU); g.fill(); }
-    if (locked) {
-      const rx = icx + (st.x - p.x)*sc, ry = icy - (st.y - p.y)*sc;
-      if (st.thr > 0 && !ended) for (let i = 0; i < 3; i++) fx.sparks.push({ x: rx, y: ry, vx: -dirx*(80 + Math.random()*140) + (Math.random()-0.5)*60, vy: diry*(80 + Math.random()*140) + (Math.random()-0.5)*60, life: 0.25 + Math.random()*0.35, age: 0 });
-      for (const s of fx.sparks) { const a = Math.max(0, 1 - s.age / s.life); g.fillStyle = 'rgba(255,' + Math.round(150 + 100*a) + ',80,' + a.toFixed(3) + ')'; g.fillRect(s.x, s.y, 2, 2); }
-      if (!ended) drawRocket(g, rx, ry, dirx, diry, st.thr, close ? 22 : 12, flicker);
-      for (const r of fx.rings) if (r.k === k) { const a = Math.max(0, 1 - r.age / r.life); g.strokeStyle = 'rgba(' + r.color + ',' + (a*0.9).toFixed(3) + ')'; g.lineWidth = r.width; g.beginPath(); g.arc(icx + r.x*sc, icy - r.y*sc, r.r*sc, 0, TAU); g.stroke(); }
-      for (const q of fx.debris) if (q.k === k) { const a = Math.max(0, 1 - q.age / q.life); g.fillStyle = q.color; g.globalAlpha = a; g.beginPath(); g.arc(icx + q.x*sc, icy - q.y*sc, q.size, 0, TAU); g.fill(); }
-      g.globalAlpha = 1;
-      if (ended && fx.flash > 0) { const fg = g.createRadialGradient(rx, ry, 0, rx, ry, CW*0.7); fg.addColorStop(0, 'rgba(255,240,200,' + fx.flash + ')'); fg.addColorStop(1, 'rgba(255,120,60,0)'); g.fillStyle = fg; g.fillRect(-20, -20, CW + 40, CH + 40); }
-    } else {
-      const ax = st.x - p.x, ay = st.y - p.y, an = Math.hypot(ax, ay) || 1, ex = icx + ax/an * (CW/2 - 18), ey = icy - ay/an * (CH/2 - 18);
-      g.fillStyle = '#f3b457'; g.save(); g.translate(ex, ey); g.rotate(Math.atan2(-ay, ax)); g.beginPath(); g.moveTo(8, 0); g.lineTo(-6, -5); g.lineTo(-6, 5); g.closePath(); g.fill(); g.restore();
+    w.bodies.forEach((bb, kk) => {
+      const pp = kk === k ? p : bodyAt(w, kk, st.t), x = X(pp.x), y = Y(pp.y), r = bb.radius * sc;
+      if (x + r < -60 || x - r > CW + 60 || y + r < -60 || y - r > CH + 60) return;
+      const [lx, ly] = lightDir(pp.x, pp.y);
+      if (kk === k && !close) { g.strokeStyle = 'rgba(243,180,87,0.15)'; g.setLineDash([3,5]); g.beginPath(); g.arc(x, y, bb.hill * sc, 0, TAU); g.stroke(); g.setLineDash([]); }
+      drawPlanet(g, bb, x, y, r, lx, ly, r > 6);
+      if (kk === w.target && kk !== k && r < 40) { g.fillStyle = '#f3b457'; g.font = '500 11px "IBM Plex Sans", sans-serif'; g.textAlign = 'center'; g.fillText(bb.name, x, y - r - 8); g.textAlign = 'start'; }
+    });
+    const bodyPos = kk => kk === k ? p : bodyAt(w, kk, st.t);
+    for (const q of fx.smoke) { const bp = bodyPos(q.k), a = Math.max(0, 1 - q.age / q.life) * 0.5; g.fillStyle = 'rgba(' + Math.round(q.tone) + ',' + Math.round(q.tone) + ',' + Math.round(q.tone + 20) + ',' + a.toFixed(3) + ')'; g.beginPath(); g.arc(X(bp.x + q.x), Y(bp.y + q.y), Math.max(1, q.size * sc), 0, TAU); g.fill(); }
+    const rx = X(st.x), ry = Y(st.y);
+    if (st.thr > 0 && !ended) {
+      const gl = g.createRadialGradient(rx, ry, 0, rx, ry, 36 + 50 * st.thr);
+      gl.addColorStop(0, 'rgba(255,180,90,' + (0.28 * st.thr).toFixed(3) + ')'); gl.addColorStop(1, 'rgba(255,120,40,0)');
+      g.fillStyle = gl; g.fillRect(rx - 100, ry - 100, 200, 200);
+      if (fx.sparks.length < 60) for (let i = 0; i < 3; i++) fx.sparks.push({ x: rx, y: ry, vx: -dirx * (80 + Math.random() * 140) + (Math.random() - 0.5) * 60, vy: diry * (80 + Math.random() * 140) + (Math.random() - 0.5) * 60, life: 0.25 + Math.random() * 0.35, age: 0 });
+    }
+    for (const s of fx.sparks) { const a = Math.max(0, 1 - s.age / s.life); g.fillStyle = 'rgba(255,' + Math.round(150 + 100 * a) + ',80,' + a.toFixed(3) + ')'; g.fillRect(s.x, s.y, 2, 2); }
+    if (!ended && !st.onPad && speed > 1e-4) {
+      const vx = st.vx / speed, vy = st.vy / speed, L = 24 + 30 * Math.min(1, speed);
+      g.strokeStyle = 'rgba(143,152,184,0.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(rx, ry); g.lineTo(rx + vx * L, ry - vy * L); g.stroke();
+      g.fillStyle = 'rgba(143,152,184,0.45)'; g.beginPath(); g.moveTo(rx + vx * (L + 6), ry - vy * (L + 6)); g.lineTo(rx + vx * L - vy * 3, ry - vy * L - vx * 3); g.lineTo(rx + vx * L + vy * 3, ry - vy * L + vx * 3); g.closePath(); g.fill();
+    }
+    if (!ended) drawRocket(g, rx, ry, dirx, diry, st.thr, close ? 22 : locked ? 12 : 15, flicker);
+    for (const r of fx.rings) { const bp = bodyPos(r.k), a = Math.max(0, 1 - r.age / r.life); g.strokeStyle = 'rgba(' + r.color + ',' + (a * 0.9).toFixed(3) + ')'; g.lineWidth = r.width; g.beginPath(); g.arc(X(bp.x + r.x), Y(bp.y + r.y), r.r * sc, 0, TAU); g.stroke(); }
+    for (const q of fx.debris) { const bp = bodyPos(q.k), a = Math.max(0, 1 - q.age / q.life); g.fillStyle = q.color; g.globalAlpha = a; g.beginPath(); g.arc(X(bp.x + q.x), Y(bp.y + q.y), q.size, 0, TAU); g.fill(); }
+    g.globalAlpha = 1;
+    if (ended && fx.flash > 0) { const fg = g.createRadialGradient(rx, ry, 0, rx, ry, CW * 0.7); fg.addColorStop(0, 'rgba(255,240,200,' + fx.flash + ')'); fg.addColorStop(1, 'rgba(255,120,60,0)'); g.fillStyle = fg; g.fillRect(-20, -20, CW + 40, CH + 40); }
+    // edge marker toward the target planet whenever it is off screen
+    if (k !== w.target) {
+      const tx = X(tp.x), ty = Y(tp.y);
+      if (tx < 0 || tx > CW || ty < 0 || ty > CH) {
+        const ax = tx - icx, ay = ty - icy, m = Math.max(Math.abs(ax) / (CW / 2 - 22), Math.abs(ay) / (CH / 2 - 22)), ex = icx + ax / m, ey = icy + ay / m, ang = Math.atan2(ay, ax);
+        g.fillStyle = '#f3b457'; g.save(); g.translate(ex, ey); g.rotate(ang); g.beginPath(); g.moveTo(9, 0); g.lineTo(-7, -6); g.lineTo(-7, 6); g.closePath(); g.fill(); g.restore();
+        g.font = '600 11px "IBM Plex Sans", sans-serif'; g.textAlign = ex > icx ? 'right' : 'left';
+        g.fillText(T.name + ' · ' + fmt(Math.max(0, dT), 2), ex + (ex > icx ? -14 : 14), ey + (ey > icy ? -8 : 16)); g.textAlign = 'start';
+      }
     }
     g.restore();
+    const vg = g.createRadialGradient(icx, icy, Math.min(CW, CH) * 0.42, icx, icy, Math.max(CW, CH) * 0.72);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.5)'); g.fillStyle = vg; g.fillRect(0, 0, CW, CH);
+    if (st.thr > 0.85 && prevThr <= 0.85 && !st.onPad) fx.shake = Math.max(fx.shake, 0.35);
+    prevThr = st.thr;
     els.camLabel.textContent = whereIs(w, st, nr);
-    els.camFoot.textContent = (locked ? b.name + ' · alt ' + fmt(Math.max(0, alt), 4) + ' · rel ' + fmt(Math.hypot(st.vx - p.vx, st.vy - p.vy), 3) : 'showing ' + b.name + ' · rocket is ' + fmt(d, 2) + ' away') + ' · true scale';
+    els.camFoot.textContent = (locked ? b.name + ' · alt ' + fmt(Math.max(0, alt), 4) + ' · rel ' + fmt(Math.hypot(st.vx - p.vx, st.vy - p.vy), 3) : 'chase cam · speed ' + fmt(speed, 3) + ' · ' + T.name + ' in ' + fmt(Math.max(0, dT), 2)) + ' · true scale';
   }
   function draw(now){
     const w = displayWorld(); if (!w) return;
@@ -818,7 +874,7 @@ label.name input{width:150px}
       for (let i = 0; i < 5; i++) { const sp = (0.2 + Math.random()*0.6) * A.radius; fx.smoke.push({ k: w.start, x: rx - dirx*A.radius*0.05, y: ry - diry*A.radius*0.05, vx: -dirx*sp + (Math.random()-0.5)*sp*0.9, vy: -diry*sp + (Math.random()-0.5)*sp*0.9, size: A.radius*(0.03 + Math.random()*0.06), grow: A.radius*0.2, life: 0.9 + Math.random()*1.0, age: 0, tone: 170 + Math.random()*50 }); }
     }
     drawSky(w, st, nr, dirx, diry, ended, flicker);
-    drawCam(w, st, nr, dirx, diry, ended, flicker);
+    drawCam(w, st, nr, dirx, diry, ended, flicker, fxDt);
     setTelemetry(w, st);
   }
   function frame(now){
@@ -828,7 +884,7 @@ label.name input{width:150px}
       if (!run) idleT += dts * w.bodies[0].period / 30;
       else if (run.done) {
         // after the verdict has had its moment, hand back to the live system; Replay brings it back
-        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); idleBanner(); els.verdict.classList.add('fade'); setTimeout(() => { if (!run) els.verdict.hidden = true; }, 950); }
+        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); camS = null; idleBanner(); els.verdict.classList.add('fade'); setTimeout(() => { if (!run) els.verdict.hidden = true; }, 950); }
       }
       else {
         const S = run.samples, end = S[S.length-1][0];
@@ -865,7 +921,7 @@ label.name input{width:150px}
     if (!world) { els.status.textContent = 'No game is running. Check back soon.'; els.tagline.textContent = 'No game is running.'; }
     resize(); new ResizeObserver(resize).observe(sky); new ResizeObserver(resize).observe(cam);
     requestAnimationFrame(frame);
-    await refreshFeed(); refreshBoard(); refreshWinners(); loadPayCfg();
+    await refreshFeed(); refreshBoard(); refreshWinners();
     setInterval(refreshGame, 3000); setInterval(refreshFeed, 3000); setInterval(refreshBoard, 10000); setInterval(renderEnds, 30000); setInterval(refreshWinners, 60000);
   }
   boot();
