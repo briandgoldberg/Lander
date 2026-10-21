@@ -6,7 +6,7 @@ Live: https://lander-topaz.vercel.app
 
 ## How it works
 
-1. Sign up with your email. A magic link signs you in. New accounts start with launch credits.
+1. Sign in with Google. New accounts start with 3 launch credits.
 2. Submit JavaScript that defines `bot(world, sim)` and returns a controller. On launch, the server runs it in a sealed worker with no network and a 10 second clock, then flies the controller you returned through the game's physics.
 3. Everyone watching the site sees each launch as it happens. One launch flies at a time; if two people launch together, one is asked to hold and goes automatically next.
 4. A game lasts 10 days. The safe landing with the most fuel left wins, and the winning code is published in Previous winners. Entering means agreeing to that.
@@ -24,7 +24,13 @@ Live: https://lander-topaz.vercel.app
 
 Vercel, with these production environment variables: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GAME_SECRET` (must match `private.config` in the database),.
 
-One manual step in Supabase: Authentication → URL Configuration → set the Site URL to the live URL, so magic links come back to the site.
+## Google sign-in setup (manual, once)
+
+1. In Google Cloud Console, create an OAuth 2.0 client ID of type Web application. Add `https://wzywxpmzrblifpphzspf.supabase.co/auth/v1/callback` as an authorized redirect URI (the Supabase callback for this project) and the live site origin as an authorized JavaScript origin.
+2. In Supabase, Authentication → Providers → Google: enable it and paste that client ID and client secret.
+3. In Supabase, Authentication → URL Configuration: keep the Site URL and the redirect URL list pointing at the live site (both Vercel addresses are listed). Add any preview deployment URL you want to sign in from.
+
+No other sign-in method exists. There is no email or password fallback.
 
 ## Units
 

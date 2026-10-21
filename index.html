@@ -41,7 +41,6 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .hero{margin:0;font-family:var(--display);font-weight:700;font-size:clamp(22px,3.2vw,34px);letter-spacing:.04em;line-height:1.15;color:var(--fg);text-wrap:balance}
 .hero em{font-style:normal;color:var(--accent)}
 .ctarow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.ctarow input{font-size:15px;padding:11px 14px;min-width:260px}
 .maincol{display:flex;flex-direction:column;gap:14px;min-width:0}
 .how{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .livebadge{position:absolute;right:12px;top:12px;display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:12px;letter-spacing:.14em;background:rgba(7,10,20,.85);border:1px solid var(--live);border-radius:999px;padding:6px 12px;color:var(--fg)}
@@ -141,11 +140,10 @@ label.name input{width:150px}
 
   <p class="hero" id="hero">Touch down on the target planet with the most fuel in the tank and you win.</p>
 
-  <form class="ctarow" id="ctaForm">
-    <input type="email" id="ctaEmail" placeholder="you@example.com" autocomplete="email">
-    <button class="cta" id="cta" type="submit">Launch your rocket</button>
+  <div class="ctarow">
+    <button class="cta" id="cta">Continue with Google to launch</button>
     <span class="status" id="ctaMsg" style="margin:0"></span>
-  </form>
+  </div>
 
   <div class="stagegrid">
     <div class="maincol">
@@ -236,9 +234,9 @@ label.name input{width:150px}
 
 <div class="modal" id="signin" hidden>
   <div class="box">
-    <h3>Sign up to launch</h3>
-    <p>Enter your email and we'll send a sign-in link. No password.</p>
-    <form id="signinForm"><input type="email" id="email" placeholder="you@example.com" required autocomplete="email"><button class="cta" type="submit">Send link</button></form>
+    <h3>Sign in to launch</h3>
+    <p>Sign in with your Google account. Free, no password, and new accounts start with 3 launches.</p>
+    <div class="row"><button class="cta" id="googleBtn">Continue with Google</button></div>
     <p id="signinMsg"></p>
     <div class="row"><button class="btn small" id="signinClose">Close</button></div>
   </div>
@@ -265,7 +263,7 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replayBtn','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaForm','ctaEmail','ctaMsg','launchBtn','status','feed','feedEmpty','feedCount','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','signinForm','email','signinMsg','signinClose','out','outReferral','outClose'].forEach(id => els[id] = $(id));
+  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replayBtn','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','feed','feedEmpty','feedCount','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null;
@@ -324,26 +322,23 @@ label.name input{width:150px}
   // ---------- auth ----------
   // One call to action. What it says and does depends on where the visitor is.
   function renderCta(){
-    els.ctaEmail.hidden = !!session;
-    if (!session) { els.cta.textContent = 'Launch your rocket'; els.launchBtn.textContent = 'Launch your rocket'; return; }
+    if (!session) { els.cta.textContent = 'Continue with Google to launch'; els.launchBtn.textContent = 'Launch your rocket'; return; }
     const label = (profile && profile.credits < 1) ? 'Out of launches' : 'Launch your rocket' + (profile ? ' · ' + profile.credits + ' credit' + (profile.credits === 1 ? '' : 's') : '');
     els.cta.textContent = label; els.launchBtn.textContent = label;
   }
   function go(){ clearTimeout(holdTimer); if (!session) return openSignin(); if (!profile || profile.credits < 1) return openOut(); launch(); }
   els.launchBtn.onclick = go;
-  els.ctaForm.onsubmit = async (e) => {
-    e.preventDefault();
-    if (session) return go();
-    const email = els.ctaEmail.value.trim();
-    if (!email) { els.ctaEmail.focus(); return; }
-    els.ctaMsg.textContent = 'Sending…';
-    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
-    els.ctaMsg.textContent = error ? 'Could not send: ' + error.message : 'Check your inbox for the sign-in link.';
-  };
+  els.cta.onclick = () => { if (!session) return signInGoogle(els.ctaMsg); go(); };
+  async function signInGoogle(msgEl){
+    if (msgEl) msgEl.textContent = 'Opening Google…';
+    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
+    if (error && msgEl) msgEl.textContent = 'Could not start Google sign-in: ' + error.message;
+  }
+  function displayName(u){ const m = u.user_metadata || {}; return m.full_name || m.name || u.email || 'pilot'; }
   function renderAuth(){
     if (!session) { els.authArea.innerHTML = '<button class="btn" id="signinBtn">Sign in</button>'; $('signinBtn').onclick = openSignin; renderCta(); return; }
     const n = profile ? profile.credits : '…';
-    els.authArea.innerHTML = '<span class="chip">' + esc(session.user.email) + '</span><span class="chip hot">' + n + ' credit' + (n === 1 ? '' : 's') + '</span><button class="btn small" id="signoutBtn">Sign out</button>';
+    els.authArea.innerHTML = '<span class="chip">' + esc(displayName(session.user)) + '</span><span class="chip hot">' + n + ' credit' + (n === 1 ? '' : 's') + '</span><button class="btn small" id="signoutBtn">Sign out</button>';
     $('signoutBtn').onclick = async () => { await sb.auth.signOut(); };
     renderCta();
   }
@@ -352,15 +347,9 @@ label.name input{width:150px}
     const { data, error } = await sb.rpc('ensure_profile');
     if (!error) profile = data; renderAuth();
   }
-  function openSignin(){ els.signin.hidden = false; els.signinMsg.textContent = ''; setTimeout(() => els.email.focus(), 50); }
+  function openSignin(){ els.signin.hidden = false; els.signinMsg.textContent = ''; setTimeout(() => els.googleBtn.focus(), 50); }
   els.signinClose.onclick = () => { els.signin.hidden = true; };
-  els.signinForm.onsubmit = async (e) => {
-    e.preventDefault();
-    const email = els.email.value.trim(); if (!email) return;
-    els.signinMsg.textContent = 'Sending…';
-    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
-    els.signinMsg.textContent = error ? 'Could not send: ' + error.message : 'Check your inbox for the sign-in link.';
-  };
+  els.googleBtn.onclick = () => signInGoogle(els.signinMsg);
   sb.auth.onAuthStateChange((event, s) => { session = s; refreshProfile(); if (s && event === 'SIGNED_IN') els.signin.hidden = true; });
 
   // ---------- out of launches ----------
