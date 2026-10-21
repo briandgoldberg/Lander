@@ -155,12 +155,12 @@ label.name input{width:150px}
     </div>
   </header>
 
-  <p class="hero" id="hero">Touch down on the target planet with the most fuel in the tank and you win.</p>
+  <p class="hero" id="hero">Land on the target planet with the most fuel left.</p>
 
   <div class="prize"><b>Round 1 prize: $100 cash.</b> The safe landing with the most fuel left wins. Free to enter.</div>
 
   <div class="ctarow">
-    <button class="cta" id="cta">Continue with Google to launch</button>
+    <button class="cta" id="cta">Set your flight path</button>
     <span class="status" id="ctaMsg" style="margin:0"></span>
   </div>
 
@@ -334,7 +334,7 @@ label.name input{width:150px}
   function renderMission(){
     const w = world, A = w.bodies[w.start], B = w.bodies[w.target];
     els.systemName.textContent = w.name + ' system';
-    $('hero').innerHTML = 'Touch down on <em>Planet ' + esc(B.name) + '</em> with the most fuel in the tank and you win.';
+    $('hero').innerHTML = 'Land on <em>Planet ' + esc(B.name) + '</em> with the most fuel left.';
     els.brief.innerHTML = 'Launch from <b>' + esc(A.name) + '</b>, land on <b>' + esc(B.name) + '</b>. ' + (B.orbitR > A.orbitR ? 'Outward.' : 'Inward.') + ' Safe landing, most fuel left, wins.';
     els.facts.innerHTML = [
       ['Fuel budget (Δv)', fmt(w.rocket.fuel, 2)],
@@ -356,14 +356,15 @@ label.name input{width:150px}
 
   // ---------- auth ----------
   // One call to action. What it says and does depends on where the visitor is.
+  // The top button always leads to the editor; the editor's button does the launching.
   function renderCta(){
-    if (!session) { els.cta.textContent = 'Continue with Google to launch'; els.launchBtn.textContent = 'Launch your rocket'; return; }
-    const label = (profile && profile.credits < 1) ? 'Out of launches' : 'Launch your rocket' + (profile ? ' · ' + profile.credits + ' credit' + (profile.credits === 1 ? '' : 's') : '');
-    els.cta.textContent = label; els.launchBtn.textContent = label;
+    els.cta.textContent = 'Set your flight path';
+    if (!session) { els.launchBtn.textContent = 'Launch your rocket'; return; }
+    els.launchBtn.textContent = (profile && profile.credits < 1) ? 'Out of launches' : 'Launch your rocket' + (profile ? ' · ' + profile.credits + ' credit' + (profile.credits === 1 ? '' : 's') : '');
   }
   function go(){ clearTimeout(holdTimer); if (!session) return openSignin(); if (!profile || profile.credits < 1) return openOut(); launch(); }
   els.launchBtn.onclick = go;
-  els.cta.onclick = () => { if (!session) return signInGoogle(els.ctaMsg); go(); };
+  els.cta.onclick = () => { els.editor.scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => els.code.focus(), 400); };
   async function signInGoogle(msgEl){
     if (msgEl) msgEl.textContent = 'Opening Google…';
     const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
