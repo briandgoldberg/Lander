@@ -32,6 +32,8 @@ Vercel, with these production environment variables: `SUPABASE_URL`, `SUPABASE_A
 
 No other sign-in method exists. There is no email or password fallback.
 
+Done on 2026-10-21: Google Cloud project `Lander` (lander-512323) with a published OAuth consent screen (homepage and privacy policy at the live site, `privacy.html`) and a Web application client; the Supabase Google provider is enabled with that client.
+
 ## Units
 
 Star mass 1, G 1, the innermost orbit is about 1. Planets share one density, so mass goes with radius cubed. Fuel is a delta-v budget: throttle 1 burns `maxThrust` per time unit. Gravity is exaggerated so flybys matter.
