@@ -125,9 +125,6 @@ label.name input{width:150px}
 .modal p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
 .modal form{display:flex;gap:8px}
 .modal form input{flex:1;min-width:0}
-.qty{display:flex;gap:6px}
-.qty .btn[aria-pressed="true"]{background:rgba(243,180,87,.12)}
-.addr{font-family:var(--mono);font-size:11px;word-break:break-all;background:var(--panel-2);padding:8px;border-radius:6px;user-select:all}
 .foot{color:var(--muted);font-size:12px;text-align:center}
 </style>
 </head>
@@ -234,7 +231,7 @@ label.name input{width:150px}
     </div>
   </div>
 
-  <p class="foot">Lander is an experiment. Physics is exaggerated so flybys matter. Payments are in USDC on Base.</p>
+  <p class="foot">Lander is an experiment. Physics is exaggerated so flybys matter.</p>
 </div>
 
 <div class="modal" id="signin" hidden>
@@ -247,17 +244,13 @@ label.name input{width:150px}
   </div>
 </div>
 
-<div class="modal" id="buy" hidden>
+<div class="modal" id="out" hidden>
   <div class="box">
-    <h3>Buy launches</h3>
-    <p>$1 USDC per launch, on Base. Pay with a wallet, or send USDC to the treasury address and paste the transaction hash.</p>
-    <div class="qty" id="qty"><button class="btn" data-n="1" aria-pressed="true">1</button><button class="btn" data-n="5">5</button><button class="btn" data-n="10">10</button></div>
-    <div class="row"><button class="cta" id="payWallet">Pay with wallet</button><span class="chip" id="payTotal">$1 USDC</span></div>
-    <p>Treasury address</p>
-    <div class="addr" id="treasury">—</div>
-    <form id="hashForm"><input type="text" id="txhash" placeholder="0x… transaction hash"><button class="btn" type="submit">Verify</button></form>
-    <p id="buyMsg"></p>
-    <div class="row"><button class="btn small" id="buyClose">Close</button></div>
+    <h3>Out of launches</h3>
+    <p>You've used your launch credits for now.</p>
+    <p><span class="chip">Buy more launches · coming soon</span></p>
+    <div id="outReferral"></div>
+    <div class="row"><button class="btn small" id="outClose">Close</button></div>
   </div>
 </div>
 
@@ -272,7 +265,7 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replayBtn','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaForm','ctaEmail','ctaMsg','launchBtn','status','feed','feedEmpty','feedCount','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','signinForm','email','signinMsg','signinClose','buy','qty','payWallet','payTotal','treasury','hashForm','txhash','buyMsg','buyClose'].forEach(id => els[id] = $(id));
+  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replayBtn','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaForm','ctaEmail','ctaMsg','launchBtn','status','feed','feedEmpty','feedCount','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','signinForm','email','signinMsg','signinClose','out','outReferral','outClose'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null;
@@ -282,7 +275,7 @@ label.name input{width:150px}
   let W = 0, H = 0, CW = 0, CH = 0, dpr = 1, lastDraw = 0, last = 0, tnow = 0;
   const fx = { smoke: [], debris: [], rings: [], sparks: [], flash: 0, skyFlash: 0, shake: 0, label: null, labelT: 0 };
   let stars = [], nebula = [], textures = {};
-  let payCfg = null, qtyN = 1, holdTimer = null;
+  let holdTimer = null;
 
   function fmt(n, d){ return (+n).toFixed(d); }
   function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -333,10 +326,10 @@ label.name input{width:150px}
   function renderCta(){
     els.ctaEmail.hidden = !!session;
     if (!session) { els.cta.textContent = 'Launch your rocket'; els.launchBtn.textContent = 'Launch your rocket'; return; }
-    const label = (profile && profile.credits < 1) ? 'Buy credits and launch your rocket' : 'Launch your rocket' + (profile ? ' · ' + profile.credits + ' credit' + (profile.credits === 1 ? '' : 's') : '');
+    const label = (profile && profile.credits < 1) ? 'Out of launches' : 'Launch your rocket' + (profile ? ' · ' + profile.credits + ' credit' + (profile.credits === 1 ? '' : 's') : '');
     els.cta.textContent = label; els.launchBtn.textContent = label;
   }
-  function go(){ clearTimeout(holdTimer); if (!session) return openSignin(); if (!profile || profile.credits < 1) return openBuy(); launch(); }
+  function go(){ clearTimeout(holdTimer); if (!session) return openSignin(); if (!profile || profile.credits < 1) return openOut(); launch(); }
   els.launchBtn.onclick = go;
   els.ctaForm.onsubmit = async (e) => {
     e.preventDefault();
@@ -370,43 +363,12 @@ label.name input{width:150px}
   };
   sb.auth.onAuthStateChange((event, s) => { session = s; refreshProfile(); if (s && event === 'SIGNED_IN') els.signin.hidden = true; });
 
-  // ---------- buy ----------
-  async function loadPayCfg(){ try { payCfg = await (await fetch('/api/pay')).json(); } catch (e) { payCfg = null; } }
-  function openBuy(){
+  // ---------- out of launches ----------
+  function openOut(){
     if (!session) return openSignin();
-    els.buy.hidden = false; els.buyMsg.textContent = '';
-    if (!payCfg || !payCfg.configured) { els.treasury.textContent = 'Payments switch on soon. Until then, every account gets one free launch.'; els.payWallet.disabled = true; }
-    else { els.treasury.textContent = payCfg.treasury; els.payWallet.disabled = false; }
+    els.out.hidden = false;
   }
-  els.buyClose.onclick = () => { els.buy.hidden = true; };
-  els.qty.querySelectorAll('button').forEach(b => b.onclick = () => { qtyN = +b.dataset.n; els.qty.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); els.payTotal.textContent = '$' + qtyN + ' USDC'; });
-  async function verifyTx(hash){
-    for (let i = 0; i < 14; i++) {
-      els.buyMsg.textContent = 'Checking the chain… (' + (i+1) + ')';
-      const res = await fetch('/api/pay', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ tx_hash: hash }) });
-      const j = await res.json();
-      if (res.ok && j.ok) { profile.credits = j.credits; renderAuth(); els.buyMsg.textContent = 'Credited. You have ' + j.credits + ' launches.'; return; }
-      if (res.status !== 404) { els.buyMsg.textContent = j.error || j.reason || 'Could not verify.'; return; }
-      await new Promise(r => setTimeout(r, 5000));
-    }
-    els.buyMsg.textContent = 'Still not seeing it. Paste the hash again in a minute.';
-  }
-  els.hashForm.onsubmit = (e) => { e.preventDefault(); const h = els.txhash.value.trim(); if (h) verifyTx(h); };
-  els.payWallet.onclick = async () => {
-    if (!window.ethereum) { els.buyMsg.textContent = 'No wallet found in this browser. Send USDC to the treasury address from any wallet and paste the transaction hash.'; return; }
-    try {
-      const eth = window.ethereum;
-      const [from] = await eth.request({ method: 'eth_requestAccounts' });
-      try { await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] }); }
-      catch (err) { if (err && err.code === 4902) await eth.request({ method: 'wallet_addEthereumChain', params: [{ chainId: '0x2105', chainName: 'Base', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: ['https://mainnet.base.org'], blockExplorerUrls: ['https://basescan.org'] }] }); else throw err; }
-      const amount = BigInt(qtyN) * 1000000n;
-      const data = '0xa9059cbb' + payCfg.treasury.slice(2).toLowerCase().padStart(64, '0') + amount.toString(16).padStart(64, '0');
-      els.buyMsg.textContent = 'Confirm the transfer in your wallet…';
-      const hash = await eth.request({ method: 'eth_sendTransaction', params: [{ from, to: payCfg.usdc, data }] });
-      els.txhash.value = hash;
-      await verifyTx(hash);
-    } catch (err) { els.buyMsg.textContent = 'Wallet said: ' + (err && err.message || err); }
-  };
+  els.outClose.onclick = () => { els.out.hidden = true; };
 
   // ---------- editor / launch ----------
   els.resetBtn.onclick = () => { els.code.value = STARTER; saveCode(); };
@@ -418,7 +380,7 @@ label.name input{width:150px}
   async function launch(){
     if (launching) return;
     if (!session) return openSignin();
-    if (!profile || profile.credits < 1) { setStatus('You are out of launches.', true); return openBuy(); }
+    if (!profile || profile.credits < 1) { setStatus('You are out of launches.', true); return openOut(); }
     saveCode(); showErr('');
     launching = true; els.cta.disabled = true; els.launchBtn.disabled = true;
     try {
@@ -433,7 +395,7 @@ label.name input{width:150px}
           holdTimer = setTimeout(launch, Math.min(data.wait_ms || 3000, 4000));
           return;
         }
-        if (data.reason === 'no_credits') { setStatus('You are out of launches.', true); openBuy(); return; }
+        if (data.reason === 'no_credits') { setStatus('You are out of launches.', true); openOut(); return; }
         if (data.reason === 'game_over') { setStatus('Game #1 is over. The winner is being announced.', true); return; }
         throw new Error(data.reason || 'could not claim');
       }
@@ -865,7 +827,7 @@ label.name input{width:150px}
     if (!world) { els.status.textContent = 'No game is running. Check back soon.'; els.tagline.textContent = 'No game is running.'; }
     resize(); new ResizeObserver(resize).observe(sky); new ResizeObserver(resize).observe(cam);
     requestAnimationFrame(frame);
-    await refreshFeed(); refreshBoard(); refreshWinners(); loadPayCfg();
+    await refreshFeed(); refreshBoard(); refreshWinners();
     setInterval(refreshGame, 3000); setInterval(refreshFeed, 3000); setInterval(refreshBoard, 10000); setInterval(renderEnds, 30000); setInterval(refreshWinners, 60000);
   }
   boot();
