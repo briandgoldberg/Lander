@@ -46,7 +46,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .cta:focus-visible,.btn:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .hero{margin:0;font-family:var(--display);font-weight:700;font-size:clamp(22px,3.2vw,34px);letter-spacing:.04em;line-height:1.15;color:var(--fg);text-wrap:balance}
 .hero em{font-style:normal;color:var(--accent)}
-.prize{border:1px solid var(--accent);background:rgba(243,180,87,.08);border-radius:8px;padding:10px 14px;font-size:15px;color:var(--fg)}
+.prize{border:1px solid var(--accent);background:rgba(243,180,87,.08);border-radius:8px;padding:14px 18px;font-size:clamp(17px,2.2vw,22px);line-height:1.4;color:var(--fg)}
+.prize em{font-style:normal;color:var(--accent);font-weight:600}
 .prize b{font-family:var(--display);letter-spacing:.04em;color:var(--accent)}
 .rules ol{margin:0;padding-left:20px;font-size:13.5px;line-height:1.55;color:var(--fg)}
 .rules li{margin:4px 0}
@@ -155,9 +156,7 @@ label.name input{width:150px}
     </div>
   </header>
 
-  <p class="hero" id="hero">Land on the target planet with the most fuel left.</p>
-
-  <div class="prize"><b>Round 1 prize: $100 cash.</b> The safe landing with the most fuel left wins. Free to enter.</div>
+  <div class="prize" id="prize"><b>Round 1 prize: $100 cash.</b> A safe landing on the target planet with the most fuel left wins. Free to enter.</div>
 
   <div class="ctarow">
     <button class="cta" id="cta">Set your flight path</button>
@@ -334,7 +333,7 @@ label.name input{width:150px}
   function renderMission(){
     const w = world, A = w.bodies[w.start], B = w.bodies[w.target];
     els.systemName.textContent = w.name + ' system';
-    $('hero').innerHTML = 'Land on <em>Planet ' + esc(B.name) + '</em> with the most fuel left.';
+    $('prize').innerHTML = '<b>Round 1 prize: $100 cash.</b> A safe landing on <em>Planet ' + esc(B.name) + '</em> with the most fuel left wins. Free to enter.';
     els.brief.innerHTML = 'Launch from <b>' + esc(A.name) + '</b>, land on <b>' + esc(B.name) + '</b>. ' + (B.orbitR > A.orbitR ? 'Outward.' : 'Inward.') + ' Safe landing, most fuel left, wins.';
     els.facts.innerHTML = [
       ['Fuel budget (Δv)', fmt(w.rocket.fuel, 2)],
