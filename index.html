@@ -136,13 +136,16 @@ label.name input{width:150px}
 .modal form{display:flex;gap:8px}
 .modal form input{flex:1;min-width:0}
 .foot{color:var(--muted);font-size:12px;text-align:center}
-.refer{display:flex;flex-direction:column;gap:8px;font-size:13px}
-.refer .link{display:flex;gap:6px}
-.refer .link input{flex:1;min-width:0;font-family:var(--mono);font-size:12px}
-.refer .shares{display:flex;gap:6px;flex-wrap:wrap}
-.refer .shares a,.refer .shares button{font-family:var(--body);font-size:12px;background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 9px;cursor:pointer;text-decoration:none}
-.refer .shares a:hover,.refer .shares button:hover{border-color:var(--accent)}
-.refer .count{color:var(--accent);font-family:var(--mono);font-size:12px}
+.refer{display:flex;flex-direction:column;gap:12px}
+.refer .meter{display:flex;flex-direction:column;gap:6px}
+.refer .meter .bar{height:8px}
+.refer .meter .bar i{background:linear-gradient(90deg,#6ad59a,#9fe7bd)}
+.refer .meter span{font-size:13px;color:var(--muted)}
+.refer .meter b{color:var(--fg);font-weight:600}
+.refer .shares{display:flex;gap:8px;flex-wrap:wrap}
+.refer .shares a,.refer .shares button{font-family:var(--body);font-size:13px;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;text-decoration:none}
+.refer .shares a:hover,.refer .shares button:hover{border-color:var(--accent);color:var(--fg)}
+.soon{font-size:12px;color:var(--muted);margin:0}
 </style>
 </head>
 <body>
@@ -226,7 +229,7 @@ label.name input{width:150px}
         <div class="ranges" id="ranges"></div>
       </div>
       <div class="card" id="referCard" hidden>
-        <h2>Refer a friend <small>+3 launches each, up to 5 friends</small></h2>
+        <h2>Refer a friend</h2>
         <div id="referPanel"></div>
       </div>
     </aside>
@@ -279,9 +282,9 @@ label.name input{width:150px}
 <div class="modal" id="out" hidden>
   <div class="box">
     <h3>Out of launches</h3>
-    <p>You've used your launch credits for now.</p>
-    <p><span class="chip">Buy more launches · coming soon</span></p>
+    <p>Invite a friend. When they launch, you get 3 more.</p>
     <div id="outReferral"></div>
+    <p class="soon">Buying launches is coming soon.</p>
     <div class="row"><button class="btn small" id="outClose">Close</button></div>
   </div>
 </div>
@@ -395,16 +398,16 @@ label.name input{width:150px}
     const enc = encodeURIComponent(msg), encLink = encodeURIComponent(link);
     const n = profile.referrals_rewarded || 0;
     const html = '<div class="refer">' +
-      '<div>Friends who launched: <span class="count">' + n + ' of 5 · +3 launches each</span></div>' +
-      '<div class="link"><input type="text" readonly value="' + esc(link) + '" aria-label="Your referral link"><button class="btn small copyRef">Copy</button></div>' +
+      '<div class="meter"><div class="bar"><i style="width:' + (n / 5 * 100) + '%"></i></div><span><b>' + n + ' of 5</b> friends have launched · 3 launches each</span></div>' +
+      '<button class="cta wide copyRef">Copy invite link</button>' +
       '<div class="shares">' + (navigator.share ? '<button class="shareRef">Share…</button>' : '') +
       '<a href="https://twitter.com/intent/tweet?text=' + enc + '" target="_blank" rel="noopener">X</a>' +
       '<a href="https://www.facebook.com/sharer/sharer.php?u=' + encLink + '" target="_blank" rel="noopener">Facebook</a>' +
       '<a href="https://wa.me/?text=' + enc + '" target="_blank" rel="noopener">WhatsApp</a>' +
-      '<a href="sms:?&body=' + enc + '">SMS</a>' +
+      '<a href="sms:?&body=' + enc + '">Text</a>' +
       '<a href="mailto:?subject=' + encodeURIComponent('Fly a rocket with me') + '&body=' + enc + '">Email</a></div></div>';
-    card.hidden = false; $('referPanel').innerHTML = html; els.outReferral.innerHTML = '<p>Earn more right now: each friend who launches gets you 3 launches, up to 5 friends.</p>' + html;
-    document.querySelectorAll('.copyRef').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(link); b.textContent = 'Copied'; } catch (e) { b.previousElementSibling.select(); b.textContent = 'Select and copy'; } setTimeout(() => { b.textContent = 'Copy'; }, 2500); });
+    card.hidden = false; $('referPanel').innerHTML = html; els.outReferral.innerHTML = html;
+    document.querySelectorAll('.copyRef').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(link); b.textContent = 'Link copied'; } catch (e) { b.textContent = link; } setTimeout(() => { b.textContent = 'Copy invite link'; }, 3000); });
     document.querySelectorAll('.shareRef').forEach(b => b.onclick = () => { navigator.share({ title: 'Lander', text: msg, url: link }).catch(() => {}); });
   }
   function openSignin(){ els.signin.hidden = false; els.signinMsg.textContent = ''; setTimeout(() => els.googleBtn.focus(), 50); }
