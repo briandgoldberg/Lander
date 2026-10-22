@@ -62,8 +62,14 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .how div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:15px;color:var(--fg);display:flex;gap:12px;align-items:center}
 .how b{font-family:var(--display);color:var(--accent);font-size:22px;line-height:1;min-width:24px}
 .how .cta{padding:10px 14px;font-size:14px}
-.stagegrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}
-@media (max-width:980px){.stagegrid{grid-template-columns:1fr}}
+.stagegrid{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;gap:14px;align-items:start}
+.stage{width:min(100%,calc(100vh - 190px));margin:0 auto}
+.editor .dials{grid-template-columns:1fr;gap:12px}
+.editor .editor-head{flex-direction:column;align-items:stretch}
+.editor .editor-head .row{display:flex}
+.editor .editor-head .cta{flex:1}
+.editor .hint{font-size:14px}
+@media (max-width:1100px){.stagegrid{grid-template-columns:1fr}.stage{order:1;width:100%}#editor{order:2}.side{order:3}}
 .stage{position:relative;background:var(--sky);border:1px solid var(--line);border-radius:10px;overflow:hidden;aspect-ratio:1/1;max-width:100%}
 .stage canvas,.camwrap canvas{display:block;width:100%;height:100%}
 .verdict{position:absolute;left:12px;right:12px;top:48px;padding:10px 14px;border-radius:6px;font-family:var(--display);font-size:20px;letter-spacing:.08em;text-transform:uppercase;background:rgba(7,10,20,.88);border:1px solid var(--line);pointer-events:none}
@@ -160,7 +166,9 @@ label.name input{width:150px}
 .modal form{display:flex;gap:8px}
 .modal form input{flex:1;min-width:0}
 .foot{color:var(--muted);font-size:12px;text-align:center}
-.challenge{background:rgba(143,200,255,.08);border:1px solid rgba(143,200,255,.5);border-radius:8px;padding:12px 14px;font-size:15px;line-height:1.5}
+.challenge{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(143,200,255,.08);border:1px solid rgba(143,200,255,.5);border-radius:8px;padding:12px 14px;font-size:15px;line-height:1.5}
+.challenge span{flex:1;min-width:200px}
+.challenge .cta{padding:9px 14px;font-size:13px}
 .dials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 22px}
 @media (max-width:640px){.dials{grid-template-columns:1fr}}
 .dial{display:flex;flex-direction:column;gap:4px;font-size:13px}
@@ -189,23 +197,7 @@ label.name input{width:150px}
   <div class="prize" id="prize"><b>Today's challenge:</b> fly to the target planet and land softly.</div>
   <div class="challenge" id="challenge" hidden></div>
 
-  <div class="ctarow">
-    <button class="cta" id="cta">Plan your flight</button>
-    <span class="status" id="ctaMsg" style="margin:0"></span>
-  </div>
-
   <div class="stagegrid">
-    <div class="maincol">
-    <section class="stage" aria-label="System view">
-      <canvas id="sky"></canvas>
-      <div class="livebadge"><i></i>LIVE<small>every launch plays here as it happens</small></div>
-      <div class="verdict" id="verdict" hidden></div>
-      <div class="controls" id="controls">
-        <div class="picker"><button class="banner" id="banner" type="button" aria-haspopup="listbox" aria-expanded="false"><i></i><span id="bannerText">Waiting for the first launch</span><b class="caret" id="bannerCaret" hidden>▾</b></button><div class="menu" id="replayMenu" role="listbox" hidden></div></div>
-      </div>
-      <div class="scalebar" id="scalebar"></div>
-    </section>
-
     <section class="card editor" id="editor">
       <div class="editor-head">
         <h2>Plan your flight</h2>
@@ -223,7 +215,15 @@ label.name input{width:150px}
       <div class="status" id="status"></div>
       <pre class="err" id="err" hidden></pre>
     </section>
-    </div>
+    <section class="stage" aria-label="System view">
+      <canvas id="sky"></canvas>
+      <div class="livebadge"><i></i>LIVE<small>every launch plays here as it happens</small></div>
+      <div class="verdict" id="verdict" hidden></div>
+      <div class="controls" id="controls">
+        <div class="picker"><button class="banner" id="banner" type="button" aria-haspopup="listbox" aria-expanded="false"><i></i><span id="bannerText">Waiting for the first launch</span><b class="caret" id="bannerCaret" hidden>▾</b></button><div class="menu" id="replayMenu" role="listbox" hidden></div></div>
+      </div>
+      <div class="scalebar" id="scalebar"></div>
+    </section>
     <aside class="side">
       <div class="camwrap"><canvas id="cam"></canvas><div class="camlabel" id="camLabel">APPROACH CAM</div><div class="camfoot" id="camFoot"></div></div>
       <div class="card">
@@ -326,7 +326,7 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','bannerCaret','replayMenu','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','board','boardEmpty','boardNote','editor','err','outNote','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose','fbBtn','fb','fbClose','fbText','fbEmail','fbSend','fbMsg'].forEach(id => els[id] = $(id));
+  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','bannerCaret','replayMenu','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','launchBtn','status','board','boardEmpty','boardNote','editor','err','outNote','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose','fbBtn','fb','fbClose','fbText','fbEmail','fbSend','fbMsg'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null, shots = null, creating = false;
@@ -385,13 +385,11 @@ label.name input{width:150px}
   // One call to action. The top button leads to the planner; the planner's button launches.
   function shotsText(){ if (!shots) return ''; return shots.left + ' shot' + (shots.left === 1 ? '' : 's') + ' left'; }
   function renderCta(){
-    els.cta.textContent = challenge && !session ? 'Sign up and beat ' + challenge.pilot : 'Plan your flight';
     if (!session) { els.launchBtn.textContent = 'Launch'; return; }
     els.launchBtn.textContent = shots && shots.left < 1 ? 'Out of shots today' : 'Launch' + (shots ? ' · ' + shotsText() : '');
   }
   function go(){ clearTimeout(holdTimer); if (!session) return openSignin(); if (shots && shots.left < 1) return openOut(); launch(); }
   els.launchBtn.onclick = go;
-  els.cta.onclick = () => { if (!session && challenge) return openSignin(); els.editor.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   async function signInGoogle(msgEl){
     if (msgEl) msgEl.textContent = 'Opening Google…';
     const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
@@ -466,8 +464,8 @@ label.name input{width:150px}
     const box = $('challenge'); if (!challenge) { box.hidden = true; return; }
     const c = challenge, today = game && c.game_id === game.id;
     const what = c.outcome === 'landed' ? 'landed on <b>' + esc(c.body) + '</b> with <b>' + fmt(c.fuel_left, 2) + ' fuel left</b>' : c.outcome === 'crashed' ? 'crashed into <b>' + esc(c.body) + '</b>' : 'never made it';
-    box.innerHTML = '<b>' + esc(c.pilot) + '</b> ' + what + (today ? '. Their path is the blue line. Beat it.' : ' on ' + esc(c.game_name) + '. Today is a new system: beat them on this one.');
-    box.hidden = false;
+    box.innerHTML = '<span><b>' + esc(c.pilot) + '</b> ' + what + (today ? '. Beat it.' : ' on ' + esc(c.game_name) + '. Today is a new system: beat them on this one.') + '</span>' + (session ? '' : '<button class="cta" id="beatBtn">Sign up and beat ' + esc(c.pilot) + '</button>');
+    box.hidden = false; const bb = $('beatBtn'); if (bb) bb.onclick = openSignin;
   }
 
   // ---------- out of shots ----------
@@ -521,7 +519,7 @@ label.name input{width:150px}
     if (!session) return openSignin();
     if (shots && shots.left < 1) { setStatus('Out of shots for today.', true); return openOut(); }
     showErr('');
-    launching = true; els.cta.disabled = true; els.launchBtn.disabled = true;
+    launching = true; els.launchBtn.disabled = true;
     try {
       setStatus('Asking for the launch slot…');
       const { data, error } = await sb.rpc('claim_launch', { p_game: game.id, p_bot_name: planName(), p_code: JSON.stringify(P) });
@@ -530,7 +528,7 @@ label.name input{width:150px}
         if (data.reason === 'hold') {
           setStatus('Please hold. Another launch is in flight. Yours goes automatically when it is done.', true);
           els.bannerText.textContent = 'Holding for the pad…';
-          launching = false; els.cta.disabled = false; els.launchBtn.disabled = false;
+          launching = false; els.launchBtn.disabled = false;
           holdTimer = setTimeout(launch, Math.min(data.wait_ms || 3000, 4000));
           return;
         }
@@ -556,7 +554,7 @@ label.name input{width:150px}
       await refreshFeed(); refreshBoard(); refreshShots(); renderShare();
     } catch (e) {
       setStatus('Launch failed: ' + (e.message || e), true);
-    } finally { launching = false; els.cta.disabled = false; els.launchBtn.disabled = false; renderCta(); }
+    } finally { launching = false; els.launchBtn.disabled = false; renderCta(); }
   }
 
   // ---------- feed / board / live ----------
