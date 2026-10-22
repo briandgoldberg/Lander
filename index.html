@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lander</title>
-<meta name="description" content="Fly a rocket between planets with JavaScript. The safe landing with the most fuel left wins $100.">
+<meta name="description" content="Fly a rocket between planets with JavaScript. The safe landing with the most fuel left wins $50.">
 <meta property="og:title" content="Lander · the classic lander game, your code is the pilot">
-<meta property="og:description" content="Fly a rocket between planets with JavaScript. The safe landing with the most fuel left wins $100. Free to play.">
+<meta property="og:description" content="Fly a rocket between planets with JavaScript. The safe landing with the most fuel left wins $50. Free to play.">
 <meta property="og:image" content="https://lander-topaz.vercel.app/og.png">
 <meta property="og:url" content="https://lander-topaz.vercel.app/">
 <meta property="og:type" content="website">
@@ -171,7 +171,7 @@ label.name input{width:150px}
     </div>
   </header>
 
-  <div class="prize" id="prize"><b>Round 1 prize: $100 cash.</b> A safe landing on the target planet with the most fuel left wins. Free to enter.</div>
+  <div class="prize" id="prize"><b>Alpha Testers Round prize: $50 cash.</b> A safe landing on the target planet with the most fuel left wins. Free to enter.</div>
 
   <div class="ctarow">
     <button class="cta" id="cta">Set your flight path</button>
@@ -257,13 +257,13 @@ label.name input{width:150px}
   </div>
 
   <section class="card rules" id="rules">
-    <h2>Rules <small>Round 1</small></h2>
+    <h2>Rules <small>Alpha Testers Round</small></h2>
     <ol>
       <li>Free to enter. No purchase needed. Every account starts with 3 launches, and referrals add more.</li>
       <li>One account per person, and you must be 18 or older.</li>
       <li>The game lasts 10 days. The safe landing with the most fuel left wins. Ties go to whoever landed first.</li>
       <li>The winning flight path is published on this site when the game ends. Entering means agreeing to that.</li>
-      <li>The winner is contacted at their Google account email and paid $100 by PayPal, Venmo or Wise within 14 days.</li>
+      <li>The winner is contacted at their Google account email and paid $50 by PayPal, Venmo or Wise within 14 days.</li>
       <li>Accounts that abuse referrals, including fake or duplicate accounts, are disqualified and lose their bonus credits.</li>
     </ol>
   </section>
@@ -321,7 +321,7 @@ label.name input{width:150px}
   let run = null, lastRun = null, idleT = 0, fast = false;
   let feed = [], seen = new Set(), playQueue = [], busyLaunch = null;
   let W = 0, H = 0, CW = 0, CH = 0, dpr = 1, lastDraw = 0, last = 0, tnow = 0;
-  const fx = { smoke: [], debris: [], rings: [], sparks: [], flash: 0, skyFlash: 0, shake: 0, label: null, labelT: 0 };
+  const fx = { smoke: [], debris: [], rings: [], sparks: [], flash: 0, skyFlash: 0, shake: 0, label: null, labelT: 0, fade: 0 };
   let stars = [], nebula = [], textures = {};
   let holdTimer = null;
 
@@ -329,11 +329,13 @@ label.name input{width:150px}
   function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
   function setStatus(s, warn){ els.status.textContent = s; els.status.classList.toggle('warn', !!warn); }
   function showErr(msg){ els.err.textContent = msg; els.err.hidden = !msg; }
-  function resetFx(){ fx.smoke.length = 0; fx.debris.length = 0; fx.rings.length = 0; fx.sparks.length = 0; fx.flash = 0; fx.skyFlash = 0; fx.shake = 0; fx.label = null; fx.labelT = 0; }
+  function resetFx(){ fx.smoke.length = 0; fx.debris.length = 0; fx.rings.length = 0; fx.sparks.length = 0; fx.flash = 0; fx.skyFlash = 0; fx.shake = 0; fx.label = null; fx.labelT = 0; fx.fade = 0; }
   function seededRnd(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 
   // ---------- world / mission card ----------
   function displayWorld(){ return run ? run.world : world; }
+  // The idle map is live: a shared clock that started when the game opened, so every visitor sees the same sky.
+  function liveT(){ if (!world || !game) return idleT; const t0 = game.started_at ? new Date(game.started_at).getTime() : 0; return Math.max(0, (Date.now() - t0) / 1000) * (world.bodies[0].period / 30); }
   function planetMagFor(w){
     let minGap = w.bodies[0].orbitR - w.sun.radius * SUN_MAG, maxR = 0;
     w.bodies.forEach((b, k) => { maxR = Math.max(maxR, b.radius); if (k > 0) minGap = Math.min(minGap, b.orbitR - w.bodies[k-1].orbitR); });
@@ -349,7 +351,7 @@ label.name input{width:150px}
   function renderMission(){
     const w = world, A = w.bodies[w.start], B = w.bodies[w.target];
     els.systemName.textContent = w.name + ' system';
-    $('prize').innerHTML = '<b>Round 1 prize: $100 cash.</b> A safe landing on <em>Planet ' + esc(B.name) + '</em> with the most fuel left wins. Free to enter.';
+    $('prize').innerHTML = '<b>Alpha Testers Round prize: $50 cash.</b> A safe landing on <em>Planet ' + esc(B.name) + '</em> with the most fuel left wins. Free to enter.';
     els.brief.innerHTML = 'Launch from <b>' + esc(A.name) + '</b>, land on <b>' + esc(B.name) + '</b>. ' + (B.orbitR > A.orbitR ? 'Outward.' : 'Inward.');
     els.facts.innerHTML = '<dt>Fuel budget</dt><dd>' + fmt(w.rocket.fuel, 2) + ' Δv</dd><dt>Soft landing</dt><dd>≤ ' + fmt(w.safeLandingSpeed, 2) + '</dd><dt>Deadline</dt><dd>' + fmt(w.deadline, 0) + ' time units</dd>';
     els.ranges.innerHTML = '<div class="planets">' + w.bodies.map((b, k) => '<span' + (k === w.start ? ' class="start"' : k === w.target ? ' class="target"' : '') + '><i style="background:' + b.color + '"></i>' + esc(b.name) + (k === w.start ? ' · start' : k === w.target ? ' · target' : '') + '</span>').join('') + '</div>' +
@@ -403,7 +405,7 @@ label.name input{width:150px}
     const card = $('referCard');
     if (!session || !profile || !profile.referral_code) { card.hidden = true; els.outReferral.innerHTML = ''; return; }
     const link = referralLink();
-    const msg = "I'm flying rockets between planets with JavaScript. Most fuel left wins $100. Try it: " + link;
+    const msg = "I'm flying rockets between planets with JavaScript. Most fuel left wins $50. Try it: " + link;
     const enc = encodeURIComponent(msg), encLink = encodeURIComponent(link);
     const html = '<div class="refer">' +
       '<p class="note">You get 5 free launches for every referred friend who launches.</p>' +
@@ -657,7 +659,7 @@ label.name input{width:150px}
       fx.debris.push({ k: nr.k, x: rx, y: ry, vx: Math.cos(ang)*sp, vy: Math.sin(ang)*sp, life: 1 + Math.random()*1.5, age: 0, size: 1 + Math.random()*2, color: Math.random() < 0.5 ? '#6ad59a' : '#ffffff' }); }
   }
   function updateFx(dt, w){
-    fx.flash = Math.max(0, fx.flash - dt * 1.4); fx.skyFlash = Math.max(0, fx.skyFlash - dt * 1.2); fx.shake = Math.max(0, fx.shake - dt * 1.3);
+    fx.flash = Math.max(0, fx.flash - dt * 1.4); fx.skyFlash = Math.max(0, fx.skyFlash - dt * 1.2); fx.shake = Math.max(0, fx.shake - dt * 1.3); fx.fade = Math.max(0, fx.fade - dt * 1.4);
     if (fx.label) { fx.labelT -= dt; if (fx.labelT <= 0) fx.label = null; }
     for (const p of fx.smoke) { p.age += dt; p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= Math.pow(0.35, dt); p.vy *= Math.pow(0.35, dt); p.size += p.grow*dt; }
     fx.smoke = fx.smoke.filter(p => p.age < p.life);
@@ -787,6 +789,7 @@ label.name input{width:150px}
     else if (fx.label) label = fx.label;
     if (label) { g.save(); g.textAlign = 'center'; g.font = '700 48px "Chakra Petch", sans-serif'; g.shadowColor = 'rgba(243,180,87,0.9)'; g.shadowBlur = 28; g.fillStyle = label === 'TOUCHDOWN' ? '#6ad59a' : '#f3b457'; g.fillText(label, W/2, H*0.18); g.shadowBlur = 0; if (sub) { g.font = '500 13px "IBM Plex Sans", sans-serif'; g.fillStyle = '#e9ecf6'; g.fillText(sub, W/2, H*0.18 + 24); } g.restore(); }
     if (fx.skyFlash > 0) { g.fillStyle = 'rgba(255,230,190,' + (fx.skyFlash*0.5).toFixed(3) + ')'; g.fillRect(0, 0, W, H); }
+    if (fx.fade > 0) { g.fillStyle = 'rgba(3,5,12,' + Math.sin(fx.fade * Math.PI).toFixed(3) + ')'; g.fillRect(0, 0, W, H); }
   }
   // The cam: locked on a planet when the rocket is near one, a chase cam on the rocket otherwise.
   // Everything is drawn in absolute coordinates at true scale; the camera center and zoom ease between targets.
@@ -867,6 +870,7 @@ label.name input{width:150px}
     g.restore();
     const vg = g.createRadialGradient(icx, icy, Math.min(CW, CH) * 0.42, icx, icy, Math.max(CW, CH) * 0.72);
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.5)'); g.fillStyle = vg; g.fillRect(0, 0, CW, CH);
+    if (fx.fade > 0) { g.fillStyle = 'rgba(3,5,12,' + Math.sin(fx.fade * Math.PI).toFixed(3) + ')'; g.fillRect(0, 0, CW, CH); }
     if (st.thr > 0.85 && prevThr <= 0.85 && !st.onPad) fx.shake = Math.max(fx.shake, 0.35);
     prevThr = st.thr;
     els.camLabel.textContent = whereIs(w, st, nr);
@@ -896,10 +900,10 @@ label.name input{width:150px}
     const dts = Math.min(1, (now - last) / 1000 || 0); last = now;
     const w = displayWorld();
     if (w) {
-      if (!run) idleT += dts * w.bodies[0].period / 30;
+      if (!run) { if (!(fx.fade > 0.5)) idleT = liveT(); }
       else if (run.done) {
         // after the verdict has had its moment, hand back to the live system; Replay brings it back
-        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); camS = null; idleBanner(); els.verdict.classList.add('fade'); setTimeout(() => { if (!run) els.verdict.hidden = true; }, 950); }
+        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); fx.fade = 1; camS = null; idleBanner(); els.verdict.classList.add('fade'); setTimeout(() => { if (!run) els.verdict.hidden = true; }, 950); }
       }
       else {
         const S = run.samples, end = S[S.length-1][0];
