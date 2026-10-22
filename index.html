@@ -99,7 +99,12 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .tele span{color:var(--muted)}
 .tele b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
-.controls select{max-width:min(320px,60vw);background:rgba(7,10,20,.85);color:var(--fg)}
+.picker{position:relative}
+.menu{position:absolute;left:0;bottom:calc(100% + 6px);min-width:300px;max-width:min(420px,80vw);max-height:280px;overflow:auto;background:rgba(10,14,26,.97);border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:2px;z-index:5;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+.menu button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:transparent;border:0;color:var(--fg);font-family:var(--mono);font-size:12px;padding:7px 9px;border-radius:6px;cursor:pointer}
+.menu button:hover{background:rgba(243,180,87,.12)}
+.menu button span{color:var(--muted);white-space:nowrap}
+.menu .none{color:var(--muted);font-size:12px;padding:7px 9px}
 @media (max-width:980px){.grid2{grid-template-columns:1fr}}
 .brief{margin:0 0 8px;font-size:14px;line-height:1.5}
 .brief b{font-family:var(--display);letter-spacing:.04em}
@@ -178,7 +183,7 @@ label.name input{width:150px}
       <div class="livebadge"><i></i>LIVE<small>every launch plays here as it happens</small></div>
       <div class="verdict" id="verdict" hidden></div>
       <div class="controls" id="controls">
-        <select class="btn" id="replaySel" aria-label="Watch a launch"><option value="">Watch a launch…</option></select>
+        <div class="picker"><button class="btn" id="replaySel" aria-haspopup="listbox" aria-expanded="false">Watch a launch ▾</button><div class="menu" id="replayMenu" role="listbox" hidden></div></div>
         <button class="btn" id="speedBtn" aria-pressed="false">Fast</button>
       </div>
       <div class="scalebar" id="scalebar"></div>
@@ -299,7 +304,7 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replaySel','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose'].forEach(id => els[id] = $(id));
+  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replaySel','replayMenu','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null;
@@ -497,9 +502,11 @@ label.name input{width:150px}
     const when = f => { const d = new Date(f.created_at), today = new Date().toDateString() === d.toDateString(); return (today ? '' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ') + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
     const options = feed.filter(f => f.status === 'done' && f.outcome !== 'error').map(f => {
       const text = f.outcome === 'landed' ? 'landed, ' + fmt(f.fuel_left, 2) + ' fuel left' : f.outcome === 'crashed' ? 'crashed into ' + f.body : f.outcome;
-      return '<option value="' + f.id + '">' + esc(when(f) + ' · ' + (f.pilot || 'pilot') + ' · ' + f.bot_name + ' · ' + text) + '</option>';
+      return '<button type="button" data-id="' + f.id + '" role="option"><b>' + esc((f.pilot || 'pilot') + ' · ' + f.bot_name) + '</b><span>' + esc(when(f) + ' · ' + text) + '</span></button>';
     }).join('');
-    els.replaySel.innerHTML = '<option value="">' + (feed.length ? 'Watch a launch… (' + feed.length + ')' : 'No launches yet') + '</option>' + options;
+    els.replaySel.textContent = (feed.length ? 'Watch a launch (' + feed.length + ') ▾' : 'No launches yet');
+    els.replayMenu.innerHTML = options || '<div class="none">No launches yet.</div>';
+    els.replayMenu.querySelectorAll('button').forEach(b => b.onclick = () => { closeMenu(); watch(+b.dataset.id, false, 'Replay'); });
     for (const f of feed) {
       if (f.status !== 'done') continue;
       if (firstLoad) { seen.add(f.id); continue; }
@@ -550,7 +557,10 @@ label.name input{width:150px}
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
   }
   function restartReplay(){ if (!run && lastRun) run = lastRun; if (!run) return; run.tau = 0; run.idx = 0; run.done = false; run.doneAt = 0; run.held = false; run.hold = null; resetFx(); els.verdict.hidden = true; }
-  els.replaySel.onchange = () => { const id = +els.replaySel.value; els.replaySel.value = ''; if (id) watch(id, false, 'Replay'); };
+  function closeMenu(){ els.replayMenu.hidden = true; els.replaySel.setAttribute('aria-expanded', 'false'); }
+  els.replaySel.onclick = (e) => { e.stopPropagation(); const open = els.replayMenu.hidden; els.replayMenu.hidden = !open; els.replaySel.setAttribute('aria-expanded', String(open)); };
+  document.addEventListener('click', (e) => { if (!els.replayMenu.hidden && !els.replayMenu.contains(e.target)) closeMenu(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
   els.speedBtn.onclick = () => { fast = !fast; els.speedBtn.setAttribute('aria-pressed', String(fast)); };
   function outcomeText(r, w){
     const B = w.bodies[w.target];
