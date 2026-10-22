@@ -110,7 +110,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .tele div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:3px 0;min-width:0}
 .tele span{color:var(--muted)}
 .tele b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.grid2{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:1100px){.grid2{grid-template-columns:1fr 1fr}}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}}
 .picker{position:relative}
 @media (max-width:640px){.livebadge small{display:none}}
 .menu{position:absolute;left:0;top:calc(100% + 6px);min-width:260px;max-width:min(380px,80vw);max-height:280px;overflow:auto;background:rgba(10,14,26,.97);border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:2px;z-index:5;box-shadow:0 12px 30px rgba(0,0,0,.5)}
@@ -119,7 +121,6 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .menu button:hover{background:rgba(243,180,87,.12)}
 .menu button span{display:block;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .menu .none{color:var(--muted);font-size:12px;padding:7px 9px}
-@media (max-width:980px){.grid2{grid-template-columns:1fr}}
 .brief{margin:0 0 8px;font-size:14px;line-height:1.5}
 .brief b{font-family:var(--display);letter-spacing:.04em}
 .facts{display:grid;grid-template-columns:1fr auto;gap:5px 12px;font-size:13px;margin:0}
@@ -246,20 +247,20 @@ label.name input{width:150px}
           <div><span>Fuel used</span><b id="tUsed">0.00</b></div>
         </div>
       </div>
-      <div class="card">
-        <h2>Today <small id="systemName"></small></h2>
-        <p class="brief" id="brief"></p>
-        <dl class="facts" id="facts"></dl>
-        <div class="ranges" id="ranges"></div>
-      </div>
-      <div class="card" id="referCard" hidden>
-        <h2>Share your flight</h2>
-        <div id="referPanel"></div>
-      </div>
     </aside>
   </div>
 
   <div class="grid2">
+    <div class="card">
+      <h2>Today's system <small id="systemName"></small></h2>
+      <p class="brief" id="brief"></p>
+      <dl class="facts" id="facts"></dl>
+      <div class="ranges" id="ranges"></div>
+    </div>
+    <div class="card" id="referCard" hidden>
+      <h2>Share your flight</h2>
+      <div id="referPanel"></div>
+    </div>
     <div class="card">
       <h2>Today's top pilots</h2>
       <ul class="list" id="board"></ul>
