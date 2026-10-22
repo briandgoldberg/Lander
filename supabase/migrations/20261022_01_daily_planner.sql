@@ -132,3 +132,7 @@ update public.games set ends_at = now() where number = 1 and ends_at > now();
 -- Applied later the same day as migration "lander_ten_shots_ranked_board":
 -- ten shots a day, no referral reward, closest_approach stored, board ranks landings > crashes on target > nearest misses.
 -- (see the function bodies in the Supabase project; this file records the intent)
+
+-- Applied later as migration "lander_flights_start_from_now": launches.t_start, get_launch_code returns
+-- created_at and the game's started_at, finish_launch stores tStart, get_replay returns t_start.
+-- A flight starts from the sky as it looked when the launch was claimed (see lib/plan.js liveRate/worldAt).

@@ -212,7 +212,7 @@ label.name input{width:150px}
       </div>
       <p class="hint">Set the four dials and launch. You find out how it went when it flies. Ten shots a day.</p>
       <div class="dials">
-        <label class="dial"><span class="dl">Launch time <b id="vWait"></b></span><input type="range" id="dWait" min="0" max="100" step="0.1"><small>When your rocket takes off. The planets keep moving while you wait.</small></label>
+        <label class="dial"><span class="dl">Launch time <b id="vWait"></b></span><input type="range" id="dWait" min="0" max="100" step="0.1"><small>How long to wait before takeoff, from the moment you press Launch. The planets keep moving while you wait.</small></label>
         <label class="dial"><span class="dl"><span id="lReach">Far point</span> <b id="vReach"></b></span><input type="range" id="dReach" min="0" max="2" step="0.001"><small id="hReach">How far your rocket swings out before coming back.</small></label>
         <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="-60" max="60" step="0.5"><small>Which way the engine pushes when you leave. 0° is straight along your planet's path; tilt it to bend yours.</small></label>
         <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"><small>How high above the target planet the brakes come on, measured in planet widths.</small></label>
@@ -353,7 +353,7 @@ label.name input{width:150px}
   // ---------- world / mission card ----------
   function displayWorld(){ return run ? run.world : world; }
   // The idle map is live: a shared clock that started when the game opened, so every visitor sees the same sky.
-  function liveT(){ if (!world || !game) return idleT; const t0 = game.started_at ? new Date(game.started_at).getTime() : 0; return Math.max(0, (Date.now() - t0) / 1000) * (world.bodies[0].period / 30); }
+  function liveT(){ if (!world || !game) return idleT; const t0 = game.started_at ? new Date(game.started_at).getTime() : 0; return Math.max(0, (Date.now() - t0) / 1000) * LanderPlan.liveRate(world); }
   function planetMagFor(w){
     let minGap = w.bodies[0].orbitR - w.sun.radius * SUN_MAG, maxR = 0;
     w.bodies.forEach((b, k) => { maxR = Math.max(maxR, b.radius); if (k > 0) minGap = Math.min(minGap, b.orbitR - w.bodies[k-1].orbitR); });
@@ -391,7 +391,9 @@ label.name input{width:150px}
   function shotsText(){ if (!shots) return ''; return shots.left + ' shot' + (shots.left === 1 ? '' : 's') + ' left'; }
   function renderCta(){
     if (!session) { els.launchBtn.textContent = 'Launch'; return; }
-    els.launchBtn.textContent = shots && shots.left < 1 ? 'Out of shots today' : 'Launch' + (shots ? ' · ' + shotsText() : '');
+    const busy = !!busyLaunch && !launching;
+    els.launchBtn.disabled = busy;
+    els.launchBtn.textContent = busy ? 'Launch in progress…' : shots && shots.left < 1 ? 'Out of shots today' : 'Launch' + (shots ? ' · ' + shotsText() : '');
   }
   function go(){ clearTimeout(holdTimer); if (!session) return openSignin(); if (shots && shots.left < 1) return openOut(); launch(); }
   els.launchBtn.onclick = go;
@@ -538,9 +540,9 @@ label.name input{width:150px}
       if (error) throw new Error(error.message);
       if (!data.ok) {
         if (data.reason === 'hold') {
-          setStatus('Please hold. Another launch is in flight. Yours goes automatically when it is done.', true);
+          setStatus('Another launch is in flight. Yours goes automatically when it is done.', true);
           els.bannerText.textContent = 'Holding for the pad…';
-          launching = false; els.launchBtn.disabled = false;
+          launching = false; els.launchBtn.disabled = true; els.launchBtn.textContent = 'Launch in progress…';
           holdTimer = setTimeout(launch, Math.min(data.wait_ms || 3000, 4000));
           return;
         }
@@ -590,7 +592,7 @@ label.name input{width:150px}
     }
     if (!data || !data.game) return;
     const changed = !game || game.id !== data.game.id;
-    game = data.game; busyLaunch = game.busy ? game.busy_launch : null;
+    const wasBusy = busyLaunch; game = data.game; busyLaunch = game.busy ? game.busy_launch : null; if (!!wasBusy !== !!busyLaunch) renderCta();
     if (changed) {
       world = data.world; buildSky(game.number || 1); renderMission();
       feed = []; seen = new Set(); playQueue = []; lastRun = null;
@@ -648,7 +650,7 @@ label.name input{width:150px}
   // ---------- replay ----------
   function playReplay(rep, opts){
     opts = opts || {};
-    const w = opts.world || world;
+    const w = opts.world || LanderPlan.worldAt(world, +rep.t_start || 0);   // the sky as it was when this flight was claimed
     const S = rep.samples;
     let tLaunch = null; for (let i = 0; i < S.length; i++) if (S[i][5] > 0) { tLaunch = S[i][0]; break; }
     run = { world: w, samples: S, result: rep, tau: 0, idx: 0, done: false, tLaunch, held: false, hold: null, mine: !!opts.mine, practice: !!opts.practice, live: !!opts.live, pilot: opts.pilot || '', name: rep.bot_name || 'bot', label: opts.label };

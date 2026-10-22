@@ -21,7 +21,9 @@ module.exports = async (req, res) => {
     if (!entry || entry.status !== 'running') return json(res, 409, { error: 'This launch already ran.' });
     const state = await rpc('game_state', {});
     if (!state || !state.game || state.game.id !== entry.game_id) return json(res, 409, { error: 'Game mismatch.' });
-    const world = state.world;
+    // the flight starts from the sky as it looked when the launch was claimed
+    const tStart = +(Math.max(0, (new Date(entry.created_at).getTime() - new Date(entry.game_started_at).getTime()) / 1000) * plan.liveRate(state.world)).toFixed(4);
+    const world = plan.worldAt(state.world, tStart);
 
     // the stored entry is the plan's dials; the autopilot source is built here, never taken from the client
     let dials; try { dials = JSON.parse(entry.code); } catch (e) { dials = {}; }
@@ -30,9 +32,9 @@ module.exports = async (req, res) => {
     if (out.type === 'result') {
       const r = out.result;
       result = { outcome: r.outcome, body: r.body, fuelUsed: r.fuelUsed, fuelLeft: +(world.rocket.fuel - r.fuelUsed).toFixed(4),
-        landingSpeed: r.landingSpeed, closestApproach: r.closestApproach, time: r.time, flights: out.flights, thinkMs: out.thinkMs, samples: r.samples, error: null };
+        landingSpeed: r.landingSpeed, closestApproach: r.closestApproach, tStart, time: r.time, flights: out.flights, thinkMs: out.thinkMs, samples: r.samples, error: null };
     } else {
-      result = { outcome: 'error', body: null, fuelUsed: 0, fuelLeft: 0, landingSpeed: null, closestApproach: null, time: 0, flights: 0, thinkMs: 0, samples: null, error: out.message };
+      result = { outcome: 'error', body: null, fuelUsed: 0, fuelLeft: 0, landingSpeed: null, closestApproach: null, tStart, time: 0, flights: 0, thinkMs: 0, samples: null, error: out.message };
     }
     const payload = JSON.stringify(result);
     await rpc('finish_launch', { p_launch: id, p_result: payload, p_sig: sign(id + '|' + payload) });
