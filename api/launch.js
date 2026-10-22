@@ -1,6 +1,7 @@
-// POST /api/launch { launch_id }  — runs a claimed launch's bot on the server and records the official flight.
+// POST /api/launch { launch_id }  — flies a claimed launch's plan on the server and records the official flight.
 const { rpc, getUser, bearer, json, readJson, sign, configured } = require('../lib/db');
 const { runBot } = require('../lib/runner');
+const plan = require('../lib/plan');
 
 const BUDGET_MS = 10000;
 
@@ -22,7 +23,9 @@ module.exports = async (req, res) => {
     if (!state || !state.game || state.game.id !== entry.game_id) return json(res, 409, { error: 'Game mismatch.' });
     const world = state.world;
 
-    const out = await runBot(entry.code, world, BUDGET_MS);
+    // the stored entry is the plan's dials; the autopilot source is built here, never taken from the client
+    let dials; try { dials = JSON.parse(entry.code); } catch (e) { dials = {}; }
+    const out = await runBot(plan.botSource(world, dials), world, BUDGET_MS);
     let result;
     if (out.type === 'result') {
       const r = out.result;

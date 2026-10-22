@@ -1,8 +1,25 @@
 {
   "functions": {
-    "api/*.js": { "maxDuration": 60, "memory": 1024 }
+    "api/*.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
   },
   "headers": [
-    { "source": "/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-store" }] }
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/today",
+      "schedule": "2 0 * * *"
+    }
   ]
 }

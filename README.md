@@ -1,23 +1,23 @@
 # Lander
 
-Launch from one planet, land on another. Your JavaScript gets 10 seconds to plan the path. Most fuel left wins.
+Launch from one planet, land on another. Plan the flight with four dials, no code. A new star system every day; the most fuel left tops the day.
 
 Live: https://lander-topaz.vercel.app
 
 ## How it works
 
-1. Sign in with Google. New accounts start with 3 launches, and every friend you refer who launches adds 5 more.
-2. Submit JavaScript that defines `bot(world, sim)` and returns a controller. On launch, the server runs it in a sealed worker with no network and a 10 second clock, then flies the controller you returned through the game's physics.
+1. Sign in with Google. Three shots a day. A friend who joins from your link and launches gives you 3 extra shots, once per friend.
+2. Set four dials (launch time, far point, aim, brake altitude). The page flies the plan in a worker and draws the predicted path; on launch the server flies the same plan through the game physics in a sealed worker.
 3. Everyone watching the site sees each launch as it happens. One launch flies at a time; if two people launch together, one is asked to hold and goes automatically next.
-4. A game lasts 10 days. The safe landing with the most fuel left wins, and the winning code is published in Previous winners. Entering means agreeing to that.
+4. Each day is its own game: `api/today.js` creates the day's system from the date (a daily cron and the page itself call it). The best landing per pilot tops the day; all-time points add up the fuel-left percentage of each day's best landing.
 
 ## Pieces
 
-- `index.html` is the whole site: system view, approach cam, telemetry, sign-in, credits, launch queue, live feed, leaderboard, previous winners, and a free practice sandbox that runs in the browser on a random system.
+- `index.html` is the whole site: system view, approach cam, telemetry, the mission planner, sign-in, shots, launch queue, live feed, daily and all-time boards. `lib/plan.js` is the shared autopilot behind the dials.
 - `lib/engine.js` is the physics: a star, four or five planets on circular orbits, a rocket with a delta-v budget, adaptive steps. The same file runs in the browser and on the server.
 - `lib/starter.js` is the starter bot. It reaches the target and arrives too fast.
 - `lib/runner.js` runs an entrant's bot in a worker thread with a bare VM context and a wall-clock cap.
-- `api/launch.js` runs a claimed launch and records the official flight. `api/winner.js` reveals the winning code once a game ends.
+- `api/launch.js` flies a claimed plan and records the official flight. `api/today.js` makes sure today's system exists.
 - Supabase holds games, profiles and launches. The server has no privileged key: it calls database functions as the signed-in user and proves server-only writes with an HMAC signature over a shared secret.
 
 ## Running it
