@@ -270,7 +270,6 @@ label.name input{width:150px}
       <h2>Today's system <small id="systemName"></small></h2>
       <p class="brief" id="brief"></p>
       <dl class="facts" id="facts"></dl>
-      <div class="ranges" id="ranges"></div>
     </div>
     </aside>
   </div>
@@ -332,7 +331,7 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['gameChip','endsChip','authArea','banner','bannerText','verdict','controls','bannerCaret','replayMenu','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','launchBtn','status','board','boardEmpty','boardNote','editor','err','outNote','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose','fbBtn','fb','fbClose','fbText','fbEmail','fbSend','fbMsg'].forEach(id => els[id] = $(id));
+  ['gameChip','endsChip','authArea','banner','bannerText','verdict','controls','bannerCaret','replayMenu','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','launchBtn','status','board','boardEmpty','boardNote','editor','err','outNote','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose','fbBtn','fb','fbClose','fbText','fbEmail','fbSend','fbMsg'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null, shots = null, creating = false;
@@ -373,7 +372,6 @@ label.name input{width:150px}
     $('prize').innerHTML = "<b>Today's challenge:</b> fly from <em>" + esc(A.name) + '</em> to <em>' + esc(B.name) + '</em> and land softly.';
     els.brief.innerHTML = 'Launch from <b>' + esc(A.name) + '</b>, land on <b>' + esc(B.name) + '</b>. ' + (B.orbitR > A.orbitR ? 'Outward.' : 'Inward.');
     els.facts.innerHTML = '<dt>Fuel budget</dt><dd>' + fmt(w.rocket.fuel, 2) + '</dd><dt>Soft landing</dt><dd>≤ ' + fmt(w.safeLandingSpeed, 2) + '</dd><dt>New system in</dt><dd id="factEnds">—</dd>';
-    els.ranges.innerHTML = '<div class="planets">' + w.bodies.map((b, k) => '<span' + (k === w.start ? ' class="start"' : k === w.target ? ' class="target"' : '') + '><i style="background:' + b.color + '"></i>' + esc(b.name) + (k === w.start ? ' · start' : k === w.target ? ' · target' : '') + '</span>').join('') + '</div>';
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
     renderEnds();
   }
