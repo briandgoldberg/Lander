@@ -98,7 +98,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .tele div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:3px 0;min-width:0}
 .tele span{color:var(--muted)}
 .tele b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.grid2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.controls select{max-width:min(320px,60vw);background:rgba(7,10,20,.85);color:var(--fg)}
 @media (max-width:980px){.grid2{grid-template-columns:1fr}}
 .brief{margin:0 0 8px;font-size:14px;line-height:1.5}
 .brief b{font-family:var(--display);letter-spacing:.04em}
@@ -176,8 +177,8 @@ label.name input{width:150px}
       <div class="banner" id="banner" hidden><i></i><span id="bannerText"></span></div>
       <div class="livebadge"><i></i>LIVE<small>every launch plays here as it happens</small></div>
       <div class="verdict" id="verdict" hidden></div>
-      <div class="controls" id="controls" hidden>
-        <button class="btn" id="replayBtn">Replay</button>
+      <div class="controls" id="controls">
+        <select class="btn" id="replaySel" aria-label="Watch a launch"><option value="">Watch a launch…</option></select>
         <button class="btn" id="speedBtn" aria-pressed="false">Fast</button>
       </div>
       <div class="scalebar" id="scalebar"></div>
@@ -240,11 +241,6 @@ label.name input{width:150px}
 
   <div class="grid2">
     <div class="card">
-      <h2>Live launches <small id="feedCount"></small></h2>
-      <ul class="list" id="feed"></ul>
-      <p class="empty" id="feedEmpty">No launches yet. Be the first.</p>
-    </div>
-    <div class="card">
       <h2>Leaderboard <small>most fuel left</small></h2>
       <ul class="list" id="board"></ul>
       <p class="empty" id="boardEmpty">Nobody has landed yet.</p>
@@ -303,7 +299,7 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replayBtn','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','feed','feedEmpty','feedCount','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose'].forEach(id => els[id] = $(id));
+  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replaySel','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null;
@@ -498,14 +494,12 @@ label.name input{width:150px}
     if (error || !data) return;
     const firstLoad = feed.length === 0 && seen.size === 0;
     feed = data;
-    els.feedCount.textContent = feed.length ? feed.length + ' so far' : '';
-    els.feedEmpty.hidden = feed.length > 0;
-    els.feed.innerHTML = feed.map(f => {
-      const ok = f.outcome === 'landed', running = f.status !== 'done';
-      const text = running ? 'in flight…' : ok ? 'landed · ' + fmt(f.fuel_left, 3) + ' fuel left' : f.outcome === 'error' ? 'bot failed' : f.outcome === 'crashed' ? 'crashed into ' + f.body : f.outcome;
-      return '<li data-id="' + f.id + '"><i class="dot ' + (running ? 'run' : ok ? 'good' : 'bad') + '"></i><b>' + esc(f.pilot || 'pilot') + ' · ' + esc(f.bot_name) + '</b><span class="r">' + esc(text) + '</span></li>';
+    const when = f => { const d = new Date(f.created_at), today = new Date().toDateString() === d.toDateString(); return (today ? '' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ') + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
+    const options = feed.filter(f => f.status === 'done' && f.outcome !== 'error').map(f => {
+      const text = f.outcome === 'landed' ? 'landed, ' + fmt(f.fuel_left, 2) + ' fuel left' : f.outcome === 'crashed' ? 'crashed into ' + f.body : f.outcome;
+      return '<option value="' + f.id + '">' + esc(when(f) + ' · ' + (f.pilot || 'pilot') + ' · ' + f.bot_name + ' · ' + text) + '</option>';
     }).join('');
-    els.feed.querySelectorAll('li').forEach(li => li.onclick = () => watch(+li.dataset.id, false));
+    els.replaySel.innerHTML = '<option value="">' + (feed.length ? 'Watch a launch… (' + feed.length + ')' : 'No launches yet') + '</option>' + options;
     for (const f of feed) {
       if (f.status !== 'done') continue;
       if (firstLoad) { seen.add(f.id); continue; }
@@ -556,7 +550,7 @@ label.name input{width:150px}
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
   }
   function restartReplay(){ if (!run && lastRun) run = lastRun; if (!run) return; run.tau = 0; run.idx = 0; run.done = false; run.doneAt = 0; run.held = false; run.hold = null; resetFx(); els.verdict.hidden = true; }
-  els.replayBtn.onclick = restartReplay;
+  els.replaySel.onchange = () => { const id = +els.replaySel.value; els.replaySel.value = ''; if (id) watch(id, false, 'Replay'); };
   els.speedBtn.onclick = () => { fast = !fast; els.speedBtn.setAttribute('aria-pressed', String(fast)); };
   function outcomeText(r, w){
     const B = w.bodies[w.target];
