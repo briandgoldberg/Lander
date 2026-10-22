@@ -1141,7 +1141,7 @@ label.name input{width:150px}
     if (k !== w.target) {
       const [tx, ty] = P(tp.x, tp.y);
       if (tx < 0 || tx > CW || ty < 0 || ty > CH) {
-        const ax = tx - icx, ay = ty - icy, m = Math.max(Math.abs(ax) / (CW / 2 - 22), Math.abs(ay) / (CH / 2 - 22)), ex = icx + ax / m, ey = icy + ay / m, ang = Math.atan2(ay, ax);
+        const ax = tx - icx, ay = ty - icy, m = Math.max(Math.abs(ax) / (CW / 2 - 22), Math.abs(ay) / (CH / 2 - 22)), ex = icx + ax / m, ey = Math.min(CH - 44, Math.max(52, icy + ay / m)), ang = Math.atan2(ay, ax);   // kept clear of the label and footer
         g.fillStyle = '#f3b457'; g.save(); g.translate(ex, ey); g.rotate(ang); g.beginPath(); g.moveTo(9, 0); g.lineTo(-7, -6); g.lineTo(-7, 6); g.closePath(); g.fill(); g.restore();
         g.font = '600 11px "IBM Plex Sans", sans-serif'; g.textAlign = ex > icx ? 'right' : 'left';
         g.fillText(T.name + ' · ' + fmt(Math.max(0, dT), 2), ex + (ex > icx ? -14 : 14), ey + (ey > icy ? -8 : 16)); g.textAlign = 'start';
