@@ -213,7 +213,7 @@ label.name input{width:150px}
       <p class="hint">Set the four dials and launch. You find out how it went when it flies. Ten shots a day.</p>
       <div class="dials">
         <label class="dial"><span class="dl">Launch time <b id="vWait"></b></span><input type="range" id="dWait" min="0" max="100" step="0.1"><small>How long to wait before takeoff, from the moment you press Launch. The planets keep moving while you wait.</small></label>
-        <label class="dial"><span class="dl"><span id="lReach">Far point</span> <b id="vReach"></b></span><input type="range" id="dReach" min="0" max="2" step="0.001"><small id="hReach">How far your rocket swings out before coming back.</small></label>
+        <label class="dial"><span class="dl"><span id="lReach">Far point</span> <b id="vReach"></b></span><input type="range" id="dReach" min="0" max="2" step="0.001"><small id="hReach">How far your rocket swings out before coming back. It is the dotted ring on the map.</small></label>
         <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="-60" max="60" step="0.5"><small>Which way the engine pushes when you leave. 0° is straight along your planet's path; tilt it to bend yours.</small></label>
         <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"><small>How high above the target planet the brakes come on, measured in planet widths.</small></label>
       </div>
@@ -507,13 +507,13 @@ label.name input{width:150px}
     dials.wait.min = 0; dials.wait.max = tb.latest.toFixed(2); dials.wait.step = (tb.latest / 1000).toFixed(4);
     dials.reach.min = tb.reachMin.toFixed(3); dials.reach.max = tb.reachMax.toFixed(3); dials.reach.step = ((tb.reachMax - tb.reachMin) / 500).toFixed(5);
     $('lReach').textContent = tb.outward ? 'Far point' : 'Near point';
-    $('hReach').textContent = tb.outward ? 'How far out from the star your rocket swings on the way over.' : 'How far in toward the star your rocket dives on the way over.';
+    $('hReach').textContent = (tb.outward ? 'How far out from the star your rocket swings on the way over.' : 'How far in toward the star your rocket dives on the way over.') + ' It is the dotted ring on the map.';
     syncDials();
   }
   function syncDials(){ dials.wait.value = P.wait; dials.reach.value = P.reach; dials.aim.value = P.aim; dials.brake.value = P.brake; renderDialValues(); }
   function renderDialValues(){
     $('vWait').textContent = 'T+' + fmt(P.wait, 1);
-    $('vReach').textContent = fmt(P.reach, 2);
+    $('vReach').textContent = fmt(P.reach, 2) + ' from the star';
     $('vAim').textContent = (P.aim > 0 ? '+' : '') + fmt(P.aim, 1) + '°';
     $('vBrake').textContent = fmt(P.brake, 2) + ' planet radii';
   }
@@ -984,6 +984,10 @@ label.name input{width:150px}
     w.bodies.forEach((b, k) => { g.strokeStyle = k === w.target ? 'rgba(243,180,87,0.35)' : 'rgba(143,152,184,0.2)'; g.beginPath(); g.arc(cx, cy, b.orbitR*scale, 0, TAU); g.stroke(); });
     g.setLineDash([]);
     drawStar(g, cx, cy, Math.max(4, w.sun.radius * scale * SUN_MAG), tnow);
+    if (!run && P && tb) {
+      const rr = P.reach * scale; g.save(); g.setLineDash([2,5]); g.strokeStyle = 'rgba(243,180,87,0.6)'; g.lineWidth = 1.5; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); g.setLineDash([]);
+      g.fillStyle = 'rgba(243,180,87,0.9)'; g.font = '600 11px "IBM Plex Sans", sans-serif'; g.textAlign = 'center'; g.fillText(tb.outward ? 'far point' : 'near point', cx, cy - rr - 5); g.textAlign = 'start'; g.restore();
+    }
     const [rxw, ryw] = shown(st.x, st.y), rx = sx(rxw), ry = sy(ryw);
     if (run) {
       const S = run.samples, n = run.idx;
