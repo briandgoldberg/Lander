@@ -186,7 +186,7 @@ label.name input{width:150px}
     </div>
   </header>
 
-  <div class="prize" id="prize"><b>A new star system every day.</b> Fly to the target planet and land softly. Most fuel left tops the day. Three shots a day, no code.</div>
+  <div class="prize" id="prize"><b>Fly to the target planet and land with as much fuel left as you can.</b> Three shots a day, and a new star system every day.</div>
   <div class="challenge" id="challenge" hidden></div>
 
   <div class="ctarow">
@@ -366,7 +366,7 @@ label.name input{width:150px}
     const w = world, A = w.bodies[w.start], B = w.bodies[w.target];
     els.systemName.textContent = w.name + ' system';
     els.gameChip.textContent = game.name + ' · ' + w.name;
-    $('prize').innerHTML = '<b>A new star system every day.</b> Fly from <em>' + esc(A.name) + '</em> to <em>' + esc(B.name) + '</em> and land softly. Most fuel left tops the day. Three shots a day, no code.';
+    $('prize').innerHTML = '<b>Fly from ' + esc(A.name) + ' to ' + esc(B.name) + ' and land with as much fuel left as you can.</b> Three shots a day, and a new star system every day.';
     els.brief.innerHTML = 'Launch from <b>' + esc(A.name) + '</b>, land on <b>' + esc(B.name) + '</b>. ' + (B.orbitR > A.orbitR ? 'Outward.' : 'Inward.');
     els.facts.innerHTML = '<dt>Fuel budget</dt><dd>' + fmt(w.rocket.fuel, 2) + '</dd><dt>Soft landing</dt><dd>≤ ' + fmt(w.safeLandingSpeed, 2) + '</dd><dt>New system in</dt><dd id="factEnds">—</dd>';
     els.ranges.innerHTML = '<div class="planets">' + w.bodies.map((b, k) => '<span' + (k === w.start ? ' class="start"' : k === w.target ? ' class="target"' : '') + '><i style="background:' + b.color + '"></i>' + esc(b.name) + (k === w.start ? ' · start' : k === w.target ? ' · target' : '') + '</span>').join('') + '</div>';
