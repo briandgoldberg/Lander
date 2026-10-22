@@ -503,7 +503,7 @@ label.name input{width:150px}
   const dials = { wait: $('dWait'), reach: $('dReach'), aim: $('dAim'), brake: $('dBrake') };
   function setupPlanner(){
     tb = LanderPlan.textbook(world);
-    P = LanderPlan.clean(world, loadPlan() || { wait: tb.latest * 0.2, reach: tb.reach, aim: 0, brake: 1 });
+    P = LanderPlan.clean(world, loadPlan() || { wait: tb.latest * 0.2, reach: (tb.reachMin + tb.reachMax) / 2, aim: 0, brake: 1 });
     dials.wait.min = 0; dials.wait.max = tb.latest.toFixed(2); dials.wait.step = (tb.latest / 1000).toFixed(4);
     dials.reach.min = tb.reachMin.toFixed(3); dials.reach.max = tb.reachMax.toFixed(3); dials.reach.step = ((tb.reachMax - tb.reachMin) / 500).toFixed(5);
     $('lReach').textContent = tb.outward ? 'Far point' : 'Near point';
@@ -986,7 +986,7 @@ label.name input{width:150px}
     drawStar(g, cx, cy, Math.max(4, w.sun.radius * scale * SUN_MAG), tnow);
     if (!run && P && tb) {
       const rr = P.reach * scale; g.save(); g.setLineDash([2,5]); g.strokeStyle = 'rgba(243,180,87,0.6)'; g.lineWidth = 1.5; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); g.setLineDash([]);
-      g.fillStyle = 'rgba(243,180,87,0.9)'; g.font = '600 11px "IBM Plex Sans", sans-serif'; g.textAlign = 'center'; g.fillText(tb.outward ? 'far point' : 'near point', cx, cy - rr - 5); g.textAlign = 'start'; g.restore();
+      g.fillStyle = 'rgba(243,180,87,0.9)'; g.font = '600 11px "IBM Plex Sans", sans-serif'; g.textAlign = 'center'; g.fillText(tb.outward ? 'far point' : 'near point', cx, cy + rr + 14); g.textAlign = 'start'; g.restore();
     }
     const [rxw, ryw] = shown(st.x, st.y), rx = sx(rxw), ry = sy(ryw);
     if (run) {
