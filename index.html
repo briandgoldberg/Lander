@@ -98,7 +98,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .tele div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:3px 0;min-width:0}
 .tele span{color:var(--muted)}
 .tele b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.grid2{display:grid;grid-template-columns:1fr;gap:14px;align-items:start}
 .picker{position:relative}
 .menu{position:absolute;left:0;bottom:calc(100% + 6px);min-width:300px;max-width:min(420px,80vw);max-height:280px;overflow:auto;background:rgba(10,14,26,.97);border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:2px;z-index:5;box-shadow:0 12px 30px rgba(0,0,0,.5)}
 .menu button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:transparent;border:0;color:var(--fg);font-family:var(--mono);font-size:12px;padding:7px 9px;border-radius:6px;cursor:pointer}
@@ -251,11 +251,6 @@ label.name input{width:150px}
       <p class="empty" id="boardEmpty">Nobody has landed yet.</p>
       <p class="status" id="boardNote"></p>
     </div>
-    <div class="card" id="winners">
-      <h2>Previous winners <small>code revealed when a game ends</small></h2>
-      <p class="empty" id="winnersEmpty">Game #1 is the first. When it ends, the winning flight path appears here, source and all.</p>
-      <div id="winnersList"></div>
-    </div>
   </div>
 
   <section class="card rules" id="rules">
@@ -264,7 +259,7 @@ label.name input{width:150px}
       <li>Free to enter. No purchase needed. Every account starts with 3 launches, and referrals add more.</li>
       <li>One account per person, and you must be 18 or older.</li>
       <li>The game lasts 10 days. The safe landing with the most fuel left wins. Ties go to whoever landed first.</li>
-      <li>The winning code is published in Previous winners when the game ends. Entering means agreeing to that.</li>
+      <li>The winning flight path is published on this site when the game ends. Entering means agreeing to that.</li>
       <li>The winner is contacted at their Google account email and paid $100 by PayPal, Venmo or Wise within 14 days.</li>
       <li>Accounts that abuse referrals, including fake or duplicate accounts, are disqualified and lose their bonus credits.</li>
     </ol>
@@ -529,18 +524,7 @@ label.name input{width:150px}
     els.board.innerHTML = data.slice(0, 10).map((r, i) => '<li data-id="' + r.id + '"><span class="n">' + (i + 1) + '</span><b>' + esc(r.pilot || 'pilot') + ' · ' + esc(r.bot_name) + '</b><span class="r">' + fmt(r.fuel_left, 3) + ' left</span></li>').join('');
     els.board.querySelectorAll('li').forEach(li => li.onclick = () => watch(+li.dataset.id, false));
     const ended = new Date(game.ends_at).getTime() <= Date.now();
-    els.boardNote.textContent = ended ? 'Game #1 has ended. The winning code is in Previous winners.' : 'Winner chosen when the clock runs out: the safe landing with the most fuel left. Their code is then published in Previous winners.';
-  }
-  async function refreshWinners(){
-    const { data, error } = await sb.rpc('past_winners');
-    if (error || !data) return;
-    $('winnersEmpty').hidden = data.length > 0;
-    $('winnersList').innerHTML = data.map(g => {
-      const wn = g.winner;
-      return '<details style="margin:8px 0"><summary style="cursor:pointer"><b>' + esc(g.name) + '</b> · ' + esc(g.system) + ' system, ' + esc(g.start) + ' to ' + esc(g.target) + ' · ' +
-        (wn ? 'won by ' + esc(wn.pilot || 'pilot') + ' with ' + esc(wn.bot_name) + ', ' + fmt(wn.fuel_left, 3) + ' fuel left' : 'nobody landed') + '</summary>' +
-        (wn ? '<pre class="err" style="border-color:var(--line);background:var(--sky);margin-top:8px;max-height:420px;overflow:auto">' + esc(wn.code) + '</pre>' : '') + '</details>';
-    }).join('');
+    els.boardNote.textContent = ended ? 'Game #1 has ended.' : 'Winner chosen when the clock runs out: the safe landing with the most fuel left. Their flight path is then published.';
   }
 
   // ---------- replay ----------
@@ -927,8 +911,8 @@ label.name input{width:150px}
     if (!world) { els.status.textContent = 'No game is running. Check back soon.'; els.tagline.textContent = 'No game is running.'; }
     resize(); new ResizeObserver(resize).observe(sky); new ResizeObserver(resize).observe(cam);
     requestAnimationFrame(frame);
-    await refreshFeed(); refreshBoard(); refreshWinners();
-    setInterval(refreshGame, 3000); setInterval(refreshFeed, 3000); setInterval(refreshBoard, 10000); setInterval(renderEnds, 30000); setInterval(refreshWinners, 60000);
+    await refreshFeed(); refreshBoard();
+    setInterval(refreshGame, 3000); setInterval(refreshFeed, 3000); setInterval(refreshBoard, 10000); setInterval(renderEnds, 30000);
   }
   boot();
 })();
