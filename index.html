@@ -446,8 +446,8 @@ label.name input{width:150px}
       : 'Fly a rocket to another planet and land it. Beat my flight: ' + link;
     const enc = encodeURIComponent(msg), encLink = encodeURIComponent(link);
     const html = '<div class="refer">' +
-      '<button class="cta wide copyRef">' + (mine ? 'Challenge a friend to beat you' : 'Challenge a friend') + '</button>' +
-      (mine ? '<button class="btn wide copyReplay">Share my flight</button>' : '') +
+      '<button class="cta wide copyRef">Challenge a friend</button>' +
+      (mine ? '<button class="cta wide copyReplay">Share my flight</button>' : '') +
       '<div class="shares">' + (navigator.share ? '<button class="shareRef">Share…</button>' : '') +
       '<a href="https://twitter.com/intent/tweet?text=' + enc + '" target="_blank" rel="noopener">X</a>' +
       '<a href="https://www.facebook.com/sharer/sharer.php?u=' + encLink + '" target="_blank" rel="noopener">Facebook</a>' +
@@ -456,7 +456,7 @@ label.name input{width:150px}
       '<a href="mailto:?subject=' + encodeURIComponent('Beat my flight') + '&body=' + enc + '">Email</a></div></div>';
     card.hidden = false; $('referPanel').innerHTML = html; els.outReferral.innerHTML = html;
     const copyBtn = (sel, text, label) => document.querySelectorAll(sel).forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(text); b.textContent = 'Link copied'; } catch (e) { b.textContent = text; } setTimeout(() => { b.textContent = label; }, 3000); });
-    copyBtn('.copyRef', link, mine ? 'Challenge a friend to beat you' : 'Challenge a friend');
+    copyBtn('.copyRef', link, 'Challenge a friend');
     if (mine) copyBtn('.copyReplay', location.origin + location.pathname + '?replay=' + mine.id, 'Share my flight');
     document.querySelectorAll('.shareRef').forEach(b => b.onclick = () => { navigator.share({ title: 'Lander', text: msg, url: link }).catch(() => {}); });
   }
