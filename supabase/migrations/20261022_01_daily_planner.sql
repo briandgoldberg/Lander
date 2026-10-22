@@ -128,3 +128,7 @@ grant execute on function public.alltime() to anon, authenticated;
 
 -- Game #1 (the ten-day round) ends now; the daily systems take over.
 update public.games set ends_at = now() where number = 1 and ends_at > now();
+
+-- Applied later the same day as migration "lander_ten_shots_ranked_board":
+-- ten shots a day, no referral reward, closest_approach stored, board ranks landings > crashes on target > nearest misses.
+-- (see the function bodies in the Supabase project; this file records the intent)

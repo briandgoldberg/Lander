@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lander</title>
 <meta name="description" content="Fly a rocket to another planet and land it with the most fuel left. A new star system every day.">
-<meta property="og:title" content="Lander · the classic lander game, your code is the pilot">
+<meta property="og:title" content="Lander · the classic lander game, you are the pilot">
 <meta property="og:description" content="Fly a rocket to another planet and land it with the most fuel left. A new star system every day. Free.">
 <meta property="og:image" content="https://lander-topaz.vercel.app/og.png">
 <meta property="og:url" content="https://lander-topaz.vercel.app/">
@@ -166,8 +166,6 @@ label.name input{width:150px}
 .dial .dl b{font-family:var(--mono);font-weight:500;color:var(--accent);text-align:right}
 .dial input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0;cursor:pointer}
 .dial small{color:var(--muted);font-size:12px;line-height:1.4;min-height:17px}
-.predict{font-family:var(--display);font-size:15px;letter-spacing:.04em;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);color:var(--muted)}
-.predict.good{border-color:var(--good);color:var(--good)} .predict.bad{border-color:var(--bad);color:var(--bad)}
 .refer{display:flex;flex-direction:column;gap:12px}
 .refer .note{margin:0;font-size:13px;color:var(--fg);line-height:1.5}
 .refer .shares{display:flex;gap:8px;flex-wrap:wrap}
@@ -181,12 +179,12 @@ label.name input{width:150px}
     <div class="brand">Lander<small id="tagline">The classic lander game. You are the pilot.</small></div>
     <div class="row">
       <span class="chip hot" id="gameChip">Today</span>
-      <span class="chip" id="endsChip">new system in —</span>
+      <span class="chip" id="endsChip">new game starts in —</span>
       <span id="authArea" class="row"></span>
     </div>
   </header>
 
-  <div class="prize" id="prize"><b>Fly to the target planet and land with as much fuel left as you can.</b> Three shots a day, and a new star system every day.</div>
+  <div class="prize" id="prize"><b>Today's challenge:</b> fly to the target planet and land softly.</div>
   <div class="challenge" id="challenge" hidden></div>
 
   <div class="ctarow">
@@ -213,14 +211,13 @@ label.name input{width:150px}
           <button class="cta" id="launchBtn">Launch</button>
         </div>
       </div>
-      <p class="hint">Drag the four dials and watch your predicted path on the map. When it lands with fuel to spare, launch it for real.</p>
+      <p class="hint">Set the four dials and launch. You find out how it went when it flies. Ten shots a day.</p>
       <div class="dials">
-        <label class="dial"><span class="dl">Launch time <b id="vWait"></b></span><input type="range" id="dWait" min="0" max="100" step="0.1" list="winTicks"><datalist id="winTicks"></datalist><small id="hWait">Scanning today's launch windows…</small></label>
-        <label class="dial"><span class="dl"><span id="lReach">Far point</span> <b id="vReach"></b></span><input type="range" id="dReach" min="0" max="2" step="0.001"><small id="hReach"></small></label>
-        <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="-60" max="60" step="0.5"><small>0° burns straight along the orbit. Tilt it to arrive a little earlier or later.</small></label>
-        <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"><small>Where the landing autopilot takes over. Late saves fuel. Too late is a crater.</small></label>
+        <label class="dial"><span class="dl">Launch time <b id="vWait"></b></span><input type="range" id="dWait" min="0" max="100" step="0.1"><small>When to lift off, in time units from the start of the day.</small></label>
+        <label class="dial"><span class="dl"><span id="lReach">Far point</span> <b id="vReach"></b></span><input type="range" id="dReach" min="0" max="2" step="0.001"><small id="hReach">How far from the star the transfer orbit swings.</small></label>
+        <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="-60" max="60" step="0.5"><small>Burn direction, in degrees off the orbit.</small></label>
+        <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"><small>Where the landing autopilot takes over, in planet radii.</small></label>
       </div>
-      <div class="predict" id="predict">Predicting…</div>
       <div class="status" id="status"></div>
       <pre class="err" id="err" hidden></pre>
     </section>
@@ -256,7 +253,7 @@ label.name input{width:150px}
 
   <div class="grid2">
     <div class="card">
-      <h2>Today's top pilots <small>most fuel left</small></h2>
+      <h2>Today's top pilots <small>best flight per pilot</small></h2>
       <ul class="list" id="board"></ul>
       <p class="empty" id="boardEmpty">Nobody has landed yet today.</p>
       <p class="status" id="boardNote"></p>
@@ -273,9 +270,9 @@ label.name input{width:150px}
     <h2>How it works</h2>
     <ol>
       <li>A new star system every day at midnight UTC. Everyone flies the same one.</li>
-      <li>Plan a flight with four dials, launch it, and watch it fly for real. Three shots a day.</li>
-      <li>Land softly on the target planet. The most fuel left tops the day, and points add up all-time.</li>
-      <li>Share your flight. A friend who joins from your link and launches gives you 3 extra shots.</li>
+      <li>Set four dials, launch, and watch the flight for real. Ten shots a day.</li>
+      <li>Today's board ranks safe landings by fuel left, then crashes on the target planet by fuel left, then the nearest misses. Landings add up as all-time points.</li>
+      <li>Share your flight and challenge a friend to beat it.</li>
       <li>One account per person. Fake or duplicate accounts lose their shots.</li>
     </ol>
   </section>
@@ -286,7 +283,7 @@ label.name input{width:150px}
 <div class="modal" id="signin" hidden>
   <div class="box">
     <h3>Sign in to launch</h3>
-    <p>Sign in with your Google account. Free, no password. Three shots a day.</p>
+    <p>Sign in with your Google account. Free, no password. Ten shots a day.</p>
     <div class="row"><button class="cta" id="googleBtn">Continue with Google</button></div>
     <p id="signinMsg"></p>
     <div class="row"><button class="btn small" id="signinClose">Close</button></div>
@@ -364,8 +361,8 @@ label.name input{width:150px}
   function renderMission(){
     const w = world, A = w.bodies[w.start], B = w.bodies[w.target];
     els.systemName.textContent = w.name + ' system';
-    els.gameChip.textContent = game.name + ' · ' + w.name;
-    $('prize').innerHTML = '<b>Fly from ' + esc(A.name) + ' to ' + esc(B.name) + ' and land with as much fuel left as you can.</b> Three shots a day, and a new star system every day.';
+    els.gameChip.textContent = game.name;
+    $('prize').innerHTML = "<b>Today's challenge:</b> fly from <em>" + esc(A.name) + '</em> to <em>' + esc(B.name) + '</em> and land softly.';
     els.brief.innerHTML = 'Launch from <b>' + esc(A.name) + '</b>, land on <b>' + esc(B.name) + '</b>. ' + (B.orbitR > A.orbitR ? 'Outward.' : 'Inward.');
     els.facts.innerHTML = '<dt>Fuel budget</dt><dd>' + fmt(w.rocket.fuel, 2) + '</dd><dt>Soft landing</dt><dd>≤ ' + fmt(w.safeLandingSpeed, 2) + '</dd><dt>New system in</dt><dd id="factEnds">—</dd>';
     els.ranges.innerHTML = '<div class="planets">' + w.bodies.map((b, k) => '<span' + (k === w.start ? ' class="start"' : k === w.target ? ' class="target"' : '') + '><i style="background:' + b.color + '"></i>' + esc(b.name) + (k === w.start ? ' · start' : k === w.target ? ' · target' : '') + '</span>').join('') + '</div>';
@@ -377,9 +374,9 @@ label.name input{width:150px}
     const ms = new Date(game.ends_at).getTime() - Date.now();
     const h = Math.floor(ms / 3600000), m = Math.floor(ms % 3600000 / 60000);
     const left = ms <= 0 ? 'any moment now' : (h > 0 ? h + 'h ' + m + 'm' : m + 'm');
-    els.endsChip.textContent = 'new system in ' + left;
+    els.endsChip.textContent = 'new game starts in ' + left;
     const fe = $('factEnds'); if (fe) fe.textContent = left;
-    els.outNote.textContent = 'A new system arrives at midnight UTC, in ' + left + '. Or earn 3 extra shots: share your flight with a friend who has never played.';
+    els.outNote.textContent = 'A new system arrives at midnight UTC, in ' + left + '.';
   }
 
   // ---------- auth ----------
@@ -442,7 +439,7 @@ label.name input{width:150px}
       : 'Fly a rocket to another planet and land it. Beat my flight: ' + link;
     const enc = encodeURIComponent(msg), encLink = encodeURIComponent(link);
     const html = '<div class="refer">' +
-      '<p class="note">' + (mine ? 'Challenge a friend to beat your flight.' : "Challenge a friend to today's system.") + ' A friend who joins from your link and launches gives you <b>3 extra shots</b>.</p>' +
+      '<p class="note">' + (mine ? 'Challenge a friend to beat your flight.' : "Challenge a friend to today's system.") + '</p>' +
       '<button class="cta wide copyRef">Copy challenge link</button>' +
       '<div class="shares">' + (navigator.share ? '<button class="shareRef">Share…</button>' : '') +
       '<a href="https://twitter.com/intent/tweet?text=' + enc + '" target="_blank" rel="noopener">X</a>' +
@@ -488,72 +485,29 @@ label.name input{width:150px}
   };
 
   // ---------- planner ----------
-  // Four dials. Every change flies the plan in a worker and draws the predicted path on the map.
-  let P = null, tb = null, preview = null, previewId = 0, worker = null, windows = [], scanId = 0, previewTimer = null, scanTimer = null;
+  // Four dials and nothing else. What they do shows when the rocket flies.
+  let P = null, tb = null;
   const dials = { wait: $('dWait'), reach: $('dReach'), aim: $('dAim'), brake: $('dBrake') };
-  async function makeWorker(){
-    if (worker) return worker;
-    const [eng, pl] = await Promise.all([fetch('lib/engine.js').then(r => r.text()), fetch('lib/plan.js').then(r => r.text())]);
-    const src = eng + '\n' + pl + '\nonmessage = function(e){ var d = e.data; if (d.scan) { var tb = textbook(d.world), out = []; for (var i = 0; i <= d.scan; i++) { var wait = tb.latest * i / d.scan; var r = fly(d.world, makeController(d.world, Object.assign({}, d.P, { wait: wait })), {}); out.push([wait, r.outcome, r.body, r.closestApproach]); } postMessage({ id: d.id, scan: out }); return; } var r = fly(d.world, makeController(d.world, d.P), { record: true }); postMessage({ id: d.id, r: r }); };';
-    worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
-    worker.onmessage = e => {
-      const d = e.data;
-      if (d.scan) { if (d.id !== scanId) return; windows = clusterWindows(d.scan); renderWindows(); return; }
-      if (d.id !== previewId) return;
-      preview = d.r; renderPrediction();
-    };
-    return worker;
-  }
-  function clusterWindows(rows){
-    const T = world.bodies[world.target], near = r => r[1] === 'landed' || (r[1] === 'crashed' && r[2] === T.name) || (r[3] != null && r[3] < T.radius * 3);
-    const out = []; let cur = null;
-    for (const r of rows) { if (!near(r)) continue; if (cur && r[0] - cur.to < tb.latest / 40) cur.to = r[0]; else { cur = { from: r[0], to: r[0] }; out.push(cur); } }
-    return out;
-  }
-  function renderWindows(){
-    const h = $('hWait'), dl = $('winTicks');
-    if (!windows.length) { h.textContent = 'No launch window found with these dials. Try a different ' + $('lReach').textContent.toLowerCase() + '.'; dl.innerHTML = ''; return; }
-    h.textContent = 'Launch windows today: ' + windows.map(x => 'T+' + fmt((x.from + x.to) / 2, 1)).join(', ') + '. Slide into one and watch the path on the map.';
-    dl.innerHTML = windows.map(x => '<option value="' + ((x.from + x.to) / 2).toFixed(2) + '"></option>').join('');
-  }
   function setupPlanner(){
     tb = LanderPlan.textbook(world);
-    P = LanderPlan.clean(world, loadPlan() || tb);
+    P = LanderPlan.clean(world, loadPlan() || { wait: tb.latest * 0.2, reach: tb.reach, aim: 0, brake: 1 });
     dials.wait.min = 0; dials.wait.max = tb.latest.toFixed(2); dials.wait.step = (tb.latest / 1000).toFixed(4);
     dials.reach.min = tb.reachMin.toFixed(3); dials.reach.max = tb.reachMax.toFixed(3); dials.reach.step = ((tb.reachMax - tb.reachMin) / 500).toFixed(5);
     $('lReach').textContent = tb.outward ? 'Far point' : 'Near point';
-    $('hReach').textContent = (tb.outward ? 'How far out the transfer swings. ' : 'How far in the transfer dips. ') + world.bodies[world.target].name + "'s orbit is " + fmt(world.bodies[world.target].orbitR, 2) + ' from the star; aim a touch short or long to change when you arrive.';
-    windows = []; preview = null; $('winTicks').innerHTML = ''; $('hWait').textContent = 'Scanning today\'s launch windows…';
-    syncDials(); schedulePreview(); scheduleScan();
+    $('hReach').textContent = (tb.outward ? 'How far out from the star the transfer orbit swings.' : 'How far in toward the star the transfer orbit dips.');
+    syncDials();
   }
   function syncDials(){ dials.wait.value = P.wait; dials.reach.value = P.reach; dials.aim.value = P.aim; dials.brake.value = P.brake; renderDialValues(); }
   function renderDialValues(){
-    const B = world.bodies[world.target], a = bodyAt(world, world.start, P.wait), b = bodyAt(world, world.target, P.wait);
-    let ang = (Math.atan2(b.y, b.x) - Math.atan2(a.y, a.x)) * 180 / Math.PI; ang = ((ang % 360) + 360) % 360; if (ang > 180) ang -= 360;
-    $('vWait').textContent = 'T+' + fmt(P.wait, 1) + ' · ' + B.name + ' ' + fmt(Math.abs(ang), 0) + '° ' + (ang >= 0 ? 'ahead' : 'behind');
-    $('vReach').textContent = fmt(P.reach, 2) + (Math.abs(P.reach - B.orbitR) < 0.004 ? ' · ' + B.name + "'s orbit" : P.reach > B.orbitR === tb.outward ? ' · past ' + B.name : ' · short of ' + B.name);
+    $('vWait').textContent = 'T+' + fmt(P.wait, 1);
+    $('vReach').textContent = fmt(P.reach, 2);
     $('vAim').textContent = (P.aim > 0 ? '+' : '') + fmt(P.aim, 1) + '°';
-    $('vBrake').textContent = fmt(P.brake, 2) + ' radii up';
+    $('vBrake').textContent = fmt(P.brake, 2) + ' radii';
   }
   Object.keys(dials).forEach(k => dials[k].addEventListener('input', () => {
     P = LanderPlan.clean(world, { wait: +dials.wait.value, reach: +dials.reach.value, aim: +dials.aim.value, brake: +dials.brake.value });
-    renderDialValues(); savePlan(); schedulePreview(); if (k === 'reach' || k === 'aim') scheduleScan();
+    renderDialValues(); savePlan();
   }));
-  function schedulePreview(){ clearTimeout(previewTimer); previewTimer = setTimeout(runPreview, 40); }
-  async function runPreview(){ if (!world || !P) return; const wk = await makeWorker(); previewId++; const el = $('predict'); el.textContent = 'Predicting…'; el.className = 'predict'; wk.postMessage({ id: previewId, world, P }); }
-  function scheduleScan(){ clearTimeout(scanTimer); scanTimer = setTimeout(async () => { if (!world || !P) return; const wk = await makeWorker(); scanId++; wk.postMessage({ id: scanId, world, P: { reach: P.reach, aim: P.aim, brake: P.brake }, scan: 120 }); }, 500); }
-  function renderPrediction(){
-    const el = $('predict'), r = preview, B = world.bodies[world.target]; if (!r) return;
-    let text, cls;
-    if (r.outcome === 'landed') { text = '✓ Lands on ' + B.name + ' with ' + fmt(world.rocket.fuel - r.fuelUsed, 2) + ' of ' + fmt(world.rocket.fuel, 2) + ' fuel left · touchdown ' + fmt(r.landingSpeed, 3); cls = 'good'; }
-    else if (r.outcome === 'crashed' && r.body === B.name) { text = '✗ Crashes into ' + B.name + ' at ' + fmt(r.landingSpeed, 2) + ' (limit ' + fmt(world.safeLandingSpeed, 2) + '). Brake higher up.'; cls = 'bad'; }
-    else if (r.outcome === 'crashed') { text = '✗ Crashes into ' + r.body + '. Wrong planet.'; cls = 'bad'; }
-    else if (r.outcome === 'burned') { text = '✗ Flies into the star.'; cls = 'bad'; }
-    else if (r.outcome === 'lost') { text = '✗ Leaves the system.'; cls = 'bad'; }
-    else if (r.closestApproach != null && r.closestApproach < B.radius * 2) { text = '✗ Flies past ' + B.name + ' without catching it. Brake higher up, or nudge the aim.'; cls = 'bad'; }
-    else { text = '✗ Misses ' + B.name + (r.closestApproach != null ? ' by ' + fmt(r.closestApproach, 2) : '') + '. Try another launch time.'; cls = 'bad'; }
-    el.textContent = text; el.className = 'predict ' + cls;
-  }
   function savePlan(){ try { localStorage.setItem('lander.plan.' + game.id, JSON.stringify(P)); } catch (e) {} }
   function loadPlan(){ try { return JSON.parse(localStorage.getItem('lander.plan.' + game.id)); } catch (e) { return null; } }
 
@@ -666,10 +620,11 @@ label.name input{width:150px}
     if (!game) return;
     const [day, at] = await Promise.all([sb.rpc('leaderboard', { p_game: game.id }), sb.rpc('alltime')]);
     if (!day.error && day.data) {
-      els.boardEmpty.hidden = day.data.length > 0;
-      els.board.innerHTML = day.data.slice(0, 10).map((r, i) => '<li data-id="' + r.id + '"><span class="n">' + (i + 1) + '</span><b>' + esc(r.pilot || 'pilot') + '</b><span class="r">' + fmt(r.fuel_left, 3) + ' left · ' + esc(r.bot_name) + '</span></li>').join('');
+      els.boardEmpty.hidden = day.data.length > 0; els.boardEmpty.textContent = 'Nobody has flown yet today.';
+      const how = r => r.outcome === 'landed' ? 'landed · ' + fmt(r.fuel_left, 3) + ' fuel left' : r.outcome === 'crashed' && r.rank === 1 ? 'crashed · ' + fmt(r.fuel_left, 3) + ' fuel left' : r.closest_approach != null ? 'missed by ' + fmt(r.closest_approach, 2) : r.outcome;
+      els.board.innerHTML = day.data.slice(0, 10).map((r, i) => '<li data-id="' + r.id + '"><span class="n">' + (i + 1) + '</span><b>' + esc(r.pilot || 'pilot') + '</b><span class="r">' + how(r) + '</span></li>').join('');
       els.board.querySelectorAll('li').forEach(li => li.onclick = () => watch(+li.dataset.id, false));
-      els.boardNote.textContent = 'Best landing per pilot. Click one to watch it. Resets with the new system.';
+      els.boardNote.textContent = 'Landings by fuel left, then crashes on the target by fuel left, then nearest misses. Click one to watch it.';
     }
     if (!at.error && at.data) {
       $('alltimeEmpty').hidden = at.data.length > 0;
@@ -1027,11 +982,6 @@ label.name input{width:150px}
       if (mode >= 0) { g.lineTo(rx, ry); g.stroke(); }
       g.restore();
     }
-    if (!run) {
-      const ghost = (samples, color, dash) => { if (!samples || samples.length < 2) return; g.save(); g.setLineDash(dash); g.strokeStyle = color; g.lineWidth = 1.5; g.beginPath(); for (let i = 0; i < samples.length; i += 2) { const q = samples[i]; if (i === 0) g.moveTo(sx(q[1]), sy(q[2])); else g.lineTo(sx(q[1]), sy(q[2])); } g.stroke(); const e = samples[samples.length - 1]; g.setLineDash([]); g.fillStyle = color; g.beginPath(); g.arc(sx(e[1]), sy(e[2]), 3, 0, TAU); g.fill(); g.restore(); };
-      if (challenge && game && challenge.game_id === game.id) ghost(challenge.samples, 'rgba(143,200,255,0.6)', [2,4]);
-      if (preview) ghost(preview.samples, preview.outcome === 'landed' ? 'rgba(106,213,154,0.85)' : 'rgba(243,180,87,0.75)', [5,4]);
-    }
     g.font = '500 11px "IBM Plex Sans", sans-serif'; g.textAlign = 'center';
     w.bodies.forEach((b, k) => {
       const p = bodyPos(k), px = sx(p.x), py = sy(p.y), r = b.radius * scale * mag, ln = Math.hypot(p.x, p.y) || 1, lx = -p.x / ln, ly = p.y / ln;
@@ -1230,7 +1180,7 @@ label.name input{width:150px}
     const dts = Math.min(1, (now - last) / 1000 || 0); last = now;
     const w = displayWorld();
     if (w) {
-      if (!run) { if (!(fx.fade > 0.5)) { const want = P ? P.wait : liveT(); idleT += (want - idleT) * Math.min(1, dts * 4); if (Math.abs(want - idleT) < 1e-4) idleT = want; } }
+      if (!run) { if (!(fx.fade > 0.5)) idleT = liveT(); }
       else if (run.done) {
         // after the verdict has had its moment, hand back to the live system; Replay brings it back
         if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); fx.fade = 1; camS = null; idleBanner(); els.verdict.classList.add('fade'); setTimeout(() => { if (!run) els.verdict.hidden = true; }, 950); }

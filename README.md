@@ -6,7 +6,7 @@ Live: https://lander-topaz.vercel.app
 
 ## How it works
 
-1. Sign in with Google. Three shots a day. A friend who joins from your link and launches gives you 3 extra shots, once per friend.
+1. Sign in with Google. Ten shots a day.
 2. Set four dials (launch time, far point, aim, brake altitude). The page flies the plan in a worker and draws the predicted path; on launch the server flies the same plan through the game physics in a sealed worker.
 3. Everyone watching the site sees each launch as it happens. One launch flies at a time; if two people launch together, one is asked to hold and goes automatically next.
 4. Each day is its own game: `api/today.js` creates the day's system from the date (a daily cron and the page itself call it). The best landing per pilot tops the day; all-time points add up the fuel-left percentage of each day's best landing.
