@@ -102,10 +102,13 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 @media (max-width:980px){.grid2{grid-template-columns:1fr}}
 .brief{margin:0 0 8px;font-size:14px;line-height:1.5}
 .brief b{font-family:var(--display);letter-spacing:.04em}
-.facts{display:grid;grid-template-columns:1fr auto;gap:3px 12px;font-size:12.5px;margin:0}
+.facts{display:grid;grid-template-columns:1fr auto;gap:5px 12px;font-size:13px;margin:0}
 .facts dt{color:var(--muted)} .facts dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
-.ranges{margin:10px 0 0;padding:8px 10px;background:var(--panel-2);border-radius:6px;font-size:12px;color:var(--muted);line-height:1.6}
-.ranges b{color:var(--fg);font-weight:500}
+.ranges{margin:10px 0 0;display:flex;flex-direction:column;gap:10px}
+.planets{display:flex;flex-wrap:wrap;gap:6px}
+.planets span{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--muted)}
+.planets span.start,.planets span.target{color:var(--fg);border-color:var(--accent)}
+.planets i{width:9px;height:9px;border-radius:50%;display:inline-block}
 .status{font-family:var(--mono);font-size:12px;color:var(--muted);min-height:18px;margin-top:8px;line-height:1.5}
 .status.warn{color:var(--accent)}
 .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-size:12px}
@@ -337,15 +340,11 @@ label.name input{width:150px}
     const w = world, A = w.bodies[w.start], B = w.bodies[w.target];
     els.systemName.textContent = w.name + ' system';
     $('prize').innerHTML = '<b>Round 1 prize: $100 cash.</b> A safe landing on <em>Planet ' + esc(B.name) + '</em> with the most fuel left wins. Free to enter.';
-    els.brief.innerHTML = 'Launch from <b>' + esc(A.name) + '</b>, land on <b>' + esc(B.name) + '</b>. ' + (B.orbitR > A.orbitR ? 'Outward.' : 'Inward.') + ' Safe landing, most fuel left, wins.';
-    els.facts.innerHTML = [
-      ['Fuel budget (Δv)', fmt(w.rocket.fuel, 2)],
-      ['Soft landing', '≤ ' + fmt(w.safeLandingSpeed, 2) + ' relative speed'],
-      ['Planets', w.bodies.length + ': ' + w.bodies.map(b => b.name).join(', ')]
-    ].map(([k,v]) => '<dt>' + k + '</dt><dd>' + v + '</dd>').join('');
-    els.ranges.innerHTML = 'The exact numbers go to your bot at launch. What every game guarantees: ' +
-      '<b>planet radius</b> 0.012 to 0.034 · <b>mass</b> = 100 × radius³ · <b>orbits</b> from about 0.9 outward, each 1.6 to 2.1× the last · ' +
-      '<b>engine</b> 3× the stronger of the two surface gravities · <b>deadline</b> set from the first launch window · <b>star</b> mass 1, radius 0.06.';
+    els.brief.innerHTML = 'Launch from <b>' + esc(A.name) + '</b>, land on <b>' + esc(B.name) + '</b>. ' + (B.orbitR > A.orbitR ? 'Outward.' : 'Inward.');
+    els.facts.innerHTML = '<dt>Fuel budget</dt><dd>' + fmt(w.rocket.fuel, 2) + ' Δv</dd><dt>Soft landing</dt><dd>≤ ' + fmt(w.safeLandingSpeed, 2) + '</dd><dt>Deadline</dt><dd>' + fmt(w.deadline, 0) + ' time units</dd>';
+    els.ranges.innerHTML = '<div class="planets">' + w.bodies.map((b, k) => '<span' + (k === w.start ? ' class="start"' : k === w.target ? ' class="target"' : '') + '><i style="background:' + b.color + '"></i>' + esc(b.name) + (k === w.start ? ' · start' : k === w.target ? ' · target' : '') + '</span>').join('') + '</div>' +
+      '<details class="api"><summary>What every game guarantees</summary><ul>' +
+      '<li>Planet radius 0.012 to 0.034; mass is 100 × radius³</li><li>Orbits from about 0.9 outward, each 1.6 to 2.1× the last</li><li>Engine: 3× the stronger of the two surface gravities</li><li>Deadline set from the first launch window</li><li>Star: mass 1, radius 0.06</li><li>The exact numbers go to your flight path at launch</li></ul></details>';
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
   }
   function renderEnds(){
