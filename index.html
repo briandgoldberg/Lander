@@ -211,10 +211,10 @@ label.name input{width:150px}
       </div>
       <p class="hint">Set the four dials and launch. You find out how it went when it flies. Ten shots a day.</p>
       <div class="dials">
-        <label class="dial"><span class="dl">Launch time <b id="vWait"></b></span><input type="range" id="dWait" min="0" max="100" step="0.1"><small>When to lift off, in time units from the start of the day.</small></label>
-        <label class="dial"><span class="dl"><span id="lReach">Far point</span> <b id="vReach"></b></span><input type="range" id="dReach" min="0" max="2" step="0.001"><small id="hReach">How far from the star the transfer orbit swings.</small></label>
-        <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="-60" max="60" step="0.5"><small>Burn direction, in degrees off the orbit.</small></label>
-        <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"><small>Where the landing autopilot takes over, in planet radii.</small></label>
+        <label class="dial"><span class="dl">Launch time <b id="vWait"></b></span><input type="range" id="dWait" min="0" max="100" step="0.1"><small>When your rocket takes off. The planets keep moving while you wait.</small></label>
+        <label class="dial"><span class="dl"><span id="lReach">Far point</span> <b id="vReach"></b></span><input type="range" id="dReach" min="0" max="2" step="0.001"><small id="hReach">How far your rocket swings out before coming back.</small></label>
+        <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="-60" max="60" step="0.5"><small>Which way the engine pushes when you leave. 0° is straight along your planet's path; tilt it to bend yours.</small></label>
+        <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"><small>How high above the target planet the brakes come on, measured in planet widths.</small></label>
       </div>
       <div class="status" id="status"></div>
       <pre class="err" id="err" hidden></pre>
@@ -498,7 +498,7 @@ label.name input{width:150px}
     dials.wait.min = 0; dials.wait.max = tb.latest.toFixed(2); dials.wait.step = (tb.latest / 1000).toFixed(4);
     dials.reach.min = tb.reachMin.toFixed(3); dials.reach.max = tb.reachMax.toFixed(3); dials.reach.step = ((tb.reachMax - tb.reachMin) / 500).toFixed(5);
     $('lReach').textContent = tb.outward ? 'Far point' : 'Near point';
-    $('hReach').textContent = (tb.outward ? 'How far out from the star the transfer orbit swings.' : 'How far in toward the star the transfer orbit dips.');
+    $('hReach').textContent = tb.outward ? 'How far out from the star your rocket swings on the way over.' : 'How far in toward the star your rocket dives on the way over.';
     syncDials();
   }
   function syncDials(){ dials.wait.value = P.wait; dials.reach.value = P.reach; dials.aim.value = P.aim; dials.brake.value = P.brake; renderDialValues(); }
@@ -506,7 +506,7 @@ label.name input{width:150px}
     $('vWait').textContent = 'T+' + fmt(P.wait, 1);
     $('vReach').textContent = fmt(P.reach, 2);
     $('vAim').textContent = (P.aim > 0 ? '+' : '') + fmt(P.aim, 1) + '°';
-    $('vBrake').textContent = fmt(P.brake, 2) + ' radii';
+    $('vBrake').textContent = fmt(P.brake, 2) + ' planet radii';
   }
   Object.keys(dials).forEach(k => dials[k].addEventListener('input', () => {
     P = LanderPlan.clean(world, { wait: +dials.wait.value, reach: +dials.reach.value, aim: +dials.aim.value, brake: +dials.brake.value });
