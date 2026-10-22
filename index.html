@@ -742,7 +742,7 @@ label.name input{width:150px}
     g.fillStyle = '#03050c'; g.fillRect(0, 0, W, H);
     for (const n of nebula) { const ng = g.createRadialGradient(n[0]*W, n[1]*H, 0, n[0]*W, n[1]*H, n[2]*W); ng.addColorStop(0, 'rgba(' + n[3].join(',') + ',0.10)'); ng.addColorStop(1, 'rgba(' + n[3].join(',') + ',0)'); g.fillStyle = ng; g.fillRect(0, 0, W, H); }
     for (const s of stars) { const a = s[3] * (0.75 + 0.35 * Math.sin(tnow * s[5] + s[4])); g.fillStyle = 'rgba(233,236,246,' + a.toFixed(3) + ')'; g.fillRect(s[0]*W, s[1]*H, s[2], s[2]); }
-    const outer = w.bodies[w.bodies.length-1].orbitR, scale = (Math.min(W, H) / 2) / (outer * 1.1), cx = W/2, cy = H/2;
+    const outer = w.bodies[w.bodies.length-1].orbitR, scale = (Math.min(W, H) / 2 - 14) / outer, cx = W/2, cy = H/2;
     const sx = x => cx + x*scale, sy = y => cy - y*scale;
     g.lineWidth = 1; g.setLineDash([3,6]);
     w.bodies.forEach((b, k) => { g.strokeStyle = k === w.target ? 'rgba(243,180,87,0.35)' : 'rgba(143,152,184,0.2)'; g.beginPath(); g.arc(cx, cy, b.orbitR*scale, 0, TAU); g.stroke(); });
