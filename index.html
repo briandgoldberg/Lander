@@ -236,7 +236,7 @@ label.name input{width:150px}
         <h2>Telemetry</h2>
         <div class="gauge"><span>Fuel</span><div class="bar"><i id="fuelBar"></i></div><span id="fuelText"></span></div>
         <div class="tele">
-          <div><span>T+</span><b id="tT">0.0</b></div>
+          <div><span>Flight time</span><b id="tT">—</b></div>
           <div><span>Phase</span><b id="tPhase">—</b></div>
           <div><span>Speed</span><b id="tSpeed">0.000</b></div>
           <div><span>Nearest</span><b id="tNear">—</b></div>
@@ -711,7 +711,7 @@ label.name input{width:150px}
     const left = Math.max(0, st.fuel), used = w.rocket.fuel - left;
     els.fuelBar.style.width = (100 * left / w.rocket.fuel).toFixed(1) + '%';
     els.fuelText.textContent = fmt(left, 2) + ' left';
-    els.tT.textContent = fmt(st.t, 2); els.tPhase.textContent = phaseOf(w, st, nr);
+    els.tT.textContent = run && run.tLaunch != null && st.t >= run.tLaunch ? fmt(st.t - run.tLaunch, 1) : '—'; els.tPhase.textContent = phaseOf(w, st, nr);
     els.tSpeed.textContent = fmt(Math.hypot(st.vx, st.vy), 3); els.tNear.textContent = nr.body.name;
     els.tRange.textContent = fmt(Math.max(0, nr.d - nr.body.radius), 4); els.tRel.textContent = fmt(rel, 3);
     els.tBurn.classList.toggle('on', st.thr > 0); els.tUsed.textContent = fmt(used, 3);
