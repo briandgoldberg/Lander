@@ -398,12 +398,18 @@ label.name input{width:150px}
       '<div class="shares">' + (navigator.share ? '<button class="shareRef">Share…</button>' : '') +
       '<a href="https://twitter.com/intent/tweet?text=' + enc + '" target="_blank" rel="noopener">X</a>' +
       '<a href="https://www.facebook.com/sharer/sharer.php?u=' + encLink + '" target="_blank" rel="noopener">Facebook</a>' +
+      '<button class="igRef" type="button">Instagram</button>' +
       '<a href="https://wa.me/?text=' + enc + '" target="_blank" rel="noopener">WhatsApp</a>' +
       '<a href="sms:?&body=' + enc + '">Text</a>' +
       '<a href="mailto:?subject=' + encodeURIComponent('Fly a rocket with me') + '&body=' + enc + '">Email</a></div></div>';
     card.hidden = false; $('referPanel').innerHTML = html; els.outReferral.innerHTML = html;
     document.querySelectorAll('.copyRef').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(link); b.textContent = 'Link copied'; } catch (e) { b.textContent = link; } setTimeout(() => { b.textContent = 'Copy invite link'; }, 3000); });
     document.querySelectorAll('.shareRef').forEach(b => b.onclick = () => { navigator.share({ title: 'Lander', text: msg, url: link }).catch(() => {}); });
+    document.querySelectorAll('.igRef').forEach(b => b.onclick = async () => {
+      try { await navigator.clipboard.writeText(msg); b.textContent = 'Copied, paste it in Instagram'; } catch (e) { b.textContent = 'Copy the link first'; }
+      setTimeout(() => { b.textContent = 'Instagram'; }, 4000);
+      window.open('https://www.instagram.com/', '_blank', 'noopener');
+    });
   }
   function openSignin(){ els.signin.hidden = false; els.signinMsg.textContent = ''; setTimeout(() => els.googleBtn.focus(), 50); }
   els.signinClose.onclick = () => { els.signin.hidden = true; };
