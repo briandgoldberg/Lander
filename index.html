@@ -84,7 +84,6 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .controls{position:absolute;left:12px;top:12px;right:150px;display:flex;align-items:center;gap:6px;z-index:6}
 .controls .picker{min-width:0;flex:0 1 auto}
-.controls #speedBtn{flex:none}
 .controls .btn{background:rgba(7,10,20,.85);padding:5px 10px;font-size:12px}
 .scalebar{position:absolute;right:12px;bottom:12px;pointer-events:none;font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(7,10,20,.7);padding:4px 8px;border-radius:4px;text-align:right;line-height:1.5}
 .side{display:flex;flex-direction:column;gap:12px;min-width:0}
@@ -106,10 +105,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .grid2{display:grid;grid-template-columns:1fr;gap:14px;align-items:start}
 .picker{position:relative}
 @media (max-width:640px){.controls{right:70px}.livebadge small{display:none}}
-.menu{position:absolute;left:0;top:calc(100% + 6px);min-width:300px;max-width:min(420px,80vw);max-height:280px;overflow:auto;background:rgba(10,14,26,.97);border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:2px;z-index:5;box-shadow:0 12px 30px rgba(0,0,0,.5)}
-.menu button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:transparent;border:0;color:var(--fg);font-family:var(--mono);font-size:12px;padding:7px 9px;border-radius:6px;cursor:pointer}
+.menu{position:absolute;left:0;top:calc(100% + 6px);min-width:260px;max-width:min(380px,80vw);max-height:280px;overflow:auto;background:rgba(10,14,26,.97);border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:2px;z-index:5;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+.menu button{display:block;width:100%;text-align:left;background:transparent;border:0;color:var(--fg);font-family:var(--mono);font-size:12px;line-height:1.35;padding:7px 9px;border-radius:6px;cursor:pointer}
+.menu button b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .menu button:hover{background:rgba(243,180,87,.12)}
-.menu button span{color:var(--muted);white-space:nowrap}
+.menu button span{display:block;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .menu .none{color:var(--muted);font-size:12px;padding:7px 9px}
 @media (max-width:980px){.grid2{grid-template-columns:1fr}}
 .brief{margin:0 0 8px;font-size:14px;line-height:1.5}
@@ -191,7 +191,6 @@ label.name input{width:150px}
       <div class="verdict" id="verdict" hidden></div>
       <div class="controls" id="controls">
         <div class="picker"><button class="banner" id="banner" type="button" aria-haspopup="listbox" aria-expanded="false"><i></i><span id="bannerText">Waiting for the first launch</span><b class="caret" id="bannerCaret" hidden>▾</b></button><div class="menu" id="replayMenu" role="listbox" hidden></div></div>
-        <button class="btn" id="speedBtn" aria-pressed="false" hidden>Fast</button>
       </div>
       <div class="scalebar" id="scalebar"></div>
     </section>
@@ -317,12 +316,12 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','bannerCaret','replayMenu','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose','fbBtn','fb','fbClose','fbText','fbEmail','fbSend','fbMsg'].forEach(id => els[id] = $(id));
+  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','bannerCaret','replayMenu','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose','fbBtn','fb','fbClose','fbText','fbEmail','fbSend','fbMsg'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null;
   let STARTER = '';
-  let run = null, lastRun = null, idleT = 0, fast = false;
+  let run = null, lastRun = null, idleT = 0;
   let feed = [], seen = new Set(), playQueue = [], busyLaunch = null;
   let W = 0, H = 0, CW = 0, CH = 0, dpr = 1, lastDraw = 0, last = 0, tnow = 0;
   const fx = { smoke: [], debris: [], rings: [], sparks: [], flash: 0, skyFlash: 0, shake: 0, label: null, labelT: 0, fade: 0 };
@@ -502,7 +501,6 @@ label.name input{width:150px}
   // The idle banner: waiting for the first launch, or an offer to replay the last one.
   function idleBanner(){
     if (run) return;
-    els.speedBtn.hidden = true;
     const done = doneLaunches(); els.bannerCaret.hidden = done.length === 0; els.banner.classList.toggle('pick', done.length > 0);
     if (busyLaunch) { const f = feed.find(x => x.id === busyLaunch); els.banner.classList.add('live'); els.banner.classList.remove('replay'); els.bannerText.textContent = 'Launch in progress' + (f ? ': ' + f.pilot + "'s " + f.bot_name : '…'); return; }
     els.banner.classList.remove('live');
@@ -565,7 +563,7 @@ label.name input{width:150px}
     let tLaunch = null; for (let i = 0; i < S.length; i++) if (S[i][5] > 0) { tLaunch = S[i][0]; break; }
     run = { world: w, samples: S, result: rep, tau: 0, idx: 0, done: false, tLaunch, held: false, hold: null, mine: !!opts.mine, practice: !!opts.practice, live: !!opts.live, pilot: opts.pilot || '', name: rep.bot_name || 'bot', label: opts.label };
     resetFx(); camS = null;
-    els.verdict.hidden = true; els.speedBtn.hidden = false; els.bannerCaret.hidden = doneLaunches().length === 0; els.banner.classList.toggle('pick', doneLaunches().length > 0);
+    els.verdict.hidden = true; els.bannerCaret.hidden = doneLaunches().length === 0; els.banner.classList.toggle('pick', doneLaunches().length > 0);
     els.banner.classList.remove('replay'); els.banner.classList.toggle('live', !!opts.live || !!opts.mine);
     els.bannerText.textContent = opts.practice ? 'Practice run · random ' + w.name + ' system' : opts.mine ? 'Your launch · ' + run.name : (opts.live ? 'LIVE · ' : (opts.label || 'Replay') + ' · ') + (run.pilot ? run.pilot + "'s " : '') + run.name;
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
@@ -575,7 +573,6 @@ label.name input{width:150px}
   els.banner.onclick = (e) => { e.stopPropagation(); if (els.bannerCaret.hidden) return; const open = els.replayMenu.hidden; els.replayMenu.hidden = !open; els.banner.setAttribute('aria-expanded', String(open)); };
   document.addEventListener('click', (e) => { if (!els.replayMenu.hidden && !els.replayMenu.contains(e.target)) closeMenu(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeMenu(); els.fb.hidden = true; } });
-  els.speedBtn.onclick = () => { fast = !fast; els.speedBtn.setAttribute('aria-pressed', String(fast)); };
   function outcomeText(r, w){
     const B = w.bodies[w.target];
     switch (r.outcome) {
@@ -914,7 +911,7 @@ label.name input{width:150px}
         else {
           const st = sampleState(), nr = nearest(w, st), near = nr.d < nr.body.hill * 1.6;
           const base = w.deadline / 36, mult = st.onPad ? 10 : near ? (nr.k === w.target ? 0.06 : 0.28) : st.thr > 0 ? 0.22 : 1;
-          let next = run.tau + dts * base * mult * (fast ? 3 : 1);
+          let next = run.tau + dts * base * mult;
           if (!run.held && run.tLaunch != null && run.tau < run.tLaunch && next >= run.tLaunch) { next = run.tLaunch; run.held = true; run.hold = { until: now + 3000 }; }
           run.tau = next;
           if (run.tau >= end) {
