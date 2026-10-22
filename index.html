@@ -72,14 +72,19 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .verdict.good{border-color:var(--good);color:var(--good)}
 .verdict.bad{border-color:var(--bad);color:var(--bad)}
 .verdict span{display:block;font-family:var(--mono);font-size:12px;letter-spacing:0;text-transform:none;color:var(--fg);margin-top:4px}
-.banner{position:absolute;left:12px;top:12px;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;background:rgba(7,10,20,.8);border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--fg);max-width:calc(100% - 24px)}
+.banner{appearance:none;-webkit-appearance:none;display:flex;align-items:center;gap:8px;min-width:0;font-family:var(--mono);font-size:12px;line-height:normal;text-align:left;background:rgba(7,10,20,.85);border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--fg);cursor:default}
+.banner.pick{cursor:pointer}
+.banner.pick:hover{border-color:var(--accent)}
+.banner .caret{font-style:normal;font-weight:400;color:var(--muted);flex:none}
 .banner span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .banner i{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
-.banner.replay{cursor:pointer;border-color:var(--accent);color:var(--accent)}
+.banner.replay{border-color:var(--accent);color:var(--accent)}
 .banner.replay:hover{background:rgba(243,180,87,.12)}
 .banner.live i{background:var(--live);box-shadow:0 0 10px var(--live);animation:pulse 1.2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-.controls{position:absolute;left:12px;bottom:12px;display:flex;gap:6px;z-index:6}
+.controls{position:absolute;left:12px;top:12px;right:150px;display:flex;align-items:center;gap:6px;z-index:6}
+.controls .picker{min-width:0;flex:0 1 auto}
+.controls #speedBtn{flex:none}
 .controls .btn{background:rgba(7,10,20,.85);padding:5px 10px;font-size:12px}
 .scalebar{position:absolute;right:12px;bottom:12px;pointer-events:none;font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(7,10,20,.7);padding:4px 8px;border-radius:4px;text-align:right;line-height:1.5}
 .side{display:flex;flex-direction:column;gap:12px;min-width:0}
@@ -100,8 +105,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .tele b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .grid2{display:grid;grid-template-columns:1fr;gap:14px;align-items:start}
 .picker{position:relative}
-@media (max-width:640px){.scalebar{bottom:46px}}
-.menu{position:absolute;left:0;bottom:calc(100% + 6px);min-width:300px;max-width:min(420px,80vw);max-height:280px;overflow:auto;background:rgba(10,14,26,.97);border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:2px;z-index:5;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+@media (max-width:640px){.controls{right:70px}.livebadge small{display:none}}
+.menu{position:absolute;left:0;top:calc(100% + 6px);min-width:300px;max-width:min(420px,80vw);max-height:280px;overflow:auto;background:rgba(10,14,26,.97);border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:2px;z-index:5;box-shadow:0 12px 30px rgba(0,0,0,.5)}
 .menu button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:transparent;border:0;color:var(--fg);font-family:var(--mono);font-size:12px;padding:7px 9px;border-radius:6px;cursor:pointer}
 .menu button:hover{background:rgba(243,180,87,.12)}
 .menu button span{color:var(--muted);white-space:nowrap}
@@ -182,12 +187,11 @@ label.name input{width:150px}
     <div class="maincol">
     <section class="stage" aria-label="System view">
       <canvas id="sky"></canvas>
-      <div class="banner" id="banner" hidden><i></i><span id="bannerText"></span></div>
       <div class="livebadge"><i></i>LIVE<small>every launch plays here as it happens</small></div>
       <div class="verdict" id="verdict" hidden></div>
       <div class="controls" id="controls">
-        <div class="picker"><button class="btn" id="replaySel" aria-haspopup="listbox" aria-expanded="false">Watch a launch ▾</button><div class="menu" id="replayMenu" role="listbox" hidden></div></div>
-        <button class="btn" id="speedBtn" aria-pressed="false">Fast</button>
+        <div class="picker"><button class="banner" id="banner" type="button" aria-haspopup="listbox" aria-expanded="false"><i></i><span id="bannerText">Waiting for the first launch</span><b class="caret" id="bannerCaret" hidden>▾</b></button><div class="menu" id="replayMenu" role="listbox" hidden></div></div>
+        <button class="btn" id="speedBtn" aria-pressed="false" hidden>Fast</button>
       </div>
       <div class="scalebar" id="scalebar"></div>
     </section>
@@ -264,7 +268,7 @@ label.name input{width:150px}
       <li>The game lasts 10 days. The safe landing with the most fuel left wins. Ties go to whoever landed first.</li>
       <li>The winning flight path is published on this site when the game ends. Entering means agreeing to that.</li>
       <li>The winner is contacted at their Google account email and paid $50 by PayPal, Venmo or Wise within 14 days.</li>
-      <li>Accounts that abuse referrals, including fake or duplicate accounts, are disqualified and lose their bonus credits.</li>
+      <li>Accounts that abuse referrals, including fake or duplicate accounts, are disqualified and lose their bonus launches.</li>
     </ol>
   </section>
 
@@ -313,7 +317,7 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replaySel','replayMenu','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose','fbBtn','fb','fbClose','fbText','fbEmail','fbSend','fbMsg'].forEach(id => els[id] = $(id));
+  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','bannerCaret','replayMenu','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose','fbBtn','fb','fbClose','fbText','fbEmail','fbSend','fbMsg'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null;
@@ -373,7 +377,7 @@ label.name input{width:150px}
   function renderCta(){
     els.cta.textContent = 'Set your flight path';
     if (!session) { els.launchBtn.textContent = 'Launch your rocket'; return; }
-    els.launchBtn.textContent = (profile && profile.credits < 1) ? 'Out of launches' : 'Launch your rocket' + (profile ? ' · ' + profile.credits + ' credit' + (profile.credits === 1 ? '' : 's') : '');
+    els.launchBtn.textContent = (profile && profile.credits < 1) ? 'Out of launches' : 'Launch your rocket' + (profile ? ' · ' + profile.credits + ' launch' + (profile.credits === 1 ? '' : 'es') + ' left' : '');
   }
   function go(){ clearTimeout(holdTimer); if (!session) return openSignin(); if (!profile || profile.credits < 1) return openOut(); launch(); }
   els.launchBtn.onclick = go;
@@ -387,7 +391,7 @@ label.name input{width:150px}
   function renderAuth(){
     if (!session) { els.authArea.innerHTML = '<button class="btn" id="signinBtn">Sign in</button>'; $('signinBtn').onclick = openSignin; renderCta(); return; }
     const n = profile ? profile.credits : '…';
-    els.authArea.innerHTML = '<span class="chip">' + esc(displayName(session.user)) + '</span><span class="chip hot">' + n + ' credit' + (n === 1 ? '' : 's') + '</span><button class="btn small" id="signoutBtn">Sign out</button>';
+    els.authArea.innerHTML = '<span class="chip">' + esc(displayName(session.user)) + '</span><span class="chip hot">' + n + ' launch' + (n === 1 ? '' : 'es') + ' left</span><button class="btn small" id="signoutBtn">Sign out</button>';
     $('signoutBtn').onclick = async () => { await sb.auth.signOut(); };
     renderCta();
   }
@@ -498,14 +502,14 @@ label.name input{width:150px}
   // The idle banner: waiting for the first launch, or an offer to replay the last one.
   function idleBanner(){
     if (run) return;
-    els.banner.hidden = false; els.banner.onclick = null;
+    els.speedBtn.hidden = true;
+    const done = doneLaunches(); els.bannerCaret.hidden = done.length === 0; els.banner.classList.toggle('pick', done.length > 0);
     if (busyLaunch) { const f = feed.find(x => x.id === busyLaunch); els.banner.classList.add('live'); els.banner.classList.remove('replay'); els.bannerText.textContent = 'Launch in progress' + (f ? ': ' + f.pilot + "'s " + f.bot_name : '…'); return; }
     els.banner.classList.remove('live');
-    const last = feed.find(f => f.status === 'done' && f.outcome !== 'error');
-    if (!last) { els.banner.classList.remove('replay'); els.bannerText.textContent = 'Waiting for the first launch'; return; }
-    els.banner.classList.add('replay'); els.bannerText.textContent = '▶ Replay last launch · ' + (last.pilot || 'pilot') + "'s " + last.bot_name;
-    els.banner.onclick = () => watch(last.id, false, 'Replay');
+    if (!done.length) { els.banner.classList.remove('replay'); els.bannerText.textContent = 'Waiting for the first launch'; return; }
+    els.banner.classList.add('replay'); els.bannerText.textContent = '▶ Watch a launch · ' + done.length + ' so far';
   }
+  function doneLaunches(){ return feed.filter(f => f.status === 'done' && f.outcome !== 'error'); }
   async function refreshGame(){
     const { data, error } = await sb.rpc('game_state');
     if (error || !data || !data.game) return;
@@ -526,7 +530,6 @@ label.name input{width:150px}
       const text = f.outcome === 'landed' ? 'landed, ' + fmt(f.fuel_left, 2) + ' fuel left' : f.outcome === 'crashed' ? 'crashed into ' + f.body : f.outcome;
       return '<button type="button" data-id="' + f.id + '" role="option"><b>' + esc((f.pilot || 'pilot') + ' · ' + f.bot_name) + '</b><span>' + esc(when(f) + ' · ' + text) + '</span></button>';
     }).join('');
-    els.replaySel.textContent = (feed.length ? 'Watch a launch (' + feed.length + ') ▾' : 'No launches yet');
     els.replayMenu.innerHTML = options || '<div class="none">No launches yet.</div>';
     els.replayMenu.querySelectorAll('button').forEach(b => b.onclick = () => { closeMenu(); watch(+b.dataset.id, false, 'Replay'); });
     for (const f of feed) {
@@ -562,14 +565,14 @@ label.name input{width:150px}
     let tLaunch = null; for (let i = 0; i < S.length; i++) if (S[i][5] > 0) { tLaunch = S[i][0]; break; }
     run = { world: w, samples: S, result: rep, tau: 0, idx: 0, done: false, tLaunch, held: false, hold: null, mine: !!opts.mine, practice: !!opts.practice, live: !!opts.live, pilot: opts.pilot || '', name: rep.bot_name || 'bot', label: opts.label };
     resetFx(); camS = null;
-    els.verdict.hidden = true; els.controls.hidden = false;
-    els.banner.hidden = false; els.banner.onclick = null; els.banner.classList.remove('replay'); els.banner.classList.toggle('live', !!opts.live || !!opts.mine);
+    els.verdict.hidden = true; els.speedBtn.hidden = false; els.bannerCaret.hidden = doneLaunches().length === 0; els.banner.classList.toggle('pick', doneLaunches().length > 0);
+    els.banner.classList.remove('replay'); els.banner.classList.toggle('live', !!opts.live || !!opts.mine);
     els.bannerText.textContent = opts.practice ? 'Practice run · random ' + w.name + ' system' : opts.mine ? 'Your launch · ' + run.name : (opts.live ? 'LIVE · ' : (opts.label || 'Replay') + ' · ') + (run.pilot ? run.pilot + "'s " : '') + run.name;
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
   }
   function restartReplay(){ if (!run && lastRun) run = lastRun; if (!run) return; run.tau = 0; run.idx = 0; run.done = false; run.doneAt = 0; run.held = false; run.hold = null; resetFx(); els.verdict.hidden = true; }
-  function closeMenu(){ els.replayMenu.hidden = true; els.replaySel.setAttribute('aria-expanded', 'false'); }
-  els.replaySel.onclick = (e) => { e.stopPropagation(); const open = els.replayMenu.hidden; els.replayMenu.hidden = !open; els.replaySel.setAttribute('aria-expanded', String(open)); };
+  function closeMenu(){ els.replayMenu.hidden = true; els.banner.setAttribute('aria-expanded', 'false'); }
+  els.banner.onclick = (e) => { e.stopPropagation(); if (els.bannerCaret.hidden) return; const open = els.replayMenu.hidden; els.replayMenu.hidden = !open; els.banner.setAttribute('aria-expanded', String(open)); };
   document.addEventListener('click', (e) => { if (!els.replayMenu.hidden && !els.replayMenu.contains(e.target)) closeMenu(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeMenu(); els.fb.hidden = true; } });
   els.speedBtn.onclick = () => { fast = !fast; els.speedBtn.setAttribute('aria-pressed', String(fast)); };
