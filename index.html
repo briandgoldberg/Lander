@@ -143,17 +143,18 @@ label.name input{width:150px}
 .modal .box{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;max-width:440px;width:100%;display:flex;flex-direction:column;gap:12px}
 .modal .x{position:absolute;top:10px;right:10px;width:30px;height:30px;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:0}
 .modal .x:hover{background:rgba(255,255,255,.08);color:#fff}
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:max(16px,env(safe-area-inset-bottom,0px));z-index:15;font-family:var(--body);font-size:13px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:9px 14px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.fab:hover{border-color:var(--accent);color:var(--accent)}
+.modal textarea.fbText{min-height:130px;white-space:pre-wrap;font-family:var(--body);font-size:14px;padding:10px 12px}
+.modal input.fbEmail{width:100%;background:var(--sky);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-family:var(--body);font-size:14px}
+#fbMsg{color:var(--muted);font-size:13px;align-self:center}
 .modal h3{margin:0;font-family:var(--display);letter-spacing:.08em;text-transform:uppercase;font-size:15px}
 .modal p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
 .modal form{display:flex;gap:8px}
 .modal form input{flex:1;min-width:0}
 .foot{color:var(--muted);font-size:12px;text-align:center}
 .refer{display:flex;flex-direction:column;gap:12px}
-.refer .meter{display:flex;flex-direction:column;gap:6px}
-.refer .meter .bar{height:8px}
-.refer .meter .bar i{background:linear-gradient(90deg,#6ad59a,#9fe7bd)}
-.refer .meter span{font-size:13px;color:var(--muted)}
-.refer .meter b{color:var(--fg);font-weight:600}
+.refer .note{margin:0;font-size:13px;color:var(--fg);line-height:1.5}
 .refer .shares{display:flex;gap:8px;flex-wrap:wrap}
 .refer .shares a,.refer .shares button{font-family:var(--body);font-size:13px;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;text-decoration:none}
 .refer .shares a:hover,.refer .shares button:hover{border-color:var(--accent);color:var(--fg)}
@@ -240,7 +241,7 @@ label.name input{width:150px}
         <div class="ranges" id="ranges"></div>
       </div>
       <div class="card" id="referCard" hidden>
-        <h2>Refer a friend <small>5 launches per friend</small></h2>
+        <h2>Refer a friend</h2>
         <div id="referPanel"></div>
       </div>
     </aside>
@@ -284,8 +285,20 @@ label.name input{width:150px}
   <div class="box">
     <button class="x" id="outClose" aria-label="Close">×</button>
     <h3>Out of launches</h3>
-    <p>Invite a friend. When they launch, you get 5 more launches.</p>
     <div id="outReferral"></div>
+  </div>
+</div>
+
+<button class="fab" id="fbBtn" type="button">Feedback</button>
+
+<div class="modal" id="fb" hidden>
+  <div class="box">
+    <button class="x" id="fbClose" aria-label="Close">×</button>
+    <h3>Feedback</h3>
+    <p>Bugs, ideas, anything. It comes straight to us.</p>
+    <textarea class="fbText" id="fbText" placeholder="What should we know?"></textarea>
+    <input class="fbEmail" id="fbEmail" type="email" placeholder="Email, optional, if you want a reply" autocomplete="email">
+    <div class="row"><button class="cta" id="fbSend">Send</button><span id="fbMsg"></span></div>
   </div>
 </div>
 
@@ -300,7 +313,7 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replaySel','replayMenu','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose'].forEach(id => els[id] = $(id));
+  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','replaySel','replayMenu','speedBtn','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','board','boardEmpty','boardNote','editor','botName','resetBtn','code','err','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose','fbBtn','fb','fbClose','fbText','fbEmail','fbSend','fbMsg'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null;
@@ -392,9 +405,8 @@ label.name input{width:150px}
     const link = referralLink();
     const msg = "I'm flying rockets between planets with JavaScript. Most fuel left wins $100. Try it: " + link;
     const enc = encodeURIComponent(msg), encLink = encodeURIComponent(link);
-    const n = profile.referrals_rewarded || 0;
     const html = '<div class="refer">' +
-      '<div class="meter"><span><b>' + n + '</b> friend' + (n === 1 ? '' : 's') + ' launched so far · <b>5 launches</b> for every friend who launches</span></div>' +
+      '<p class="note">You get 5 free launches for every referred friend who launches.</p>' +
       '<button class="cta wide copyRef">Copy invite link</button>' +
       '<div class="shares">' + (navigator.share ? '<button class="shareRef">Share…</button>' : '') +
       '<a href="https://twitter.com/intent/tweet?text=' + enc + '" target="_blank" rel="noopener">X</a>' +
@@ -417,6 +429,18 @@ label.name input{width:150px}
     els.out.hidden = false;
   }
   els.outClose.onclick = () => { els.out.hidden = true; };
+  els.fbBtn.onclick = () => { els.fb.hidden = false; els.fbEmail.hidden = !!session; els.fbMsg.textContent = ''; setTimeout(() => els.fbText.focus(), 50); };
+  els.fbClose.onclick = () => { els.fb.hidden = true; };
+  els.fbSend.onclick = async () => {
+    const msg = els.fbText.value.trim();
+    if (msg.length < 2) { els.fbMsg.textContent = 'Say a little more.'; els.fbText.focus(); return; }
+    els.fbSend.disabled = true; els.fbMsg.textContent = 'Sending…';
+    const { error } = await sb.rpc('send_feedback', { p_message: msg, p_email: session ? null : (els.fbEmail.value.trim() || null), p_page: location.pathname + location.search });
+    els.fbSend.disabled = false;
+    if (error) { els.fbMsg.textContent = 'Could not send. Try again.'; return; }
+    els.fbText.value = ''; els.fbMsg.textContent = 'Thanks, got it.';
+    setTimeout(() => { els.fb.hidden = true; }, 1200);
+  };
 
   // ---------- editor / launch ----------
   els.resetBtn.onclick = () => { els.code.value = STARTER; saveCode(); };
@@ -545,7 +569,7 @@ label.name input{width:150px}
   function closeMenu(){ els.replayMenu.hidden = true; els.replaySel.setAttribute('aria-expanded', 'false'); }
   els.replaySel.onclick = (e) => { e.stopPropagation(); const open = els.replayMenu.hidden; els.replayMenu.hidden = !open; els.replaySel.setAttribute('aria-expanded', String(open)); };
   document.addEventListener('click', (e) => { if (!els.replayMenu.hidden && !els.replayMenu.contains(e.target)) closeMenu(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeMenu(); els.fb.hidden = true; } });
   els.speedBtn.onclick = () => { fast = !fast; els.speedBtn.setAttribute('aria-pressed', String(fast)); };
   function outcomeText(r, w){
     const B = w.bodies[w.target];
