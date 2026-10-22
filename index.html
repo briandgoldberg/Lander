@@ -79,9 +79,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .banner.replay:hover{background:rgba(243,180,87,.12)}
 .banner.live i{background:var(--live);box-shadow:0 0 10px var(--live);animation:pulse 1.2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-.controls{position:absolute;left:12px;bottom:12px;display:flex;gap:6px}
+.controls{position:absolute;left:12px;bottom:12px;display:flex;gap:6px;z-index:6}
 .controls .btn{background:rgba(7,10,20,.85);padding:5px 10px;font-size:12px}
-.scalebar{position:absolute;right:12px;bottom:12px;font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(7,10,20,.7);padding:4px 8px;border-radius:4px;text-align:right;line-height:1.5}
+.scalebar{position:absolute;right:12px;bottom:12px;pointer-events:none;font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(7,10,20,.7);padding:4px 8px;border-radius:4px;text-align:right;line-height:1.5}
 .side{display:flex;flex-direction:column;gap:12px;min-width:0}
 .camwrap{position:relative;background:var(--sky);border:1px solid var(--line);border-radius:10px;overflow:hidden;aspect-ratio:4/3}
 .camlabel{position:absolute;left:10px;top:9px;right:10px;font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--accent);text-shadow:0 0 8px rgba(0,0,0,.9)}
@@ -100,6 +100,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .tele b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .grid2{display:grid;grid-template-columns:1fr;gap:14px;align-items:start}
 .picker{position:relative}
+@media (max-width:640px){.scalebar{bottom:46px}}
 .menu{position:absolute;left:0;bottom:calc(100% + 6px);min-width:300px;max-width:min(420px,80vw);max-height:280px;overflow:auto;background:rgba(10,14,26,.97);border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:2px;z-index:5;box-shadow:0 12px 30px rgba(0,0,0,.5)}
 .menu button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:transparent;border:0;color:var(--fg);font-family:var(--mono);font-size:12px;padding:7px 9px;border-radius:6px;cursor:pointer}
 .menu button:hover{background:rgba(243,180,87,.12)}
