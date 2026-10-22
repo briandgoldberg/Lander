@@ -238,7 +238,7 @@ label.name input{width:150px}
         <div class="ranges" id="ranges"></div>
       </div>
       <div class="card" id="referCard" hidden>
-        <h2>Refer a friend</h2>
+        <h2>Refer a friend <small>5 launches per friend</small></h2>
         <div id="referPanel"></div>
       </div>
     </aside>
@@ -281,7 +281,7 @@ label.name input{width:150px}
 <div class="modal" id="out" hidden>
   <div class="box">
     <h3>Out of launches</h3>
-    <p>Invite a friend. When they launch, you get 3 more.</p>
+    <p>Invite a friend. When they launch, you get 5 more launches.</p>
     <div id="outReferral"></div>
     <p class="soon">Buying launches is coming soon.</p>
     <div class="row"><button class="btn small" id="outClose">Close</button></div>
@@ -393,7 +393,7 @@ label.name input{width:150px}
     const enc = encodeURIComponent(msg), encLink = encodeURIComponent(link);
     const n = profile.referrals_rewarded || 0;
     const html = '<div class="refer">' +
-      '<div class="meter"><div class="bar"><i style="width:' + (n / 5 * 100) + '%"></i></div><span><b>' + n + ' of 5</b> friends have launched · 3 launches each</span></div>' +
+      '<div class="meter"><span><b>' + n + '</b> friend' + (n === 1 ? '' : 's') + ' launched so far · <b>5 launches</b> for every friend who launches</span></div>' +
       '<button class="cta wide copyRef">Copy invite link</button>' +
       '<div class="shares">' + (navigator.share ? '<button class="shareRef">Share…</button>' : '') +
       '<a href="https://twitter.com/intent/tweet?text=' + enc + '" target="_blank" rel="noopener">X</a>' +

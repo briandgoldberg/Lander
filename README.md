@@ -6,7 +6,7 @@ Live: https://lander-topaz.vercel.app
 
 ## How it works
 
-1. Sign in with Google. New accounts start with 3 launch credits.
+1. Sign in with Google. New accounts start with 3 launches, and every friend you refer who launches adds 5 more.
 2. Submit JavaScript that defines `bot(world, sim)` and returns a controller. On launch, the server runs it in a sealed worker with no network and a 10 second clock, then flies the controller you returned through the game's physics.
 3. Everyone watching the site sees each launch as it happens. One launch flies at a time; if two people launch together, one is asked to hold and goes automatically next.
 4. A game lasts 10 days. The safe landing with the most fuel left wins, and the winning code is published in Previous winners. Entering means agreeing to that.
