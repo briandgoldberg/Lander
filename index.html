@@ -129,6 +129,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .list li b{font-weight:500;flex:none;max-width:44%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .list li .r{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .list li .n{color:var(--accent);flex:none;width:18px}
+.list li .tag{flex:none;font-style:normal;font-size:10px;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:1px 7px;color:var(--muted)}
+.list li .tag.good{color:var(--good);border-color:var(--good)} .list li .tag.bad{color:var(--bad);border-color:var(--bad)}
 .dot{width:8px;height:8px;border-radius:50%;flex:none;position:relative;top:-1px;background:var(--muted)}
 .dot.good{background:var(--good)} .dot.bad{background:var(--bad)} .dot.run{background:var(--live);animation:pulse 1.2s infinite}
 .empty{color:var(--muted);font-size:13px;margin:0}
@@ -253,10 +255,10 @@ label.name input{width:150px}
 
   <div class="grid2">
     <div class="card">
-      <h2>Today's top pilots <small>best flight per pilot</small></h2>
+      <h2>Today's top pilots</h2>
       <ul class="list" id="board"></ul>
       <p class="empty" id="boardEmpty">Nobody has landed yet today.</p>
-      <p class="status" id="boardNote"></p>
+      <p class="status" id="boardNote" hidden></p>
     </div>
     <div class="card">
       <h2>All-time <small>points</small></h2>
@@ -621,10 +623,11 @@ label.name input{width:150px}
     const [day, at] = await Promise.all([sb.rpc('leaderboard', { p_game: game.id }), sb.rpc('alltime')]);
     if (!day.error && day.data) {
       els.boardEmpty.hidden = day.data.length > 0; els.boardEmpty.textContent = 'Nobody has flown yet today.';
-      const how = r => r.outcome === 'landed' ? 'landed · ' + fmt(r.fuel_left, 3) + ' fuel left' : r.outcome === 'crashed' && r.rank === 1 ? 'crashed · ' + fmt(r.fuel_left, 3) + ' fuel left' : r.closest_approach != null ? 'missed by ' + fmt(r.closest_approach, 2) : r.outcome;
-      els.board.innerHTML = day.data.slice(0, 10).map((r, i) => '<li data-id="' + r.id + '"><span class="n">' + (i + 1) + '</span><b>' + esc(r.pilot || 'pilot') + '</b><span class="r">' + how(r) + '</span></li>').join('');
+      const tag = r => r.outcome === 'landed' ? '<em class="tag good">Landed</em>' : r.rank === 1 ? '<em class="tag bad">Crashed</em>' : '<em class="tag">Never arrived</em>';
+      const how = r => r.rank < 2 ? fmt(r.fuel_left, 2) + ' fuel left' : r.closest_approach != null ? 'missed by ' + fmt(r.closest_approach, 2) : '';
+      els.board.innerHTML = day.data.slice(0, 10).map((r, i) => '<li data-id="' + r.id + '"><span class="n">' + (i + 1) + '</span><b>' + esc(r.pilot || 'pilot') + '</b>' + tag(r) + '<span class="r">' + how(r) + '</span></li>').join('');
       els.board.querySelectorAll('li').forEach(li => li.onclick = () => watch(+li.dataset.id, false));
-      els.boardNote.textContent = 'Landings by fuel left, then crashes on the target by fuel left, then nearest misses. Click one to watch it.';
+      els.boardNote.textContent = '';
     }
     if (!at.error && at.data) {
       $('alltimeEmpty').hidden = at.data.length > 0;
