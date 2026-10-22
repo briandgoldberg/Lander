@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lander</title>
-<meta name="description" content="Fly a rocket to another planet, no code needed. A new star system every day. Land with the most fuel left.">
+<meta name="description" content="Fly a rocket to another planet and land it with the most fuel left. A new star system every day.">
 <meta property="og:title" content="Lander · the classic lander game, your code is the pilot">
-<meta property="og:description" content="Fly a rocket to another planet, no code needed. A new star system every day. Land with the most fuel left. Free.">
+<meta property="og:description" content="Fly a rocket to another planet and land it with the most fuel left. A new star system every day. Free.">
 <meta property="og:image" content="https://lander-topaz.vercel.app/og.png">
 <meta property="og:url" content="https://lander-topaz.vercel.app/">
 <meta property="og:type" content="website">
@@ -210,11 +210,10 @@ label.name input{width:150px}
       <div class="editor-head">
         <h2>Plan your flight</h2>
         <div class="row">
-          <button class="btn" id="resetBtn">Textbook plan</button>
           <button class="cta" id="launchBtn">Launch</button>
         </div>
       </div>
-      <p class="hint">Four dials, no code. Drag them and watch the predicted path on the map. When it lands with fuel to spare, launch it for real.</p>
+      <p class="hint">Drag the four dials and watch your predicted path on the map. When it lands with fuel to spare, launch it for real.</p>
       <div class="dials">
         <label class="dial"><span class="dl">Launch time <b id="vWait"></b></span><input type="range" id="dWait" min="0" max="100" step="0.1" list="winTicks"><datalist id="winTicks"></datalist><small id="hWait">Scanning today's launch windows…</small></label>
         <label class="dial"><span class="dl"><span id="lReach">Far point</span> <b id="vReach"></b></span><input type="range" id="dReach" min="0" max="2" step="0.001"><small id="hReach"></small></label>
@@ -328,7 +327,7 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','bannerCaret','replayMenu','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','board','boardEmpty','boardNote','editor','resetBtn','err','outNote','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose','fbBtn','fb','fbClose','fbText','fbEmail','fbSend','fbMsg'].forEach(id => els[id] = $(id));
+  ['tagline','gameChip','endsChip','authArea','banner','bannerText','verdict','controls','bannerCaret','replayMenu','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','ranges','cta','ctaMsg','launchBtn','status','board','boardEmpty','boardNote','editor','err','outNote','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose','fbBtn','fb','fbClose','fbText','fbEmail','fbSend','fbMsg'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null, shots = null, creating = false;
@@ -440,7 +439,7 @@ label.name input{width:150px}
     const T = world ? world.bodies[world.target].name : 'the planet';
     const msg = mine && mine.outcome === 'landed' ? 'I landed on ' + T + ' with ' + fmt(mine.fuel_left, 2) + ' fuel left. Beat my flight: ' + link
       : mine ? 'I just crashed into ' + T + '. Think you can land it? ' + link
-      : 'Fly a rocket to another planet, no code needed. Beat my flight: ' + link;
+      : 'Fly a rocket to another planet and land it. Beat my flight: ' + link;
     const enc = encodeURIComponent(msg), encLink = encodeURIComponent(link);
     const html = '<div class="refer">' +
       '<p class="note">' + (mine ? 'Challenge a friend to beat your flight.' : "Challenge a friend to today's system.") + ' A friend who joins from your link and launches gives you <b>3 extra shots</b>.</p>' +
@@ -513,7 +512,7 @@ label.name input{width:150px}
   }
   function renderWindows(){
     const h = $('hWait'), dl = $('winTicks');
-    if (!windows.length) { h.textContent = 'No launch window found with these dials. Try the textbook plan, or a different ' + $('lReach').textContent.toLowerCase() + '.'; dl.innerHTML = ''; return; }
+    if (!windows.length) { h.textContent = 'No launch window found with these dials. Try a different ' + $('lReach').textContent.toLowerCase() + '.'; dl.innerHTML = ''; return; }
     h.textContent = 'Launch windows today: ' + windows.map(x => 'T+' + fmt((x.from + x.to) / 2, 1)).join(', ') + '. Slide into one and watch the path on the map.';
     dl.innerHTML = windows.map(x => '<option value="' + ((x.from + x.to) / 2).toFixed(2) + '"></option>').join('');
   }
@@ -557,7 +556,6 @@ label.name input{width:150px}
   }
   function savePlan(){ try { localStorage.setItem('lander.plan.' + game.id, JSON.stringify(P)); } catch (e) {} }
   function loadPlan(){ try { return JSON.parse(localStorage.getItem('lander.plan.' + game.id)); } catch (e) { return null; } }
-  els.resetBtn.onclick = () => { P = LanderPlan.clean(world, tb); syncDials(); savePlan(); schedulePreview(); scheduleScan(); };
 
   // ---------- launch ----------
   let launching = false;
