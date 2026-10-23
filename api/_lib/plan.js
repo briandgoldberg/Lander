@@ -50,7 +50,7 @@ function textbook(world) {
 function clean(world, P) {
   var tb = textbook(world), n = function (v, lo, hi, d) { v = +v; return isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
   P = P || {};
-  return { wait: +n(P.wait, 0, tb.latest, tb.wait).toFixed(3), s1: +(P.exact ? n(P.s1, 0, 0.71, 0.35) : Math.round(n(P.s1, 0, 0.7, 0.35) * 20) / 20).toFixed(3), aim: +(((n(P.aim, -1e9, 1e9, 0) % 360) + 360) % 360).toFixed(1), brake: +n(P.brake, 0.1, 4, 1).toFixed(2) };
+  return { assist: ['easy', 'medium', 'hard'].indexOf(P.assist) >= 0 ? P.assist : 'medium', wait: +n(P.wait, 0, tb.latest, tb.wait).toFixed(3), s1: +(P.exact ? n(P.s1, 0, 0.71, 0.35) : Math.round(n(P.s1, 0, 0.7, 0.35) * 20) / 20).toFixed(3), aim: +(((n(P.aim, -1e9, 1e9, 0) % 360) + 360) % 360).toFixed(1), brake: +n(P.brake, 0.1, 4, 1).toFixed(2) };
 }
 
 // Source of a sandbox bot that flies the plan: a function of (world, sim) returning the controller.

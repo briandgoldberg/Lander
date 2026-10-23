@@ -175,3 +175,7 @@ grant execute on function public.my_best_launch(integer) to authenticated;
 -- 2026-10-23: Abort. abort_launch(p_launch, p_tau) lets the pilot end their own in-flight launch at flight time p_tau:
 -- samples and burns are cut there, outcome = 'aborted', closest_approach recomputed over the kept samples, fuel_left from
 -- the last kept sample, lands_at = now() so the pad frees at once. launches.abort_t (also in launch_feed) tells viewers.
+
+-- 2026-10-23: Autopilot assist (easy / medium / hard) travels in the plan (dials.assist) and is stored in launches.assist.
+-- launch_rank(l, w) / launch_key(l, w) are the one ranking: landed hard (0) > medium (1) > easy (2) > crashed on target (3)
+-- > misses (4); leaderboard, my_best_launch and keep_best_replay all use them. The board's rank field changed accordingly.
