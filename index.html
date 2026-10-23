@@ -1152,7 +1152,7 @@ label.name input{width:150px}
     else if (fx.flash > 0) { g.fillStyle = 'rgba(255,220,160,' + fx.flash + ')'; g.beginPath(); g.arc(rx, ry, 6 + 40*(1 - fx.flash), 0, TAU); g.fill(); }
     g.restore();
     let label = null, sub = null;
-    if (countdown != null) { label = launchPending && !run && !focal ? 'IGNITION' : 'T-' + Math.ceil(countdown); sub = 'Launching from ' + w.bodies[w.start].name; }
+    if (countdown != null && !(launchPending && !run && !focal)) { label = 'T-' + Math.ceil(countdown); sub = 'Launching from ' + w.bodies[w.start].name; }
     else if (fx.label) label = fx.label;
     if (label) { const fs = Math.min(48, Math.max(26, W * 0.07)), ly = Math.max(H * 0.3, 120); g.save(); g.textAlign = 'center'; g.font = '700 ' + fs + 'px "Chakra Petch", sans-serif'; g.shadowColor = label === 'TOUCHDOWN' ? 'rgba(106,213,154,0.9)' : 'rgba(243,180,87,0.9)'; g.shadowBlur = 28; g.fillStyle = label === 'TOUCHDOWN' ? '#6ad59a' : label === 'IMPACT' ? '#ff8a4a' : '#f3b457'; g.fillText(label, W/2, ly); g.shadowBlur = 0; if (sub) { g.font = '500 13px "IBM Plex Sans", sans-serif'; g.fillStyle = '#e9ecf6'; g.fillText(sub, W/2, ly + 24); } g.restore(); }
     if (fx.skyFlash > 0) { g.fillStyle = 'rgba(255,230,190,' + (fx.skyFlash*0.5).toFixed(3) + ')'; g.fillRect(0, 0, W, H); }
