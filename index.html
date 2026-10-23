@@ -492,7 +492,7 @@ label.name input{width:150px}
   function setupPlanner(){
     tb = LanderPlan.textbook(world);
     P = LanderPlan.clean(world, Object.assign(loadPlan() || { burn: 0.1, aim: 0, brake: 1 }, { wait: 0 }));
-    syncDials();
+    syncDials(); burnReach = null; scheduleReach();
   }
   function syncDials(){ dials.burn.value = (P.burn * 100).toFixed(1); dials.aim.value = P.aim; dials.brake.value = P.brake; renderDialValues(); }
   function renderDialValues(){
@@ -503,8 +503,28 @@ label.name input{width:150px}
   }
   Object.keys(dials).forEach(k => dials[k].addEventListener('input', () => {
     P = LanderPlan.clean(world, { wait: 0, burn: +dials.burn.value / 100, aim: +dials.aim.value, brake: +dials.brake.value });
-    renderDialValues(); savePlan();
+    renderDialValues(); savePlan(); scheduleReach();
   }));
+  // How far the launch burn carries you: fly the plan from the sky as it is now, in a worker, and read the orbit right after the burn ends.
+  let reachWorker = null, reachId = 0, burnReach = null, reachTimer = null;
+  async function reachWorkerReady(){
+    if (reachWorker) return reachWorker;
+    const [eng, pl] = await Promise.all([fetch('lib/engine.js').then(r => r.text()), fetch('lib/plan.js').then(r => r.text())]);
+    const src = eng + '\n' + pl + '\nonmessage = function(e){ var d = e.data, w = flightWorld(d.world, d.t0, d.P), r = fly(w, makeController(w, d.P), { record: true }), S = r.samples, burns = 0, out = null;' +
+      ' for (var i = 1; i < S.length; i++) { if (S[i-1][5] > 0 && S[i][5] === 0) { burns++; if (burns === 2) { var x = S[i][1], y = S[i][2], vx = S[i][3], vy = S[i][4], rr = Math.hypot(x, y), eps = (vx*vx + vy*vy) / 2 - w.sun.mass / rr, hh = x*vy - y*vx, sma = -w.sun.mass / (2 * eps), ecc = Math.sqrt(Math.max(0, 1 + 2 * eps * hh * hh / (w.sun.mass * w.sun.mass)));' +
+      ' out = { peri: sma * (1 - ecc), apo: eps < 0 ? sma * (1 + ecc) : null }; break; } } }' +
+      ' postMessage({ id: d.id, reach: out }); };';
+    reachWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+    reachWorker.onmessage = e => { if (e.data.id === reachId) burnReach = e.data.reach; };
+    return reachWorker;
+  }
+  async function updateReach(){
+    if (!world || !P || run) return;
+    const wk = await reachWorkerReady(); reachId++;
+    wk.postMessage({ id: reachId, world, t0: idleT, P });
+  }
+  function scheduleReach(){ clearTimeout(reachTimer); reachTimer = setTimeout(updateReach, 120); }
+  setInterval(() => { if (!run) updateReach(); }, 1500);
   function savePlan(){ try { localStorage.setItem('lander.plan.' + game.id, JSON.stringify(P)); } catch (e) {} }
   function loadPlan(){ try { return JSON.parse(localStorage.getItem('lander.plan.' + game.id)); } catch (e) { return null; } }
 
@@ -969,6 +989,9 @@ label.name input{width:150px}
     g.setLineDash([]);
     drawStar(g, cx, cy, Math.max(4, w.sun.radius * scale * SUN_MAG), tnow);
     if (!run && P && tb) {
+      // where the launch burn carries you: the closest (or furthest) the flight would get to the star
+      const reach = burnReach ? (tb.outward ? burnReach.apo : burnReach.peri) : null;
+      if (reach && reach > 0) { const rr = reach * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab('your burn carries you to here', cx, cy + rr + 14); }
       // the brake ring around the target shows where the landing autopilot takes over
       const A = w.bodies[w.start], B = w.bodies[w.target], lab = (t, x, y) => { g.fillStyle = 'rgba(243,180,87,0.9)'; g.font = '600 11px "IBM Plex Sans", sans-serif'; g.textAlign = 'center'; g.fillText(t, x, y); g.textAlign = 'start'; };
       g.save(); g.setLineDash([2,5]); g.strokeStyle = 'rgba(243,180,87,0.6)'; g.lineWidth = 1.5;
