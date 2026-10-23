@@ -359,7 +359,7 @@ label.name input{width:150px}
   }
   function renderMission(){
     const w = world, A = w.bodies[w.start], B = w.bodies[w.target];
-    els.systemName.textContent = w.name + ' system';
+    els.systemName.textContent = game && game.number ? 'Game #' + game.number : '';
     els.gameChip.textContent = game.name;
     $('prize').innerHTML = "<b>Today's challenge:</b> fly from <em>" + esc(A.name) + '</em> to <em>' + esc(B.name) + '</em> and land softly.';
     els.brief.innerHTML = 'Launch from <b>' + esc(A.name) + '</b>, land on <b>' + esc(B.name) + '</b>.';
@@ -631,7 +631,7 @@ label.name input{width:150px}
     const gid = boardGame || game.id, past = gid !== game.id, d0 = days.find(d => d.id === gid);
     const day = await sb.rpc('leaderboard', { p_game: gid });
     if (!day.error && day.data && gid === (boardGame || game.id)) {
-      $('boardTitle').textContent = past ? 'Top pilots · ' + ((d0 && d0.name) || 'Day') + (d0 && d0.system ? ' · ' + d0.system : '') : "Today's top pilots";
+      $('boardTitle').textContent = past ? 'Top pilots · Game #' + ((d0 && d0.number) || '') : "Today's top pilots";
       els.boardEmpty.hidden = day.data.length > 0; els.boardEmpty.textContent = past ? 'Nobody flew that day.' : 'Nobody has flown yet today.';
       const tag = r => r.outcome === 'landed' ? '<em class="tag good">Landed</em>' : r.rank === 1 ? '<em class="tag bad">Crashed</em>' : '<em class="tag">Never arrived</em>';
       const how = r => r.rank < 2 ? fmt(r.fuel_left, 2) + ' fuel left' : r.closest_approach != null ? 'missed by ' + fmt(r.closest_approach, 2) : '';
