@@ -142,3 +142,17 @@ update public.games set ends_at = now() where number = 1 and ends_at > now();
 
 -- Applied as "lander_unlimited_launches": no cap on launches per day; shots_left returns left = null; claim_launch also
 -- refuses games whose day has not started.
+
+-- 2026-10-23: the share card shares the pilot's best launch of the day (same ranking as the leaderboard)
+create or replace function public.my_best_launch(p_game integer) returns jsonb language sql stable security definer as $$
+  select to_jsonb(t) from (
+    select l.id, l.bot_name, l.status, l.outcome, l.body, l.fuel_left, l.closest_approach, l.created_at
+    from public.launches l join public.games g on g.id = l.game_id
+    where l.user_id = auth.uid() and l.game_id = p_game and l.status = 'done' and l.outcome <> 'error'
+    order by case when l.outcome = 'landed' then 0 when l.outcome = 'crashed' and l.body = g.world->'bodies'->(g.world->>'target')::int->>'name' then 1 else 2 end,
+      case when l.outcome = 'landed' or (l.outcome = 'crashed' and l.body = g.world->'bodies'->(g.world->>'target')::int->>'name') then -coalesce(l.fuel_left, 0) else coalesce(l.closest_approach, 1e9) end,
+      l.created_at desc
+    limit 1
+  ) t
+$$;
+grant execute on function public.my_best_launch(integer) to authenticated;

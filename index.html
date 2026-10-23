@@ -219,7 +219,7 @@ label.name input{width:150px}
       <pre class="err" id="err" hidden></pre>
     </section>
     <div class="card" id="referCard" hidden>
-      <h2>Share your flight</h2>
+      <h2>Share your best flight</h2>
       <div id="referPanel"></div>
     </div>
     </div>
@@ -417,34 +417,32 @@ label.name input{width:150px}
   els.googleBtn.onclick = () => signInGoogle(els.signinMsg);
 
   // ---------- share / beat my flight ----------
-  // One link does both jobs: it carries the sharer's referral and, after a launch, the flight to beat.
+  // The share link is the replay of the pilot's best launch today (landed beats crashed beats a miss).
   let challenge = null, myLast = null;
   function myLastLaunch(){ try { return +localStorage.getItem('lander.mylaunch.' + (game ? game.id : 0)) || 0; } catch (e) { return 0; } }
   function rememberLaunch(id){ try { localStorage.setItem('lander.mylaunch.' + game.id, String(id)); } catch (e) {} }
-  function shareLink(){ return location.origin + location.pathname + (myLast ? '?beat=' + myLast.id : '?ref=' + (profile ? profile.referral_code : '')); }
-  async function refreshMine(){ if (!session || !game) { myLast = null; return; } const { data } = await sb.rpc('my_last_launch', { p_game: game.id }); myLast = data || null; renderShare(); }
+  function shareLink(){ return location.origin + location.pathname + '?replay=' + myLast.id; }
+  async function refreshMine(){ if (!session || !game) { myLast = null; return; } const { data } = await sb.rpc('my_best_launch', { p_game: game.id }); myLast = data || null; renderShare(); }
   function renderShare(){
     const card = $('referCard');
-    if (!session || !profile || !profile.referral_code) { card.hidden = true; els.outReferral.innerHTML = ''; return; }
+    if (!session || !profile || !myLast) { card.hidden = true; els.outReferral.innerHTML = ''; return; }
     const link = shareLink(), mine = myLast;
     const T = world ? world.bodies[world.target].name : 'the planet';
-    const msg = mine && mine.outcome === 'landed' ? 'I landed on ' + T + ' with ' + fmt(mine.fuel_left, 2) + ' fuel left. Beat my flight: ' + link
-      : mine ? 'I just crashed into ' + T + '. Think you can land it? ' + link
-      : 'Fly a rocket to another planet and land it. Beat my flight: ' + link;
+    const msg = mine.outcome === 'landed' ? 'I landed on ' + T + ' with ' + fmt(mine.fuel_left, 2) + ' fuel left. Watch my flight: ' + link
+      : mine.outcome === 'crashed' ? 'I crashed into ' + T + '. Watch my flight: ' + link
+      : 'My rocket never made it to ' + T + '. Watch my flight: ' + link;
     const enc = encodeURIComponent(msg), encLink = encodeURIComponent(link);
     const html = '<div class="refer">' +
-      '<button class="cta wide copyRef">Challenge a friend</button>' +
-      (mine ? '<button class="cta wide copyReplay">Share my last flight</button>' : '') +
+      '<button class="cta wide copyReplay">Share my best flight</button>' +
       '<div class="shares">' + (navigator.share ? '<button class="shareRef">Share…</button>' : '') +
       '<a href="https://twitter.com/intent/tweet?text=' + enc + '" target="_blank" rel="noopener">X</a>' +
       '<a href="https://www.facebook.com/sharer/sharer.php?u=' + encLink + '" target="_blank" rel="noopener">Facebook</a>' +
       '<a href="https://wa.me/?text=' + enc + '" target="_blank" rel="noopener">WhatsApp</a>' +
       '<a href="sms:?&body=' + enc + '">Text</a>' +
-      '<a href="mailto:?subject=' + encodeURIComponent('Beat my flight') + '&body=' + enc + '">Email</a></div></div>';
+      '<a href="mailto:?subject=' + encodeURIComponent('Watch my flight') + '&body=' + enc + '">Email</a></div></div>';
     card.hidden = false; $('referPanel').innerHTML = html; els.outReferral.innerHTML = html;
     const copyBtn = (sel, text, label) => document.querySelectorAll(sel).forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(text); b.textContent = 'Link copied'; } catch (e) { b.textContent = text; } setTimeout(() => { b.textContent = label; }, 3000); });
-    copyBtn('.copyRef', link, 'Challenge a friend');
-    if (mine) copyBtn('.copyReplay', location.origin + location.pathname + '?replay=' + mine.id, 'Share my last flight');
+    copyBtn('.copyReplay', link, 'Share my best flight');
     document.querySelectorAll('.shareRef').forEach(b => b.onclick = () => { navigator.share({ title: 'Lander', text: msg, url: link }).catch(() => {}); });
   }
   async function loadChallenge(){
