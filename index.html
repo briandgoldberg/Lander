@@ -117,7 +117,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .leftcol{display:flex;flex-direction:column;gap:14px;min-width:0}
 .boards{display:flex;flex-direction:column;gap:14px}
 #almanacCard[hidden]{display:none}.almanacwrap{position:relative;width:100%;max-width:560px;margin:8px auto}.almanac{display:block;width:100%;aspect-ratio:1;background:#03050c;border:1px solid var(--line);border-radius:8px;cursor:crosshair;touch-action:none}#almanacNote{font-size:15px;line-height:1.5}
-.legend{display:flex;gap:8px;flex-wrap:wrap}.legend button{font-family:var(--body);font-size:14px;background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px}.legend button i{width:10px;height:10px;border-radius:50%;display:inline-block}.legend button.off{opacity:.4}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.legend button{font-family:var(--body);font-size:14px;background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px}.legend button i{width:10px;height:10px;border-radius:50%;display:inline-block}.legend button.off{opacity:.4}
 .almanacTip{position:absolute;pointer-events:none;background:rgba(10,14,26,.95);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:14px;color:var(--fg);white-space:nowrap;transform:translate(-50%,-130%)}.almanacTip[hidden]{display:none}
 .boardhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.boardhead h2{margin:0}
 .boardhead select{appearance:none;-webkit-appearance:none;font-family:var(--mono);font-size:12px;color:var(--fg);background:rgba(7,10,20,.85);border:1px solid var(--line);border-radius:999px;padding:6px 28px 6px 12px;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
@@ -278,9 +278,10 @@ label.name input{width:150px}
     <p class="status" id="boardNote" hidden></p>
   </div>
   <div class="card" id="almanacCard" hidden>
-    <div class="boardhead"><h2 id="almanacTitle">Yesterday's results</h2><div class="legend" id="almanacLegend"></div></div>
+    <h2 id="almanacTitle">Yesterday's results</h2>
+    <div class="legend" id="almanacLegend"></div>
     <div class="almanacwrap"><canvas id="almanac" class="almanac"></canvas><div class="almanacTip" id="almanacTip" hidden></div></div>
-    <p class="empty" id="almanacNote"></p>
+    <p class="empty" id="almanacNote" hidden></p>
   </div>
   </div>
 </div>
@@ -671,11 +672,11 @@ label.name input{width:150px}
   async function showAlmanac(gid){
     const card = $('almanacCard'); if (!gid) { card.hidden = true; almanacFor = null; return; }
     if (almanacFor === gid) return; almanacFor = gid; alm = null;
-    card.hidden = false; $('almanacNote').textContent = 'Charting yesterday…'; $('almanacLegend').innerHTML = '';
+    card.hidden = false; $('almanacNote').hidden = true; $('almanacLegend').innerHTML = '';
     try {
       const [w, fl, al] = await Promise.all([worldFor(gid), sb.rpc('almanac_flights', { p_game: gid }), fetch('/api/almanac?game=' + gid).then(r => r.json())]);
       if (almanacFor !== gid) return;
-      if (!w || !al || !al.ended) { $('almanacNote').textContent = 'Results open when the day is over.'; return; }
+      if (!w || !al || !al.ended) { $('almanacNote').hidden = false; $('almanacNote').textContent = 'Results open when the day is over.'; return; }
       const flights = fl.data || [], list = (al.data && al.data.list) || [], A = w.bodies[w.start];
       // every path turned so its launch points straight up
       const turn = (pts, t0) => { const th = Math.PI / 2 - (A.angle0 + A.omega * t0), c = Math.cos(th), s = Math.sin(th); return pts.map(p => [p[0] * c - p[1] * s, p[0] * s + p[1] * c]); };
@@ -684,12 +685,12 @@ label.name input{width:150px}
       if (list[0]) paths.push({ layer: 'best', pts: list[0].path, label: 'Best path' });
       alm = { w, paths, hover: null };
       const landed = flights.filter(f => f.outcome === 'landed').length;
-      $('almanacNote').textContent = list.length ? (list.length === 1 ? 'One way to land was found.' : list.length + ' ways to land were found.') + ' The yellow one used the least fuel.' : 'No way to land was found.';
+      $('almanacNote').hidden = true;
       const leg = $('almanacLegend');
       leg.innerHTML = [['plans', 'Ways to land', '#8f98b8'], ['best', 'Best path', '#ffd94a']].map(([k, t, c]) => '<button type="button" data-k="' + k + '" class="' + (almLayers[k] ? '' : 'off') + '"><i style="background:' + c + '"></i>' + t + '</button>').join('');
       leg.querySelectorAll('button').forEach(b => b.onclick = () => { const k = b.dataset.k; almLayers[k] = !almLayers[k]; b.classList.toggle('off', !almLayers[k]); drawAlmanac(); });
       drawAlmanac();
-    } catch (e) { $('almanacNote').textContent = 'The results could not be loaded.'; }
+    } catch (e) { $('almanacNote').hidden = false; $('almanacNote').textContent = 'The results could not be loaded.'; }
   }
   function almanacGeom(){
     const cv = $('almanac'), size = Math.min(560, cv.clientWidth || 560), w = alm.w, outer = w.bodies[w.bodies.length - 1].orbitR, sc = (size / 2 - 26) / outer;
