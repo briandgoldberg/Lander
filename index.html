@@ -647,7 +647,7 @@ label.name input{width:150px}
     resetFx(); camS = null;
     els.verdict.hidden = true; els.bannerCaret.hidden = doneLaunches().length === 0; els.banner.classList.toggle('pick', doneLaunches().length > 0);
     els.banner.classList.remove('replay'); els.banner.classList.toggle('live', !!opts.live || !!opts.mine); renderCta();
-    els.bannerText.textContent = opts.practice ? 'Practice run · random ' + w.name + ' system' : opts.mine ? 'Your launch · ' + run.name : (opts.live ? 'LIVE · ' : (opts.label || 'Replay') + ' · ') + (run.pilot ? run.pilot + "'s " : '') + run.name;
+    els.bannerText.textContent = opts.practice ? 'Practice run · random ' + w.name + ' system' : opts.mine ? 'Your launch · ' + run.name : (opts.live ? '' : (opts.label || 'Replay') + ' · ') + (run.pilot ? run.pilot + "'s " : '') + run.name;
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
   }
   function restartReplay(){ if (!run && lastRun) run = lastRun; if (!run) return; run.tau = 0; run.idx = 0; run.done = false; run.doneAt = 0; run.held = false; run.hold = null; resetFx(); els.verdict.hidden = true; }
