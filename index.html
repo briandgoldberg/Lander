@@ -1210,7 +1210,7 @@ label.name input{width:150px}
           const st = sampleState(), nr = nearest(w, st), near = nr.d < nr.body.hill * 1.6, R = nr.body.radius;
           const base = w.deadline / 36;
           let mult;
-          if (st.onPad) mult = 10;
+          if (st.onPad) mult = 40;   // the wait on the pad flashes by, however long it was
           else if (near && nr.k === w.target) { const a = (nr.d - R) / R; mult = a < 8 ? Math.min(0.25, 0.02 + 0.25 * Math.pow(a / 8, 1.5)) : 0.25; }
           else if (near) mult = 0.28;
           else mult = st.thr > 0 ? 0.22 : 1;
