@@ -498,7 +498,6 @@ label.name input{width:150px}
   function renderDialValues(){
     $('vBurn').textContent = fmt(P.burn * 100, 1).replace(/\.0$/, '') + '% of fuel';
     $('vAim').textContent = fmt(P.aim, 0) + '°';
-    world.rocket.padAngle = P.aim * Math.PI / 180;   // the rocket sits where the dial says
     $('vBrake').textContent = fmt(P.brake, 2) + ' planet radii';
   }
   Object.keys(dials).forEach(k => dials[k].addEventListener('input', () => {
@@ -994,7 +993,7 @@ label.name input{width:150px}
       g.save(); g.setLineDash([2,5]); g.strokeStyle = 'rgba(243,180,87,0.6)'; g.lineWidth = 1.5;
       // where the launch burn carries you: the closest (or furthest) the flight would get to the star
       const reach = burnReach ? (tb.outward ? burnReach.apo : burnReach.peri) : null;
-      if (reach && reach > 0) { const rr = reach * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab('your thrusters carry you to here', cx, cy + rr + 14); }
+      if (reach && reach > 0) { const rr = reach * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab('Thrusters turn off', cx, cy + rr + 14); }
       const tp = bodyAt(w, w.target, st.t), bx = sx(tp.x), by = sy(tp.y), br = (1 + P.brake) * B.radius * scale * mag; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.stroke(); lab('brakes on', bx, by + br + 13);
       g.restore();
     }
@@ -1176,6 +1175,7 @@ label.name input{width:150px}
     const w = displayWorld(); if (!w || W < 40 || H < 40 || CW < 40 || CH < 40) { resize(); return; }
     const fxDt = Math.min(0.1, (now - lastDraw) / 1000 || 0); lastDraw = now; tnow = now / 1000;
     updateFx(fxDt, w);
+    if (!run && P) { const A0 = w.bodies[w.start]; w.rocket.padAngle = A0.angle0 + A0.omega * idleT + Math.PI / 2 + P.aim * Math.PI / 180; }   // the launch spot keeps its angle to the direction of travel
     const st = run ? sampleState() : padState(w, idleT);
     const nr = nearest(w, st), flicker = Math.random(), R = nr.body.radius;
     let dirx, diry;
