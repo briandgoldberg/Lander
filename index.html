@@ -212,7 +212,7 @@ label.name input{width:150px}
       <p class="hint">Set the dials, then press Launch when the sky looks right. The rocket leaves the moment you press.</p>
       <div class="dials">
         <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="-180" max="180" step="1"></label>
-        <label class="dial"><span class="dl">2nd stage <b id="vWhen"></b></span><input type="range" id="dWhen" min="1" max="40" step="1"></label>
+        <label class="dial"><span class="dl">Departure burn <b id="vS1"></b></span><input type="range" id="dS1" min="25" max="60" step="5"></label>
         <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"></label>
       </div>
       <div class="status" id="status"></div>
@@ -488,21 +488,20 @@ label.name input{width:150px}
   // ---------- planner ----------
   // Four dials and nothing else. What they do shows when the rocket flies.
   let P = null, tb = null;
-  const dials = { aim: $('dAim'), when: $('dWhen'), brake: $('dBrake') };
+  const dials = { aim: $('dAim'), s1: $('dS1'), brake: $('dBrake') };
   function setupPlanner(){
     tb = LanderPlan.textbook(world);
-    dials.when.max = Math.floor(LanderPlan.flightDays(world));
-    P = LanderPlan.clean(world, Object.assign(loadPlan() || { aim: 0, when: Math.round(dials.when.max / 2), brake: 1 }, { wait: 0 }));
+    P = LanderPlan.clean(world, Object.assign(loadPlan() || { aim: 0, s1: 0.35, brake: 1 }, { wait: 0 }));
     syncDials(); burnReach = null; reachShown = null; burnDot = null; fireDot = null; padRel = null; scheduleReach(); reachWorkerReady().then(wk => wk.postMessage({ id: 0, minburn: true, world }));
   }
-  function syncDials(){ dials.aim.value = P.aim > 180 ? P.aim - 360 : P.aim; dials.when.value = Math.round(P.when); dials.brake.value = P.brake; renderDialValues(); }
+  function syncDials(){ dials.aim.value = P.aim > 180 ? P.aim - 360 : P.aim; dials.s1.value = Math.round(P.s1 * 100); dials.brake.value = P.brake; renderDialValues(); }
   function renderDialValues(){
-    $('vWhen').textContent = 'day ' + Math.round(P.when) + ' of ' + dials.when.max;
+    $('vS1').textContent = Math.round(P.s1 * 100) + '% of fuel · ' + (P.s1 <= 0.3 ? 'small' : P.s1 <= 0.4 ? 'medium' : P.s1 <= 0.5 ? 'large' : 'huge');
     $('vAim').textContent = fmt(P.aim > 180 ? P.aim - 360 : P.aim, 0) + '°';
     $('vBrake').textContent = fmt(P.brake, 2) + ' planet radii';
   }
   Object.keys(dials).forEach(k => dials[k].addEventListener('input', () => {
-    P = LanderPlan.clean(world, { wait: 0, s1: P.s1, aim: +dials.aim.value, when: +dials.when.value, brake: +dials.brake.value });
+    P = LanderPlan.clean(world, { wait: 0, s1: +dials.s1.value / 100, aim: +dials.aim.value, brake: +dials.brake.value });
     renderDialValues(); savePlan(); scheduleReach();
   }));
   // How far the launch burn carries you: fly the plan from the sky as it is now, in a worker, and read the orbit right after the burn ends.
@@ -513,10 +512,10 @@ label.name input{width:150px}
     const src = eng + '\n' + pl + '\nonmessage = function(e){ var d = e.data; if (d.minburn) { postMessage({ id: d.id, s1: stage1(d.world, { fly: fly, bodyAt: bodyAt }) }); return; } var E = { fly: fly, bodyAt: bodyAt }, w = flightWorld(d.world, d.t0, d.P, E), r = fly(w, makeController(w, d.P), { record: true }), S = r.samples, burns = 0, out = null, dot = null, fire = null, tH = d.world.hints && d.world.hints.transferTime ? d.world.hints.transferTime : 10;' +
       ' for (var i = 1; i < S.length; i++) { if (S[i-1][5] > 0 && S[i][5] === 0) { burns++; if (burns === 1) { var x = S[i][1], y = S[i][2], vx = S[i][3], vy = S[i][4], rr = Math.hypot(x, y), eps = (vx*vx + vy*vy) / 2 - w.sun.mass / rr, hh = x*vy - y*vx, sma = -w.sun.mass / (2 * eps), ecc = Math.sqrt(Math.max(0, 1 + 2 * eps * hh * hh / (w.sun.mass * w.sun.mass)));' +
       ' out = { peri: sma * (1 - ecc), apo: eps < 0 ? sma * (1 + ecc) : null }; var tAfter = S[i][0] + tH * 0.08; for (var j = i; j < S.length; j++) if (S[j][0] >= tAfter) { dot = [S[j][1], S[j][2]]; break; } if (!dot) dot = [S[S.length-1][1], S[S.length-1][2]]; break; } } }' +
-      ' var tFire = +d.P.when || 0; for (var q = 0; q < S.length; q++) if (S[q][0] >= tFire) { fire = [S[q][1], S[q][2]]; break; }' +
+      '' +
       ' postMessage({ id: d.id, reach: out, dot: dot, fire: fire, padRel: w.rocket.padAngle - (w.bodies[d.world.start].angle0 + Math.PI / 2) }); };';
     reachWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
-    reachWorker.onmessage = e => { if (e.data.s1 != null) { P.s1 = e.data.s1; savePlan(); scheduleReach(); return; } if (e.data.id === reachId) { burnReach = e.data.reach; burnDot = e.data.dot; fireDot = e.data.fire; if (e.data.padRel != null) padRel = e.data.padRel; } };
+    reachWorker.onmessage = e => { if (e.data.s1 != null) { const mb = Math.round(e.data.s1 * 100); dials.s1.min = mb; if (P.s1 * 100 < mb - 0.01) { P.s1 = mb / 100; syncDials(); savePlan(); scheduleReach(); } return; } if (e.data.id === reachId) { burnReach = e.data.reach; burnDot = e.data.dot; fireDot = e.data.fire; if (e.data.padRel != null) padRel = e.data.padRel; } };
     return reachWorker;
   }
   async function updateReach(){
@@ -532,7 +531,7 @@ label.name input{width:150px}
 
   // ---------- launch ----------
   let launching = false;
-  function planName(){ return 'aim ' + fmt(P.aim > 180 ? P.aim - 360 : P.aim, 0) + ' day ' + Math.round(P.when) + ' brake ' + fmt(P.brake, 1); }
+  function planName(){ return 'aim ' + fmt(P.aim > 180 ? P.aim - 360 : P.aim, 0) + ' burn ' + Math.round(P.s1 * 100) + '% brake ' + fmt(P.brake, 1); }
   async function launch(){
     if (launching) return;
     if (!session) return openSignin();
@@ -996,7 +995,6 @@ label.name input{width:150px}
       // where the launch burn carries you: the closest (or furthest) the flight would get to the star
       const reach = burnReach ? (tb.outward ? burnReach.apo : burnReach.peri) : null;
       if (reach && reach > 0) { reachShown = reachShown == null ? reach : reachShown + (reach - reachShown) * 0.2; } else reachShown = null;
-      if (fireDot) { g.setLineDash([]); g.fillStyle = 'rgba(255,120,60,0.95)'; g.beginPath(); g.arc(sx(fireDot[0]), sy(fireDot[1]), 4.5, 0, TAU); g.fill(); g.strokeStyle = 'rgba(255,120,60,0.9)'; g.lineWidth = 1.5; g.beginPath(); g.arc(sx(fireDot[0]), sy(fireDot[1]), 8, 0, TAU); g.stroke(); lab('2nd stage', sx(fireDot[0]), sy(fireDot[1]) + 20); g.setLineDash([2,5]); g.strokeStyle = 'rgba(243,180,87,0.6)'; }
       const tp = bodyAt(w, w.target, st.t), bx = sx(tp.x), by = sy(tp.y), br = (1 + P.brake) * B.radius * scale * mag; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.stroke(); lab('brakes on', bx, by + br + 13);
       g.restore();
     }
@@ -1231,7 +1229,7 @@ label.name input{width:150px}
           else if (nr.k === w.start) mult = 0.3 + 0.7 * ease(a / 8);
           else mult = 0.4 + 0.6 * ease(a / 6);
           // every burn plays slowly, and the moment the engine cuts off the pace eases back up over two seconds
-          if (!st.onPad) { const slow = (run.tLaunch != null && st.t - run.tLaunch < 1.5) ? 0.02 : 0.06;   // the launch burn is tiny in flight time, so it plays very slowly
+          if (!st.onPad) { const slow = 0.02;   // every burn is a moment: it plays at a crawl, then the pace eases back up
             if (st.thr > 0) { burning = true; mult = Math.min(mult, slow); } else if (burning) { burning = false; cutoffAt = now; cutoffMult = slow; } if (cutoffAt && now - cutoffAt < 2500) mult = Math.min(mult, cutoffMult + (mult - cutoffMult) * ease((now - cutoffAt) / 2500)); }
           let next = run.tau + dts * base * mult;
           if (!run.held && run.tLaunch != null && run.tau < run.tLaunch && next >= run.tLaunch) { next = run.tLaunch; run.held = true; run.hold = { until: now + 3000 }; }
