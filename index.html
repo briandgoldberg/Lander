@@ -326,7 +326,7 @@ label.name input{width:150px}
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null, shots = null, creating = false;
   let run = null, lastRun = null, idleT = 0;
-  let feed = [], seen = new Set(), playQueue = [], busyLaunch = null;
+  let feed = [], seen = new Set(), playQueue = [], busyLaunch = null, feedLoaded = false;
   let W = 0, H = 0, CW = 0, CH = 0, dpr = 1, lastDraw = 0, last = 0, tnow = 0;
   const fx = { smoke: [], debris: [], rings: [], sparks: [], fire: [], flash: 0, skyFlash: 0, shake: 0, label: null, labelT: 0, fade: 0, punch: 0, punchK: -1, punchX: 0, punchY: 0, scar: null, flag: null, legs: 0 };
   let stars = [], nebula = [], textures = {}, meteors = [];
@@ -437,7 +437,7 @@ label.name input{width:150px}
     const enc = encodeURIComponent(msg), encLink = encodeURIComponent(link);
     const html = '<div class="refer">' +
       '<button class="cta wide copyRef">Challenge a friend</button>' +
-      (mine ? '<button class="cta wide copyReplay">Share my flight</button>' : '') +
+      (mine ? '<button class="cta wide copyReplay">Share my last flight</button>' : '') +
       '<div class="shares">' + (navigator.share ? '<button class="shareRef">Share…</button>' : '') +
       '<a href="https://twitter.com/intent/tweet?text=' + enc + '" target="_blank" rel="noopener">X</a>' +
       '<a href="https://www.facebook.com/sharer/sharer.php?u=' + encLink + '" target="_blank" rel="noopener">Facebook</a>' +
@@ -447,7 +447,7 @@ label.name input{width:150px}
     card.hidden = false; $('referPanel').innerHTML = html; els.outReferral.innerHTML = html;
     const copyBtn = (sel, text, label) => document.querySelectorAll(sel).forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(text); b.textContent = 'Link copied'; } catch (e) { b.textContent = text; } setTimeout(() => { b.textContent = label; }, 3000); });
     copyBtn('.copyRef', link, 'Challenge a friend');
-    if (mine) copyBtn('.copyReplay', location.origin + location.pathname + '?replay=' + mine.id, 'Share my flight');
+    if (mine) copyBtn('.copyReplay', location.origin + location.pathname + '?replay=' + mine.id, 'Share my last flight');
     document.querySelectorAll('.shareRef').forEach(b => b.onclick = () => { navigator.share({ title: 'Lander', text: msg, url: link }).catch(() => {}); });
   }
   async function loadChallenge(){
@@ -585,7 +585,7 @@ label.name input{width:150px}
     const wasBusy = busyLaunch; game = data.game; busyLaunch = game.busy ? game.busy_launch : null; if (!!wasBusy !== !!busyLaunch) renderCta();
     if (changed) {
       world = data.world; buildSky(game.number || 1); renderMission();
-      feed = []; seen = new Set(); playQueue = []; lastRun = null;
+      feed = []; seen = new Set(); playQueue = []; lastRun = null; feedLoaded = false;
       setupPlanner(); renderChallenge(); refreshShots(); renderShare();
       if (!changed || game) { refreshFeed(); refreshBoard(); }
     }
@@ -596,7 +596,7 @@ label.name input{width:150px}
     if (!game) return;
     const { data, error } = await sb.from('launch_feed').select('*').eq('game_id', game.id).order('created_at', { ascending: false }).limit(25);
     if (error || !data) return;
-    const firstLoad = feed.length === 0 && seen.size === 0;
+    const firstLoad = !feedLoaded; feedLoaded = true;   // only the very first look at a day marks its flights as seen
     feed = data;
     const when = f => { const d = new Date(f.created_at); return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
     const options = feed.filter(f => f.status === 'done' && f.outcome !== 'error').map(f => {
