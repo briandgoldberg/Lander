@@ -212,10 +212,10 @@ label.name input{width:150px}
       </div>
       <p class="hint">Set the four dials and launch. You find out how it went when it flies. Ten shots a day.</p>
       <div class="dials">
-        <label class="dial"><span class="dl">Launch time <b id="vWait"></b></span><input type="range" id="dWait" min="0" max="100" step="0.1"><small>How long to wait before takeoff, from the moment you press Launch. The planets keep moving while you wait.</small></label>
+        <label class="dial"><span class="dl">Launch time <b id="vWait"></b></span><input type="range" id="dWait" min="0" max="100" step="0.1"><small>How long to wait before takeoff, from the moment you press Launch. The takeoff circle on the map is where your planet will be.</small></label>
         <label class="dial"><span class="dl"><span id="lReach">Far point</span> <b id="vReach"></b></span><input type="range" id="dReach" min="0" max="2" step="0.001"><small id="hReach">How far your rocket swings, as a share of your home planet's distance from the star. The dotted ring on the map.</small></label>
-        <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="-60" max="60" step="0.5"><small>Which way the engine pushes when you leave. 0° is straight along your planet's path; tilt it to bend yours.</small></label>
-        <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"><small>How high above the target planet the brakes come on, measured in planet widths.</small></label>
+        <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="-60" max="60" step="0.5"><small>Which way the engine pushes when you leave. The arrow on the map.</small></label>
+        <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"><small>How high above the target planet the brakes come on. The ring around it on the map.</small></label>
       </div>
       <div class="status" id="status"></div>
       <pre class="err" id="err" hidden></pre>
@@ -370,7 +370,7 @@ label.name input{width:150px}
     els.systemName.textContent = w.name + ' system';
     els.gameChip.textContent = game.name;
     $('prize').innerHTML = "<b>Today's challenge:</b> fly from <em>" + esc(A.name) + '</em> to <em>' + esc(B.name) + '</em> and land softly.';
-    els.brief.innerHTML = 'Launch from <b>' + esc(A.name) + '</b>, land on <b>' + esc(B.name) + '</b>. ' + (B.orbitR > A.orbitR ? 'Outward.' : 'Inward.');
+    els.brief.innerHTML = 'Launch from <b>' + esc(A.name) + '</b>, land on <b>' + esc(B.name) + '</b>.';
     els.facts.innerHTML = '<dt>Fuel budget</dt><dd>' + fmt(w.rocket.fuel, 2) + '</dd><dt>Soft landing</dt><dd>≤ ' + fmt(w.safeLandingSpeed, 2) + '</dd><dt>New system in</dt><dd id="factEnds">—</dd>';
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
     renderEnds();
@@ -986,8 +986,17 @@ label.name input{width:150px}
     g.setLineDash([]);
     drawStar(g, cx, cy, Math.max(4, w.sun.radius * scale * SUN_MAG), tnow);
     if (!run && P && tb) {
-      const rr = P.reach * scale; g.save(); g.setLineDash([2,5]); g.strokeStyle = 'rgba(243,180,87,0.6)'; g.lineWidth = 1.5; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); g.setLineDash([]);
-      g.fillStyle = 'rgba(243,180,87,0.9)'; g.font = '600 11px "IBM Plex Sans", sans-serif'; g.textAlign = 'center'; g.fillText(tb.outward ? 'far point' : 'near point', cx, cy + rr + 14); g.textAlign = 'start'; g.restore();
+      // every dial has a shape on the map: the near/far ring, the takeoff ghost, the aim arrow, the brake ring
+      const A = w.bodies[w.start], B = w.bodies[w.target], lab = (t, x, y) => { g.fillStyle = 'rgba(243,180,87,0.9)'; g.font = '600 11px "IBM Plex Sans", sans-serif'; g.textAlign = 'center'; g.fillText(t, x, y); g.textAlign = 'start'; };
+      g.save(); g.setLineDash([2,5]); g.strokeStyle = 'rgba(243,180,87,0.6)'; g.lineWidth = 1.5;
+      const rr = P.reach * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab(tb.outward ? 'far point' : 'near point', cx, cy + rr + 14);
+      const tp = bodyAt(w, w.target, st.t), bx = sx(tp.x), by = sy(tp.y), br = (1 + P.brake) * B.radius * scale * mag; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.stroke(); lab('brakes on', bx, by + br + 13);
+      const ta = bodyAt(w, w.start, st.t + P.wait), ax = sx(ta.x), ay = sy(ta.y), ar = A.radius * scale * mag; g.beginPath(); g.arc(ax, ay, ar + 3, 0, TAU); g.stroke(); lab('takeoff', ax, ay + ar + 16);
+      const sgn = tb.outward ? 1 : -1, c = Math.cos(P.aim * Math.PI / 180), s = Math.sin(P.aim * Math.PI / 180), vn = Math.hypot(ta.vx, ta.vy) || 1, ux0 = sgn * ta.vx / vn, uy0 = sgn * ta.vy / vn, dxv = ux0 * c - uy0 * s, dyv = ux0 * s + uy0 * c, L = ar + 30;
+      g.setLineDash([]); g.strokeStyle = 'rgba(243,180,87,0.9)'; g.lineWidth = 2; g.beginPath(); g.moveTo(ax + dxv * (ar + 4), ay - dyv * (ar + 4)); g.lineTo(ax + dxv * L, ay - dyv * L); g.stroke();
+      g.fillStyle = 'rgba(243,180,87,0.9)'; g.save(); g.translate(ax + dxv * L, ay - dyv * L); g.rotate(Math.atan2(-dyv, dxv)); g.beginPath(); g.moveTo(7, 0); g.lineTo(-5, -5); g.lineTo(-5, 5); g.closePath(); g.fill(); g.restore();
+      lab('aim', ax + dxv * (L + 14), ay - dyv * (L + 14) + 4);
+      g.restore();
     }
     const [rxw, ryw] = shown(st.x, st.y), rx = sx(rxw), ry = sy(ryw);
     if (run) {
