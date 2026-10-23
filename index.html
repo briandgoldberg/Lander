@@ -139,7 +139,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .planets span{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--muted)}
 .planets span.start,.planets span.target{color:var(--fg);border-color:var(--accent)}
 .planets i{width:9px;height:9px;border-radius:50%;display:inline-block}
-.status{font-family:var(--mono);font-size:12px;color:var(--muted);min-height:18px;margin-top:8px;line-height:1.5}
+.status{font-family:var(--mono);font-size:12px;color:var(--muted);margin:0;line-height:1.5}.status:empty{display:none}
 .status.warn{color:var(--accent)}
 .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-size:12px}
 .list li{display:flex;gap:8px;align-items:baseline;min-width:0;cursor:pointer;padding:3px 4px;border-radius:4px}
@@ -182,7 +182,7 @@ label.name input{width:150px}
 .challenge span{flex:1;min-width:200px}
 .challenge .cta{padding:9px 14px;font-size:13px}
 .dials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 22px}
-.hints{margin-top:14px}.hints ul{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:6px}.hints li{font-size:14px;line-height:1.45;color:var(--fg);background:rgba(243,180,87,.08);border:1px solid rgba(243,180,87,.35);border-radius:6px;padding:7px 10px}.hints button[hidden]{display:none}
+.hints{margin-top:4px;display:flex;flex-direction:column;gap:8px}.hints ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}.hints ul:empty{display:none}.hints button{align-self:flex-start}.hints li{font-size:14px;line-height:1.45;color:var(--fg);background:rgba(243,180,87,.08);border:1px solid rgba(243,180,87,.35);border-radius:6px;padding:7px 10px}.hints button[hidden]{display:none}
 @media (max-width:640px){.dials{grid-template-columns:1fr}}
 .dial{display:flex;flex-direction:column;gap:4px;font-size:13px}
 .dial .dl{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-weight:600}
@@ -530,7 +530,7 @@ label.name input{width:150px}
   function renderHints(){
     if (!game) return;
     const shown = hintsShown(), ul = $('hintList'), btn = $('hintBtn');
-    ul.innerHTML = shown.map(t => '<li>' + esc(t) + '</li>').join('');
+    ul.innerHTML = shown.length ? '<li>' + esc(shown[shown.length - 1]) + '</li>' : '';
     btn.hidden = shown.length >= 4; btn.textContent = shown.length ? 'Reveal another hint' : 'Reveal a hint';
   }
   $('hintBtn').onclick = async () => {
