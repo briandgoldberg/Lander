@@ -568,10 +568,11 @@ label.name input{width:150px}
     const f = flights.find(x => x.mine && !x.finished); if (!f) return;
     $('abortBtn').disabled = true;
     try {
-      const tau = Math.max(0, liveT() - f.t0);
+      const tau = Math.max(0, Math.min(f.end, liveT() - f.t0));
+      f.end = tau; f.result = Object.assign({}, f.result, { outcome: 'aborted' });   // on screen it is over right now
       const { data, error } = await sb.rpc('abort_launch', { p_launch: f.id, p_tau: +tau.toFixed(4) });
       if (error) throw new Error(error.message);
-      if (data && data.ok) { f.end = Math.min(f.end, +data.tau); f.result = Object.assign({}, f.result, { outcome: 'aborted' }); refreshFeed(); }
+      if (data && data.ok) refreshFeed();
     } catch (e) { setStatus('Could not abort: ' + (e.message || e), true); }
     finally { $('abortBtn').disabled = false; }
   };
