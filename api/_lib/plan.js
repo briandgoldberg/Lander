@@ -148,6 +148,23 @@ function resolveAim(w, travel, P, engine) {
 }
 // The automated first stage's share of the tank: the least that clears the home planet, plus a little, on the 5% grid.
 function stage1(world, engine) { return Math.min(0.7, Math.ceil((minBurn(world, engine) + 0.03) * 20) / 20); }
+// The almanac sweep: every landable plan on the dial grid across a synodic period of launch times, best fuel first.
+// Paths are turned so that every launch starts straight up (the sky is round, so a turned path is still a true path).
+function solutions(world, engine) {
+  var A = world.bodies[world.start], B = world.bodies[world.target], floor = stage1(world, engine);
+  var synodic = 2 * Math.PI / Math.abs(A.omega - B.omega), list = [], flights = 0;
+  for (var ti = 0; ti < 32; ti++) for (var ai = 0; ai < 72; ai++) for (var s1 = floor; s1 <= 0.601; s1 += 0.05) for (var ki = 0; ki < 3; ki++) {
+    var t0 = synodic * ti / 32, P = { wait: 0, s1: +s1.toFixed(2), aim: ai * 5, brake: [0.8, 1.2, 1.8][ki] }, fw = flightWorld(world, t0, P);
+    var r = engine.fly(fw, makeController(fw, P), { record: true }); flights++;
+    if (r.outcome !== 'landed') continue;
+    var th = Math.PI / 2 - (A.angle0 + A.omega * t0), c = Math.cos(th), s = Math.sin(th), S = r.samples, path = [];
+    for (var i = 0; i < S.length; i += 6) path.push([+(S[i][1] * c - S[i][2] * s).toFixed(4), +(S[i][1] * s + S[i][2] * c).toFixed(4)]);
+    var L = S[S.length - 1]; path.push([+(L[1] * c - L[2] * s).toFixed(4), +(L[1] * s + L[2] * c).toFixed(4)]);
+    list.push({ aim: P.aim, s1: P.s1, brake: P.brake, t0: +t0.toFixed(2), fuel: +(world.rocket.fuel - r.fuelUsed).toFixed(3), days: +r.time.toFixed(1), path: path });
+  }
+  list.sort(function (p, q) { return q.fuel - p.fuel; });
+  return { flights: flights, found: list.length, floor: floor, synodic: +synodic.toFixed(2), list: list.slice(0, 80) };
+}
 // Is this system landable with the dials? A coarse sweep; the daily generator skips days that fail it.
 function landable(world, engine) {
   var A = world.bodies[world.start], B = world.bodies[world.target], landed = 0, hits = 0, floor = stage1(world, engine);
@@ -171,5 +188,5 @@ function minBurn(world, engine) {
   for (var k = 0; k < 9; k++) { var mid = (lo + hi) / 2; if (clears(mid)) hi = mid; else lo = mid; }
   return +(hi + 0.01).toFixed(3);
 }
-if (typeof module !== 'undefined' && module.exports) module.exports = { makeController: makeController, textbook: textbook, clean: clean, botSource: botSource, liveRate: liveRate, worldAt: worldAt, flightWorld: flightWorld, landable: landable, minBurn: minBurn, resolveAim: resolveAim, stage1: stage1, flightDays: flightDays, skyClock: skyClock, burnWindows: burnWindows, mergeWindows: mergeWindows, slowWindows: slowWindows, SLOW: SLOW };
-if (typeof window !== 'undefined') window.LanderPlan = { makeController: makeController, textbook: textbook, clean: clean, botSource: botSource, liveRate: liveRate, worldAt: worldAt, flightWorld: flightWorld, landable: landable, minBurn: minBurn, resolveAim: resolveAim, stage1: stage1, flightDays: flightDays, skyClock: skyClock, burnWindows: burnWindows, mergeWindows: mergeWindows, slowWindows: slowWindows, SLOW: SLOW };
+if (typeof module !== 'undefined' && module.exports) module.exports = { makeController: makeController, textbook: textbook, clean: clean, botSource: botSource, liveRate: liveRate, worldAt: worldAt, flightWorld: flightWorld, landable: landable, minBurn: minBurn, resolveAim: resolveAim, stage1: stage1, flightDays: flightDays, solutions: solutions, skyClock: skyClock, burnWindows: burnWindows, mergeWindows: mergeWindows, slowWindows: slowWindows, SLOW: SLOW };
+if (typeof window !== 'undefined') window.LanderPlan = { makeController: makeController, textbook: textbook, clean: clean, botSource: botSource, liveRate: liveRate, worldAt: worldAt, flightWorld: flightWorld, landable: landable, minBurn: minBurn, resolveAim: resolveAim, stage1: stage1, flightDays: flightDays, solutions: solutions, skyClock: skyClock, burnWindows: burnWindows, mergeWindows: mergeWindows, slowWindows: slowWindows, SLOW: SLOW };

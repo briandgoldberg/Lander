@@ -116,6 +116,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .tele b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .leftcol{display:flex;flex-direction:column;gap:14px;min-width:0}
 .boards{display:flex;flex-direction:column;gap:14px}
+#almanacCard[hidden]{display:none}.almanac{display:block;width:100%;max-width:560px;aspect-ratio:1;margin:8px auto;background:#03050c;border:1px solid var(--line);border-radius:8px}#almanacNote{font-size:13px;line-height:1.5}
 .boardhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.boardhead h2{margin:0}
 .boardhead select{appearance:none;-webkit-appearance:none;font-family:var(--mono);font-size:12px;color:var(--fg);background:rgba(7,10,20,.85);border:1px solid var(--line);border-radius:999px;padding:6px 28px 6px 12px;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
 .list li{cursor:pointer}
@@ -273,6 +274,11 @@ label.name input{width:150px}
     <ul class="list" id="board"></ul>
     <p class="empty" id="boardEmpty">Nobody has landed yet today.</p>
     <p class="status" id="boardNote" hidden></p>
+  </div>
+  <div class="card" id="almanacCard" hidden>
+    <h2 id="almanacTitle">Almanac</h2>
+    <canvas id="almanac" class="almanac"></canvas>
+    <p class="empty" id="almanacNote"></p>
   </div>
   </div>
 </div>
@@ -587,7 +593,7 @@ label.name input{width:150px}
     game = data.game;
     if (changed) {
       world = data.world; buildSky(game.number || 1); renderMission();
-      feed = []; seen = new Set(); playQueue = []; lastRun = null; feedLoaded = false; flights = []; focal = null; run = null; boardGame = null; refreshDays();
+      feed = []; seen = new Set(); playQueue = []; lastRun = null; feedLoaded = false; flights = []; focal = null; run = null; boardGame = null; almanacFor = null; refreshDays();
       setupPlanner(); refreshShots(); renderShare();
       if (!changed || game) { refreshFeed(); refreshBoard(); }
     }
@@ -638,6 +644,51 @@ label.name input{width:150px}
       els.board.querySelectorAll('li').forEach(li => li.onclick = () => watch(+li.dataset.id, li.dataset.pilot, gid));
       els.boardNote.textContent = '';
     }
+    showAlmanac(past ? gid : null);
+  }
+
+  // ---------- almanac ----------
+  // A finished day's answers: every pilot's kept flight as a ghost, every landable plan the sweep found, the least-fuel one lit.
+  let almanacFor = null;
+  async function showAlmanac(gid){
+    const card = $('almanacCard'); if (!gid) { card.hidden = true; almanacFor = null; return; }
+    if (almanacFor === gid) return; almanacFor = gid;
+    card.hidden = false; $('almanacTitle').textContent = 'Almanac'; $('almanacNote').textContent = 'Charting the day…';
+    const cv = $('almanac'); cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+    try {
+      const [w, fl, al] = await Promise.all([worldFor(gid), sb.rpc('almanac_flights', { p_game: gid }), fetch('/api/almanac?game=' + gid).then(r => r.json())]);
+      if (almanacFor !== gid) return;
+      const d0 = days.find(d => d.id === gid);
+      $('almanacTitle').textContent = 'Almanac · Game #' + ((d0 && d0.number) || '');
+      if (!w || !al || !al.ended) { $('almanacNote').textContent = 'The almanac opens when the day is over.'; return; }
+      const flights = fl.data || [], sol = al.data || { list: [] };
+      drawAlmanac(w, sol, flights);
+      const best = sol.list[0];
+      $('almanacNote').innerHTML = flights.length + ' pilot' + (flights.length === 1 ? '' : 's') + ' flew · ' + sol.found + ' landable plan' + (sol.found === 1 ? '' : 's') + ' found' +
+        (best ? ' · best: aim ' + (best.aim > 180 ? best.aim - 360 : best.aim) + '°, burn ' + Math.round(best.s1 * 100) + '%, brake ' + best.brake + ' → ' + fmt(best.fuel, 2) + ' fuel left in ' + best.days + ' days' : '') +
+        '<br>Every path is turned so its launch points straight up. White: pilots. Green: landable plans. Gold: the least fuel.';
+    } catch (e) { $('almanacNote').textContent = 'The almanac could not be loaded.'; }
+  }
+  function drawAlmanac(w, sol, flights){
+    const cv = $('almanac'), size = Math.min(560, cv.clientWidth || 560), d = Math.max(1, devicePixelRatio || 1);
+    cv.width = size * d; cv.height = size * d; const g = cv.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0);
+    g.fillStyle = '#03050c'; g.fillRect(0, 0, size, size);
+    const outer = w.bodies[w.bodies.length - 1].orbitR, sc = (size / 2 - 12) / outer, cx = size / 2, cy = size / 2, X = x => cx + x * sc, Y = y => cy - y * sc;
+    g.lineWidth = 1; g.setLineDash([3, 6]);
+    w.bodies.forEach((b, k) => { g.strokeStyle = k === w.target ? 'rgba(243,180,87,0.5)' : k === w.start ? 'rgba(233,236,246,0.35)' : 'rgba(143,152,184,0.2)'; g.beginPath(); g.arc(cx, cy, b.orbitR * sc, 0, TAU); g.stroke(); });
+    g.setLineDash([]);
+    g.fillStyle = '#ffd27a'; g.beginPath(); g.arc(cx, cy, Math.max(3, w.sun.radius * sc * SUN_MAG), 0, TAU); g.fill();
+    const A = w.bodies[w.start];
+    const trace = (pts, style, width, glow) => { if (!pts || pts.length < 2) return; g.save(); g.strokeStyle = style; g.lineWidth = width; g.lineJoin = 'round'; if (glow) { g.shadowColor = glow; g.shadowBlur = 10; } g.beginPath(); g.moveTo(X(pts[0][0]), Y(pts[0][1])); for (let i = 1; i < pts.length; i++) g.lineTo(X(pts[i][0]), Y(pts[i][1])); g.stroke(); g.restore(); };
+    // pilots' flights, turned so each launch points straight up
+    for (const f of flights) { const th = Math.PI / 2 - (A.angle0 + A.omega * (+f.t_start || 0)), c = Math.cos(th), s = Math.sin(th); const pts = (f.path || []).map(p => [p[0] * c - p[1] * s, p[0] * s + p[1] * c]); trace(pts, f.outcome === 'landed' ? 'rgba(233,236,246,0.6)' : 'rgba(233,236,246,0.28)', 1); }
+    // landable plans, best last and lit
+    const list = sol.list || [];
+    for (let i = list.length - 1; i >= 1; i--) trace(list[i].path, 'rgba(106,213,154,0.3)', 1);
+    if (list[0]) { trace(list[0].path, '#f3b457', 2.5, 'rgba(243,180,87,0.9)'); const e = list[0].path[list[0].path.length - 1]; g.fillStyle = '#f3b457'; g.beginPath(); g.arc(X(e[0]), Y(e[1]), 4, 0, TAU); g.fill(); }
+    // the launch spot: straight up on the home orbit
+    g.fillStyle = '#e9ecf6'; g.beginPath(); g.arc(cx, cy - A.orbitR * sc, 3.5, 0, TAU); g.fill();
+    g.font = '600 11px "IBM Plex Sans", sans-serif'; g.fillStyle = 'rgba(233,236,246,0.8)'; g.textAlign = 'center'; g.fillText('launch', cx, cy - A.orbitR * sc - 8);
   }
 
   // ---------- replay ----------
