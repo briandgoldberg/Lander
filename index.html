@@ -379,9 +379,9 @@ label.name input{width:150px}
   // One call to action. The top button leads to the planner; the planner's button launches.
   function shotsText(){ if (!shots) return ''; return shots.left + ' shot' + (shots.left === 1 ? '' : 's') + ' left'; }
   function renderCta(){
-    if (!session) { els.launchBtn.textContent = 'Launch'; return; }
     const busy = !launching && (!!busyLaunch || !!(run && run.live && !run.done && !run.mine));
     els.launchBtn.disabled = busy;
+    if (!session) { els.launchBtn.textContent = busy ? 'Launch in progress…' : 'Launch'; return; }
     els.launchBtn.textContent = busy ? 'Launch in progress…' : shots && shots.left < 1 ? 'Out of shots today' : 'Launch' + (shots ? ' · ' + shotsText() : '');
   }
   function go(){ clearTimeout(holdTimer); if (!session) return openSignin(); if (shots && shots.left < 1) return openOut(); launch(); }
