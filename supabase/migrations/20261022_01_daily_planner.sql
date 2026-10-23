@@ -139,3 +139,6 @@ update public.games set ends_at = now() where number = 1 and ends_at > now();
 
 -- Applied as "lander_day_exists" (day_exists(p_day) helper for api/today) and "lander_current_game_started":
 -- game_state only treats a game as current once its started_at has passed, since tomorrow's system is made a day ahead.
+
+-- Applied as "lander_unlimited_launches": no cap on launches per day; shots_left returns left = null; claim_launch also
+-- refuses games whose day has not started.
