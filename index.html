@@ -428,7 +428,7 @@ label.name input{width:150px}
   async function refreshDays(){
     const { data } = await sb.rpc('game_list'); if (!data) return; days = data;
     const sel = $('boardDay'), cur = boardGame || (game ? game.id : 0);
-    sel.innerHTML = days.map(d => { const label = (game && d.id === game.id) ? 'Today' : (d.name || 'Day ' + d.number) + (d.day ? ' · ' + new Date(d.day + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''); return '<option value="' + d.id + '">' + esc(label) + '</option>'; }).join('');
+    sel.innerHTML = days.map(d => { const date = d.day ? new Date(d.day + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : (d.name || 'Day ' + d.number), label = (game && d.id === game.id) ? 'Today · ' + date : date; return '<option value="' + d.id + '">' + esc(label) + '</option>'; }).join('');
     sel.value = String(cur); sel.hidden = days.length < 2;
   }
   $('boardDay').onchange = () => { const gid = +$('boardDay').value; boardGame = game && gid === game.id ? null : gid; refreshBoard(); };
