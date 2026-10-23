@@ -15,7 +15,7 @@ Live: https://lander-topaz.vercel.app
 
 - `index.html` is the whole site: system view, approach cam, telemetry, the mission planner, sign-in, shots, launch queue, live feed, daily and all-time boards. `lib/plan.js` is the shared autopilot behind the dials.
 - `lib/engine.js` is the physics: a star, four or five planets on circular orbits, a rocket with a delta-v budget, adaptive steps. The same file runs in the browser and on the server.
-- `lib/starter.js` is the starter bot. It reaches the target and arrives too fast.
+- `api/_lib/starter.js` is the old starter bot (the server libraries live under `api/_lib`, out of public reach; the page loads only `lib/sky.js`). It reaches the target and arrives too fast.
 - `lib/runner.js` runs an entrant's bot in a worker thread with a bare VM context and a wall-clock cap.
 - `api/launch.js` flies a claimed plan and records the official flight. `api/today.js` makes sure today's system exists.
 - Supabase holds games, profiles and launches. The server has no privileged key: it calls database functions as the signed-in user and proves server-only writes with an HMAC signature over a shared secret.

@@ -166,3 +166,8 @@ grant execute on function public.my_best_launch(integer) to authenticated;
 -- 2026-10-23: days are Pacific-time calendar days. ensure_game sets started_at/ends_at to midnight America/Los_Angeles;
 -- api/today computes the day in that zone; the cron runs at 07:02 and 08:02 UTC (PDT/PST midnight). Games relabelled:
 -- id 2 = 2026-10-21 (Day 1), id 10 = 2026-10-22 (Day 2), id 8 = 2026-10-23 (Day 3).
+
+-- 2026-10-23: the physics is hidden from the browser. public_world(w) strips a game's world to what the page draws
+-- (no masses, thrust, hints; hill -> zone rounded to one significant figure; floor = hints.stage1, the departure burn's
+-- minimum). game_state and game_world(p_game) return the public world; game_world_full(p_game, p_sig) returns the real
+-- one to the server (signed 'world|<id>'). api/today stores hints.stage1 when it creates a day.
