@@ -57,6 +57,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .livebadge{display:flex;flex:none;align-items:center;gap:8px;font-family:var(--display);font-size:12px;letter-spacing:.14em;background:rgba(7,10,20,.85);border:1px solid var(--live);border-radius:999px;padding:6px 12px;color:var(--fg)}
 .livebadge i{width:8px;height:8px;border-radius:50%;background:var(--live);box-shadow:0 0 10px var(--live);animation:pulse 1.2s infinite;flex:none}
 .livebadge small{font-family:var(--body);letter-spacing:0;color:var(--muted);font-size:12px}
+.livebadge[hidden]{display:none}
 .livebadge.slow{border-color:var(--accent);color:var(--accent)}.livebadge.slow i{background:var(--accent);box-shadow:0 0 10px var(--accent);animation:pulse .5s infinite}.livebadge.slow small{color:var(--accent)}
 @media (max-width:640px){.livebadge small{display:none}}
 @media (max-width:760px){.how{grid-template-columns:1fr}}
