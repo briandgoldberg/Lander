@@ -868,7 +868,7 @@ label.name input{width:150px}
     fx.rings.push({ k: nr.k, x: rx, y: ry, r: 0, speed: R*0.9, life: 2.4, age: 0, width: 1.2, color: '255,255,255' });
   }
   function touchdown(w, st, nr){
-    fx.label = 'TOUCHDOWN'; fx.labelT = 2.5; fx.skyFlash = 0.15; fx.shake = 0.5;
+    fx.label = 'TOUCHDOWN'; fx.labelT = 3.6; fx.skyFlash = 0.15; fx.shake = 0.5;
     const b = nr.body, R = b.radius, d = Math.hypot(st.x - nr.b.x, st.y - nr.b.y) || 1, ux = (st.x - nr.b.x)/d, uy = (st.y - nr.b.y)/d, rx = ux * R, ry = uy * R, tx = -uy, ty = ux, L = rocketLen(w);
     punchAt(nr.k, rx, ry, 1);
     fx.flag = { k: nr.k, x: ux * R + tx * L * 1.1, y: uy * R + ty * L * 1.1, ux, uy, t: 0 };
@@ -1406,7 +1406,7 @@ label.name input{width:150px}
       }
     }
     // flights that have had their moment leave the sky; the camera moves on to the next one
-    const kept = flights.filter(f => !f.finished || now - f.doneAt < 1800);   // the verdict gets a moment, then the sky resets
+    const kept = flights.filter(f => !f.finished || now - f.doneAt < (f.result.outcome === 'landed' ? 3600 : 1800));   // a landing gets its moment; anything else resets quickly
     if (kept.length !== flights.length) { flights = kept; changed = true; }
     if (focal && !flights.includes(focal)) { focal = null; resetFx(); fx.fade = 1; camS = null; noseAng = null; els.verdict.classList.add('fade'); setTimeout(() => { if (!focal && !run) els.verdict.hidden = true; }, 950); }
     if (!focal || focal.finished) { const live = flights.filter(f => !f.finished); if (live.length) { const next = live.find(f => f.mine) || live[live.length - 1]; if (next !== focal) { focal = next; camS = null; noseAng = null; changed = true; } } }
