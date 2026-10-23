@@ -165,6 +165,27 @@ function solutions(world, engine) {
   list.sort(function (p, q) { return q.fuel - p.fuel; });
   return { flights: flights, found: list.length, floor: floor, synodic: +synodic.toFixed(2), list: list.slice(0, 80) };
 }
+// Four clues in plain words, from the day's least-fuel plan: where the target should be at launch, how big a burn,
+// how high to brake, and which side of the planet to leave from. No numbers.
+function tips(world, engine) {
+  var sol = solutions(world, engine), best = sol.list[0], A = world.bodies[world.start], B = world.bodies[world.target];
+  if (!best) return ['Nobody knows a way to land on this one. Fly it your way.'];
+  var a0 = B.angle0 + B.omega * best.t0 - (A.angle0 + A.omega * best.t0), lead = ((a0 * 180 / Math.PI) % 360 + 360) % 360;   // where the target is, measured ahead of the home planet along the orbits
+  if (lead > 180) lead -= 360;
+  var ab = Math.abs(lead), side = lead > 0 ? 'ahead of' : 'behind', where;
+  if (ab < 25) where = B.name + ' should be right beside ' + A.name + ' when you launch.';
+  else if (ab < 70) where = B.name + ' should be a little ' + side + ' ' + A.name + ' when you launch.';
+  else if (ab < 115) where = B.name + ' should be a quarter turn ' + side + ' ' + A.name + ' when you launch.';
+  else if (ab < 155) where = B.name + ' should be well ' + side + ' ' + A.name + ' when you launch.';
+  else where = B.name + ' should be on the opposite side of the star when you launch.';
+  var burn = best.s1 <= sol.floor + 0.051 ? 'Go easy on the departure burn: the smallest one is close to right.' : best.s1 >= 0.5 ? 'You are going to need a big departure burn.' : 'A medium departure burn does it.';
+  var brake = best.brake >= 1.5 ? 'You are going to need a large brake altitude.' : best.brake <= 0.9 ? 'Brake late: a low brake altitude works.' : 'A middling brake altitude is about right.';
+  var sec = Math.round((((best.aim % 360) + 360) % 360) / 45) % 8;
+  var aim = ['Leave from the front of ' + A.name + ', straight along its direction of travel.', 'Leave from the front of ' + A.name + ', a little toward the star.', 'Leave from the side of ' + A.name + ' that faces the star.',
+    'Leave from the back of ' + A.name + ', toward the star.', 'Leave from the back of ' + A.name + ', straight against its direction of travel.', 'Leave from the back of ' + A.name + ', away from the star.',
+    'Leave from the side of ' + A.name + ' that faces away from the star.', 'Leave from the front of ' + A.name + ', a little away from the star.'][sec];
+  return [where, burn, brake, aim];
+}
 // Is this system landable with the dials? A coarse sweep; the daily generator skips days that fail it.
 function landable(world, engine) {
   var A = world.bodies[world.start], B = world.bodies[world.target], landed = 0, hits = 0, floor = stage1(world, engine);
@@ -188,5 +209,5 @@ function minBurn(world, engine) {
   for (var k = 0; k < 9; k++) { var mid = (lo + hi) / 2; if (clears(mid)) hi = mid; else lo = mid; }
   return +(hi + 0.01).toFixed(3);
 }
-if (typeof module !== 'undefined' && module.exports) module.exports = { makeController: makeController, textbook: textbook, clean: clean, botSource: botSource, liveRate: liveRate, worldAt: worldAt, flightWorld: flightWorld, landable: landable, minBurn: minBurn, resolveAim: resolveAim, stage1: stage1, flightDays: flightDays, solutions: solutions, skyClock: skyClock, burnWindows: burnWindows, mergeWindows: mergeWindows, slowWindows: slowWindows, SLOW: SLOW };
-if (typeof window !== 'undefined') window.LanderPlan = { makeController: makeController, textbook: textbook, clean: clean, botSource: botSource, liveRate: liveRate, worldAt: worldAt, flightWorld: flightWorld, landable: landable, minBurn: minBurn, resolveAim: resolveAim, stage1: stage1, flightDays: flightDays, solutions: solutions, skyClock: skyClock, burnWindows: burnWindows, mergeWindows: mergeWindows, slowWindows: slowWindows, SLOW: SLOW };
+if (typeof module !== 'undefined' && module.exports) module.exports = { makeController: makeController, textbook: textbook, clean: clean, botSource: botSource, liveRate: liveRate, worldAt: worldAt, flightWorld: flightWorld, landable: landable, minBurn: minBurn, resolveAim: resolveAim, stage1: stage1, flightDays: flightDays, solutions: solutions, tips: tips, skyClock: skyClock, burnWindows: burnWindows, mergeWindows: mergeWindows, slowWindows: slowWindows, SLOW: SLOW };
+if (typeof window !== 'undefined') window.LanderPlan = { makeController: makeController, textbook: textbook, clean: clean, botSource: botSource, liveRate: liveRate, worldAt: worldAt, flightWorld: flightWorld, landable: landable, minBurn: minBurn, resolveAim: resolveAim, stage1: stage1, flightDays: flightDays, solutions: solutions, tips: tips, skyClock: skyClock, burnWindows: burnWindows, mergeWindows: mergeWindows, slowWindows: slowWindows, SLOW: SLOW };

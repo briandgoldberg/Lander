@@ -182,6 +182,7 @@ label.name input{width:150px}
 .challenge span{flex:1;min-width:200px}
 .challenge .cta{padding:9px 14px;font-size:13px}
 .dials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 22px}
+.hints{margin-top:14px}.hints ul{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:6px}.hints li{font-size:14px;line-height:1.45;color:var(--fg);background:rgba(243,180,87,.08);border:1px solid rgba(243,180,87,.35);border-radius:6px;padding:7px 10px}.hints button[hidden]{display:none}
 @media (max-width:640px){.dials{grid-template-columns:1fr}}
 .dial{display:flex;flex-direction:column;gap:4px;font-size:13px}
 .dial .dl{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-weight:600}
@@ -226,6 +227,7 @@ label.name input{width:150px}
         <label class="dial"><span class="dl">Departure burn <b id="vS1"></b></span><input type="range" id="dS1" min="25" max="60" step="5"></label>
         <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"></label>
       </div>
+      <div class="hints" id="hints"><ul id="hintList"></ul><button class="btn" id="hintBtn" type="button">Reveal a hint</button></div>
       <div class="status" id="status"></div>
       <pre class="err" id="err" hidden></pre>
     </section>
@@ -522,6 +524,26 @@ label.name input{width:150px}
   function savePlan(){ try { localStorage.setItem('lander.plan.' + game.id, JSON.stringify(P)); } catch (e) {} }
   function loadPlan(){ try { return JSON.parse(localStorage.getItem('lander.plan.' + game.id)); } catch (e) { return null; } }
 
+  // ---------- hints ----------
+  // Four clues a day, revealed one at a time; what you have revealed stays revealed for the day.
+  function hintsShown(){ try { return JSON.parse(localStorage.getItem('lander.hints.' + game.id)) || []; } catch (e) { return []; } }
+  function renderHints(){
+    if (!game) return;
+    const shown = hintsShown(), ul = $('hintList'), btn = $('hintBtn');
+    ul.innerHTML = shown.map(t => '<li>' + esc(t) + '</li>').join('');
+    btn.hidden = shown.length >= 4; btn.textContent = shown.length ? 'Reveal another hint' : 'Reveal a hint';
+  }
+  $('hintBtn').onclick = async () => {
+    const btn = $('hintBtn'); btn.disabled = true;
+    try {
+      const shown = hintsShown(), { data } = await sb.rpc('reveal_hint', { p_game: game.id, p_n: shown.length });
+      if (data && data.hint) { shown.push(data.hint); try { localStorage.setItem('lander.hints.' + game.id, JSON.stringify(shown)); } catch (e) {} if (shown.length >= (data.total || 4)) { try { localStorage.setItem('lander.hints.' + game.id, JSON.stringify(shown)); } catch (e) {} } }
+      else setStatus('No more hints today.', true);
+      renderHints(); if (data && data.total && hintsShown().length >= data.total) btn.hidden = true;
+    } catch (e) { setStatus('Could not fetch a hint.', true); }
+    finally { btn.disabled = false; }
+  };
+
   // ---------- launch ----------
   let launching = false;
   function planName(){ return 'aim ' + fmt(P.aim > 180 ? P.aim - 360 : P.aim, 0) + ' burn ' + Math.round(P.s1 * 100) + '% brake ' + fmt(P.brake, 1); }
@@ -596,7 +618,7 @@ label.name input{width:150px}
     if (changed) {
       world = data.world; buildSky(game.number || 1); renderMission();
       feed = []; seen = new Set(); playQueue = []; lastRun = null; feedLoaded = false; flights = []; focal = null; run = null; boardGame = null; almanacFor = null; refreshDays();
-      setupPlanner(); refreshShots(); renderShare();
+      setupPlanner(); refreshShots(); renderShare(); renderHints();
       if (!changed || game) { refreshFeed(); refreshBoard(); }
     }
     renderEnds();

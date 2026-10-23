@@ -24,7 +24,9 @@ module.exports = async (req, res) => {
     const game = await ensureDay(day);
     // tomorrow's system is made ahead of time so the midnight rollover is instant
     let next = null; try { next = await ensureDay(tomorrow); } catch (e) {}
-    return json(res, 200, { ok: true, day, game, next });
+    // every current or coming day gets its four clues, from the day's least-fuel plan
+    const tipped = []; try { for (const id of (await rpc('games_needing_tips')) || []) { const w = await rpc('game_world_full', { p_game: id, p_sig: sign('world|' + id) }); if (!w) continue; const t = JSON.stringify(plan.tips(w, engine)); await rpc('set_tips', { p_game: id, p_tips: t, p_sig: sign('tips|' + id + '|' + t) }); tipped.push(id); } } catch (e) {}
+    return json(res, 200, { ok: true, day, game, next, tipped });
   } catch (e) {
     return json(res, e.status || 500, { error: e.message || String(e) });
   }
