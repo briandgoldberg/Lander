@@ -9,7 +9,7 @@ function daySeed(day) { let h = 2166136261; for (const ch of 'lander-' + day) { 
 
 async function ensureDay(day) {
   if (await rpc('day_exists', { p_day: day })) return { day, existing: true };   // the landability sweep is slow, so only run it when a day is actually new
-  let w = null; for (let attempt = 0; attempt < 64; attempt++) { w = makeWorld(daySeed(day + (attempt ? '#' + attempt : ''))); w.rocket.fuel = +(w.rocket.fuel * 0.7).toFixed(2); if (Math.abs(w.start - w.target) >= 2 && plan.landable(w, engine).ok) break; }
+  let w = null; for (let attempt = 0; attempt < 64; attempt++) { w = makeWorld(daySeed(day + (attempt ? '#' + attempt : ''))); w.rocket.fuel = +(w.rocket.fuel * 0.85).toFixed(2); if (Math.abs(w.start - w.target) >= 2 && plan.landable(w, engine).ok) break; }
   const world = JSON.stringify(w);
   return rpc('ensure_game', { p_day: day, p_world: world, p_sig: sign('game|' + day + '|' + world) });
 }
