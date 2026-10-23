@@ -434,9 +434,9 @@ label.name input{width:150px}
   let boardGame = null, days = [], worlds = {};   // the board's day (null = today), the days so far, past systems by game id
   async function worldFor(gid){ if (game && gid === game.id) return world; if (worlds[gid]) return worlds[gid]; const { data } = await sb.rpc('game_world', { p_game: gid }); if (data) worlds[gid] = data; return data; }
   async function refreshDays(){
-    const { data } = await sb.rpc('game_list'); if (!data) return; days = data;
+    const { data } = await sb.rpc('game_list'); if (!data) return; days = data.slice(0, 2);   // today and yesterday only
     const sel = $('boardDay'), cur = boardGame || (game ? game.id : 0);
-    sel.innerHTML = days.map(d => { const date = d.day ? new Date(d.day + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : (d.name || 'Day ' + d.number), label = (game && d.id === game.id) ? 'Today · ' + date : date; return '<option value="' + d.id + '">' + esc(label) + '</option>'; }).join('');
+    sel.innerHTML = days.map(d => { const date = d.day ? new Date(d.day + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : (d.name || 'Day ' + d.number), label = (game && d.id === game.id) ? 'Today · ' + date : 'Yesterday · ' + date; return '<option value="' + d.id + '">' + esc(label) + '</option>'; }).join('');
     sel.value = String(cur); sel.hidden = days.length < 2;
   }
   $('boardDay').onchange = () => { const gid = +$('boardDay').value; boardGame = game && gid === game.id ? null : gid; refreshBoard(); };
