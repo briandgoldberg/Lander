@@ -512,7 +512,7 @@ label.name input{width:150px}
     $('vS1').textContent = Math.round(P.s1 * 100) + '% of fuel';
     $('vAim').textContent = fmt(P.aim > 180 ? P.aim - 360 : P.aim, 0) + '°';
     $('vBrake').textContent = fmt(P.brake, 2) + ' planet radii';
-    $('vAssist').textContent = P.assist === 'easy' ? 'Easy' : P.assist === 'hard' ? 'Hard' : 'Medium';
+    $('vAssist').textContent = P.assist === 'easy' ? 'Full assist' : P.assist === 'hard' ? 'No autopilot' : 'Light assist';
   }
   Object.keys(dials).forEach(k => dials[k].addEventListener('input', () => {
     P = LanderPlan.clean(world, { wait: 0, s1: +dials.s1.value / 100, aim: +dials.aim.value, brake: +dials.brake.value, assist: ASSISTS[+dials.assist.value] || 'medium' });
@@ -648,7 +648,7 @@ label.name input{width:150px}
     if (!day.error && day.data && gid === (boardGame || game.id)) {
       $('boardTitle').textContent = past ? 'Top pilots · Game #' + ((d0 && d0.number) || '') : "Today's top pilots";
       els.boardEmpty.hidden = day.data.length > 0; els.boardEmpty.textContent = past ? 'Nobody flew that day.' : 'Nobody has flown yet today.';
-      const tag = r => r.outcome === 'landed' ? '<em class="tag good">Landed · ' + (r.assist === 'hard' ? 'hard' : r.assist === 'easy' ? 'easy' : 'medium') + '</em>' : r.rank === 3 ? '<em class="tag bad">Crashed</em>' : '<em class="tag">Never arrived</em>';
+      const tag = r => r.outcome === 'landed' ? '<em class="tag good">Landed · ' + (r.assist === 'hard' ? 'no autopilot' : r.assist === 'easy' ? 'full assist' : 'light assist') + '</em>' : r.rank === 3 ? '<em class="tag bad">Crashed</em>' : '<em class="tag">Never arrived</em>';
       const how = r => r.rank <= 3 ? fmt(r.fuel_left, 2) + ' fuel left' : r.closest_approach != null ? 'missed by ' + fmt(r.closest_approach, 2) : '';
       els.board.innerHTML = day.data.map((r, i) => '<li data-id="' + r.id + '" data-pilot="' + esc(r.pilot || 'pilot') + '"><span class="n">' + (i + 1) + '</span><b>' + esc(r.pilot || 'pilot') + '</b>' + tag(r) + '<span class="r">' + how(r) + '</span></li>').join('');
       els.board.querySelectorAll('li').forEach(li => li.onclick = () => watch(+li.dataset.id, li.dataset.pilot, gid));
