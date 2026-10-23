@@ -1233,7 +1233,7 @@ label.name input{width:150px}
       if (!run) { if (!(fx.fade > 0.5)) idleT = liveT(); liveStep(w, now); }
       else if (run.done) {
         // after the verdict has had its moment, hand back to the live sky
-        if (now - run.doneAt > 5000) endReplay();
+        if (now - run.doneAt > 2500) endReplay();
       }
       else {
         const S = run.samples, end = run.end;
@@ -1303,7 +1303,7 @@ label.name input{width:150px}
       }
     }
     // flights that have had their moment leave the sky; the camera moves on to the next one
-    const kept = flights.filter(f => !f.finished || now - f.doneAt < 5000);
+    const kept = flights.filter(f => !f.finished || now - f.doneAt < 1800);   // the verdict gets a moment, then the sky resets
     if (kept.length !== flights.length) { flights = kept; changed = true; }
     if (focal && !flights.includes(focal)) { focal = null; resetFx(); fx.fade = 1; camS = null; noseAng = null; els.verdict.classList.add('fade'); setTimeout(() => { if (!focal && !run) els.verdict.hidden = true; }, 950); }
     if (!focal || focal.finished) { const live = flights.filter(f => !f.finished); if (live.length) { const next = live.find(f => f.mine) || live[live.length - 1]; if (next !== focal) { focal = next; camS = null; noseAng = null; changed = true; } } }
