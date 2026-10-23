@@ -171,3 +171,7 @@ grant execute on function public.my_best_launch(integer) to authenticated;
 -- (no masses, thrust, hints; hill -> zone rounded to one significant figure; floor = hints.stage1, the departure burn's
 -- minimum). game_state and game_world(p_game) return the public world; game_world_full(p_game, p_sig) returns the real
 -- one to the server (signed 'world|<id>'). api/today stores hints.stage1 when it creates a day.
+
+-- 2026-10-23: Abort. abort_launch(p_launch, p_tau) lets the pilot end their own in-flight launch at flight time p_tau:
+-- samples and burns are cut there, outcome = 'aborted', closest_approach recomputed over the kept samples, fuel_left from
+-- the last kept sample, lands_at = now() so the pad frees at once. launches.abort_t (also in launch_feed) tells viewers.
