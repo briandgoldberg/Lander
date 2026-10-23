@@ -374,7 +374,7 @@ label.name input{width:150px}
     const left = ms <= 0 ? 'any moment now' : (h > 0 ? h + 'h ' + m + 'm' : m + 'm');
     els.endsChip.textContent = 'new game starts in ' + left;
     const fe = $('factEnds'); if (fe) fe.textContent = left;
-    els.outNote.textContent = 'A new system arrives at midnight UTC, in ' + left + '.';
+    els.outNote.textContent = 'A new system arrives at midnight Pacific time, in ' + left + '.';
   }
 
   // ---------- auth ----------

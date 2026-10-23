@@ -17,7 +17,9 @@ async function ensureDay(day) {
 module.exports = async (req, res) => {
   if (!configured) return json(res, 503, { error: 'Server is not configured yet.' });
   try {
-    const day = new Date().toISOString().slice(0, 10), tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    // a day is a Pacific-time calendar day
+    const pacific = ms => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+    const day = pacific(Date.now()), tomorrow = pacific(Date.now() + 86400000);
     const game = await ensureDay(day);
     // tomorrow's system is made ahead of time so the midnight rollover is instant
     let next = null; try { next = await ensureDay(tomorrow); } catch (e) {}

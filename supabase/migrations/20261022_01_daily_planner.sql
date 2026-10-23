@@ -162,3 +162,7 @@ grant execute on function public.my_best_launch(integer) to authenticated;
 -- sweep_replays null the samples of a pilot's other flights once they are ten minutes old (called from finish_launch and
 -- claim_launch); leaderboard breaks ties by newest flight to match. game_list() and game_world(p_game) feed the board's
 -- day picker and replays from past days. Definitions live in the database (created via the Supabase MCP); see pg_get_functiondef.
+
+-- 2026-10-23: days are Pacific-time calendar days. ensure_game sets started_at/ends_at to midnight America/Los_Angeles;
+-- api/today computes the day in that zone; the cron runs at 07:02 and 08:02 UTC (PDT/PST midnight). Games relabelled:
+-- id 2 = 2026-10-21 (Day 1), id 10 = 2026-10-22 (Day 2), id 8 = 2026-10-23 (Day 3).
