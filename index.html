@@ -728,7 +728,7 @@ label.name input{width:150px}
     const left = Math.max(0, st.fuel), used = w.rocket.fuel - left;
     els.fuelBar.style.width = (100 * left / w.rocket.fuel).toFixed(1) + '%';
     els.fuelText.textContent = fmt(left, 2) + ' left';
-    els.tT.textContent = run ? (run.tLaunch != null && st.t >= run.tLaunch ? fmt(st.t - run.tLaunch, 1) : '—') : focal && st.t >= focal.t0 ? fmt(st.t - focal.t0, 1) : '—'; els.tPhase.textContent = phaseOf(w, st, nr);
+    els.tT.textContent = run ? (run.tLaunch != null && st.t >= run.tLaunch ? fmt(st.t - run.tLaunch, 1) : '—') : focal && st.t >= focal.t0 ? fmt(Math.min(st.t - focal.t0, focal.end), 1) : '—'; els.tPhase.textContent = phaseOf(w, st, nr);
     els.tSpeed.textContent = fmt(Math.hypot(st.vx, st.vy), 3); els.tNear.textContent = nr.body.name;
     els.tRange.textContent = fmt(Math.max(0, nr.d - nr.body.radius), 4); els.tRel.textContent = fmt(rel, 3);
     els.tBurn.classList.toggle('on', st.thr > 0); els.tUsed.textContent = fmt(used, 3);
