@@ -4,7 +4,7 @@ const { runBot } = require('../lib/runner');
 const plan = require('../lib/plan');
 
 const BUDGET_MS = 10000;
-const LEAD_S = 5;   // real seconds between the claim and liftoff
+const LEAD_S = 0;   // liftoff the moment the launch is claimed
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return json(res, 405, { error: 'POST only' });
@@ -27,7 +27,7 @@ module.exports = async (req, res) => {
     dials.s1 = Math.max(+dials.s1 || 0, plan.stage1(state.world, require('../lib/engine')));   // the departure burn is the pilot's, but never too small to clear the home planet
     // sky time at liftoff, on the shared clock that slows while any rocket of the day is burning
     const events = (await rpc('clock_events', { p_game: entry.game_id })) || [];
-    const windows = plan.mergeWindows([].concat.apply([], events.map(e => (e.b || []).map(w => [+e.t + w[0], +e.t + w[1]]))));
+    const windows = plan.slowWindows(events);
     const clock = plan.skyClock(new Date(entry.game_started_at).getTime(), plan.liveRate(state.world), windows);
     const tStart = +clock.sky(new Date(entry.created_at).getTime() + LEAD_S * 1000).toFixed(4);
     const world = plan.flightWorld(state.world, tStart, dials, require('../lib/engine'));
@@ -47,8 +47,7 @@ module.exports = async (req, res) => {
       const r = out.result;
       result = { outcome: r.outcome, body: r.body, fuelUsed: r.fuelUsed, fuelLeft: +(world.rocket.fuel - r.fuelUsed).toFixed(4),
         landingSpeed: r.landingSpeed, closestApproach: r.closestApproach, tStart, time: r.time, flights: out.flights, thinkMs: out.thinkMs, samples: r.samples, burns: plan.burnWindows(r.samples), error: null };
-      const mine = result.burns.map(w => [tStart + w[0], tStart + w[1]]);
-      result.landsAt = Math.round(plan.skyClock(new Date(entry.game_started_at).getTime(), plan.liveRate(state.world), plan.mergeWindows(windows.concat(mine))).real(tStart + r.time));
+      result.landsAt = Math.round(plan.skyClock(new Date(entry.game_started_at).getTime(), plan.liveRate(state.world), plan.slowWindows(events.concat([{ t: tStart, b: result.burns }]))).real(tStart + r.time));
     } else {
       result = { outcome: 'error', body: null, fuelUsed: 0, fuelLeft: 0, landingSpeed: null, closestApproach: null, tStart, time: 0, flights: 0, thinkMs: 0, samples: null, burns: [], landsAt: null, error: out.message };
     }

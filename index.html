@@ -231,6 +231,7 @@ label.name input{width:150px}
       <div class="controls" id="controls">
         <div class="picker"><button class="banner" id="banner" type="button" aria-haspopup="listbox" aria-expanded="false"><i></i><span id="bannerText">Waiting for the next launch</span><b class="caret" id="bannerCaret" hidden>▾</b></button><div class="menu" id="replayMenu" role="listbox" hidden></div></div>
       </div>
+      <button class="btn small" id="backLive" type="button" hidden>Back to live</button>
       <div class="livebadge" id="liveBadge"><i></i><span id="liveWord">LIVE</span><small id="liveNote">every launch plays here as it happens</small></div>
     </div>
     <section class="stage" id="stage" aria-label="System view">
@@ -297,7 +298,7 @@ label.name input{width:150px}
   <div class="box">
     <button class="x" id="fbClose" aria-label="Close">×</button>
     <h3>Feedback</h3>
-    <p>Bugs, ideas, anything. It comes straight to us.</p>
+    <p>We love feedback and are here to help.</p>
     <textarea class="fbText" id="fbText" placeholder="What should we know?"></textarea>
     <input class="fbEmail" id="fbEmail" type="email" placeholder="Email, optional, if you want a reply" autocomplete="email">
     <div class="row"><button class="cta" id="fbSend">Send</button><span id="fbMsg"></span></div>
@@ -342,7 +343,7 @@ label.name input{width:150px}
   function skyClock(){ return LanderPlan.skyClock(game.started_at ? new Date(game.started_at).getTime() : 0, LanderPlan.liveRate(world), clockWindows); }
   function liveT(){ if (!world || !game) return idleT; return skyClock().sky(Date.now()); }
   function realAt(skyT){ return skyClock().real(skyT); }
-  async function refreshClock(){ if (!game) return; const { data } = await sb.rpc('clock_events', { p_game: game.id }); if (data) clockWindows = LanderPlan.mergeWindows([].concat.apply([], data.map(e => (e.b || []).map(w => [+e.t + w[0], +e.t + w[1]])))); }
+  async function refreshClock(){ if (!game) return; const { data } = await sb.rpc('clock_events', { p_game: game.id }); if (data) clockWindows = LanderPlan.slowWindows(data); }
   function planetMagFor(w){
     let minGap = w.bodies[0].orbitR - w.sun.radius * SUN_MAG, maxR = 0;
     w.bodies.forEach((b, k) => { maxR = Math.max(maxR, b.radius); if (k > 0) minGap = Math.min(minGap, b.orbitR - w.bodies[k-1].orbitR); });
@@ -651,12 +652,14 @@ label.name input{width:150px}
     run = { world: w, samples: S, result: rep, tau: 0, idx: 0, done: false, tLaunch, held: false, hold: null, mine: !!opts.mine, practice: !!opts.practice, live: !!opts.live, pilot: opts.pilot || '', name: rep.bot_name || 'bot', label: opts.label };
     resetFx(); camS = null; burning = false; cutoffAt = 0;
     els.verdict.hidden = true;
-    els.banner.classList.remove('live'); els.banner.classList.add('replay', 'pick'); renderCta();
-    els.bannerText.textContent = 'Replay · ' + (run.pilot ? run.pilot + "'s " : '') + run.name + ' · tap for live';
+    els.banner.classList.remove('live'); els.banner.classList.add('replay'); renderCta();
+    const when = rep.created_at ? new Date(rep.created_at).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric', year: '2-digit' }) : '';
+    els.bannerText.textContent = (run.pilot ? run.pilot + "'s " : '') + 'best flight' + (when ? ' ' + when : '');
+    $('backLive').hidden = false; $('liveBadge').hidden = true;
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
   }
-  function endReplay(){ if (!run) return; lastRun = run; run = null; idleT = liveT(); resetFx(); camS = null; noseAng = null; els.verdict.hidden = true; idleBanner(); }
-  els.banner.onclick = endReplay;
+  function endReplay(){ if (!run) return; lastRun = run; run = null; idleT = liveT(); resetFx(); camS = null; noseAng = null; els.verdict.hidden = true; $('backLive').hidden = true; $('liveBadge').hidden = false; idleBanner(); }
+  $('backLive').onclick = endReplay;
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { els.fb.hidden = true; } });
   function outcomeText(r, w){
     const B = w.bodies[w.target];
