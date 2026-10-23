@@ -496,7 +496,7 @@ label.name input{width:150px}
   }
   function syncDials(){ dials.aim.value = P.aim > 180 ? P.aim - 360 : P.aim; dials.s1.value = Math.round(P.s1 * 100); dials.brake.value = P.brake; renderDialValues(); }
   function renderDialValues(){
-    $('vS1').textContent = Math.round(P.s1 * 100) + '% of fuel · ' + (P.s1 <= 0.3 ? 'small' : P.s1 <= 0.4 ? 'medium' : P.s1 <= 0.5 ? 'large' : 'huge');
+    $('vS1').textContent = Math.round(P.s1 * 100) + '% of fuel';
     $('vAim').textContent = fmt(P.aim > 180 ? P.aim - 360 : P.aim, 0) + '°';
     $('vBrake').textContent = fmt(P.brake, 2) + ' planet radii';
   }
