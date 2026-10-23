@@ -1108,7 +1108,7 @@ label.name input{width:150px}
       if (kk === k && rv > bb.hill * 0.6) { g.strokeStyle = 'rgba(243,180,87,0.15)'; g.setLineDash([3,5]); g.beginPath(); g.arc(x, y, bb.hill * sc, 0, TAU); g.stroke(); g.setLineDash([]); }
       if (ring) drawRing(g, bb, x, y, r, false);
       if (r > 9) drawAtmo(g, bb, x, y, r);
-      drawPlanet(g, bb, x, y, r, lx, ly, r > 6, -camS.ang);
+      drawPlanet(g, bb, x, y, r, lx, ly, r > 6, -camS.ang - (kk === w.start ? bb.omega * st.t : 0));   // the home planet turns with its pad, so the ground stays under the rocket
       if (ring) drawRing(g, bb, x, y, r, true);
       if (fx.scar && fx.scar.k === kk && fx.scar.r * sc > 2) {
         const [qx, qy] = P(pp.x + fx.scar.x, pp.y + fx.scar.y), rs = fx.scar.r * sc;
