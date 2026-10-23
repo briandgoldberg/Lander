@@ -994,7 +994,7 @@ label.name input{width:150px}
       // where the launch burn carries you: the closest (or furthest) the flight would get to the star
       const reach = burnReach ? (tb.outward ? burnReach.apo : burnReach.peri) : null;
       if (reach && reach > 0) { reachShown = reachShown == null ? reach : reachShown + (reach - reachShown) * 0.2; } else reachShown = null;
-      if (reachShown) { const rr = reachShown * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab('Thrusters Off', cx, cy + rr + 14); }
+      if (reachShown) { const rr = reachShown * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab('Aim point', cx, cy + rr + 14); }
       const tp = bodyAt(w, w.target, st.t), bx = sx(tp.x), by = sy(tp.y), br = (1 + P.brake) * B.radius * scale * mag; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.stroke(); lab('brakes on', bx, by + br + 13);
       g.restore();
     }
