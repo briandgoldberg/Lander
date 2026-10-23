@@ -1046,7 +1046,7 @@ label.name input{width:150px}
   // The cam: a tight shot on the rocket at the surface that pulls back with altitude, a chase cam in deep space.
   // The frame turns so that "down" is toward the nearest planet whenever the rocket is in its sphere of influence.
   // Everything is drawn at true scale; the camera center, zoom and heading ease between targets.
-  let camS = null, prevThr = 0, camStars = null, preIgnite = 0;
+  let camS = null, prevThr = 0, camStars = null, preIgnite = 0, noseAng = null;
   function camStarsInit(){ const rnd = seededRnd(777); camStars = [0, 1, 2].map(l => { const arr = []; for (let i = 0; i < 70; i++) arr.push([rnd(), rnd(), 0.6 + l * 0.5 + rnd() * 0.7, 0.2 + rnd() * 0.5]); return arr; }); }
   function drawCam(w, st, nr, dirx, diry, ended, flicker, dt){
     const g = cctx;
@@ -1184,6 +1184,8 @@ label.name input{width:150px}
     else { dirx = st.vx; diry = st.vy; }
     if (st.onPad || (run && run.done && run.result.outcome === 'landed')) { dirx = st.x - nr.b.x; diry = st.y - nr.b.y; }
     const dn = Math.hypot(dirx, diry) || 1; dirx /= dn; diry /= dn;
+    // the nose turns smoothly toward its new heading instead of snapping, except on the pad
+    { const want = Math.atan2(diry, dirx); if (noseAng == null || st.onPad || !run) noseAng = want; else { let d = want - noseAng; d = Math.atan2(Math.sin(d), Math.cos(d)); noseAng += d * Math.min(1, fxDt / 0.35); } dirx = Math.cos(noseAng); diry = Math.sin(noseAng); }
     const ended = !!(run && run.done && (run.result.outcome === 'crashed' || run.result.outcome === 'burned'));
     preIgnite = 0;
     if (run && run.hold) {
