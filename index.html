@@ -518,7 +518,7 @@ label.name input{width:150px}
     if (launching) return;
     if (!session) return openSignin();
     showErr('');
-    launching = true; els.launchBtn.disabled = true;
+    launching = true; els.launchBtn.disabled = true; fadeVerdict();
     try {
       setStatus('Asking for the launch slot…');
       const { data, error } = await sb.rpc('claim_launch', { p_game: game.id, p_bot_name: planName(), p_code: JSON.stringify(P) });
@@ -680,7 +680,7 @@ label.name input{width:150px}
     const a0 = bodyAt(world, world.start, t0);
     const f = { id: rep.id, samples: S, result: rep, t0, end, idx: 0, pa0: Math.atan2(S[0][2] - a0.y, S[0][1] - a0.x), ignited: tau >= 0, finished: false, doneAt: 0, mine: !!opts.mine, pilot: opts.pilot || '', name: rep.bot_name || 'plan' };
     flights.push(f);
-    if (f.mine || !focal || focal.finished) { focal = f; camS = null; noseAng = null; }
+    if (f.mine || !focal || focal.finished) { focal = f; camS = null; noseAng = null; fadeVerdict(); }
     idleBanner();
   }
   function flightState(f, T){
@@ -1267,6 +1267,7 @@ label.name input{width:150px}
     }
     requestAnimationFrame(frame);
   }
+  function fadeVerdict(){ if (els.verdict.hidden) return; els.verdict.classList.add('fade'); setTimeout(() => { if (els.verdict.classList.contains('fade')) els.verdict.hidden = true; }, 950); }
   function showVerdict(r, w){
     const txt = outcomeText(r, w);
     els.verdict.className = 'verdict ' + (r.outcome === 'landed' ? 'good' : 'bad');
