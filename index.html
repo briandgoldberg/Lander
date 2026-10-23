@@ -71,7 +71,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .editor .editor-head .row{display:flex}
 .editor .editor-head .cta{flex:1}
 .editor .hint{font-size:14px}
-@media (max-width:1100px){.stagegrid{grid-template-columns:1fr}.leftcol,.stagecol,.side{display:contents}#editor{order:1}.stagebar{order:2}.stage{order:3}.camwrap{order:4}#teleCard{order:5}#todayCard{order:6}#referCard{order:7}}
+@media (max-width:1100px){.stagegrid{grid-template-columns:1fr}.stagegrid .leftcol,.stagegrid .stagecol,.stagegrid .side{display:contents}#editor{order:1}.stagebar{order:2}.stage{order:3}.camwrap{order:4}#teleCard{order:5}#todayCard{order:6}#referCard{order:7}}
 .stage{position:relative;background:var(--sky);border:1px solid var(--line);border-radius:10px;overflow:hidden;aspect-ratio:1/1;max-width:100%}
 .stage canvas,.camwrap canvas{display:block;width:100%;height:100%}
 .verdict{position:absolute;left:12px;right:12px;top:12px;padding:10px 14px;border-radius:6px;font-family:var(--display);font-size:20px;letter-spacing:.08em;text-transform:uppercase;background:rgba(7,10,20,.88);border:1px solid var(--line);pointer-events:none}
@@ -613,7 +613,7 @@ label.name input{width:150px}
     feed = data;
     const when = f => { const d = new Date(f.created_at); return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
     const options = feed.filter(f => f.status === 'done' && f.outcome !== 'error').map(f => {
-      const text = f.outcome === 'landed' ? 'landed, ' + fmt(f.fuel_left, 2) + ' fuel left' : f.outcome === 'crashed' ? 'crashed into ' + f.body : f.outcome;
+      const text = f.outcome === 'landed' ? 'landed, ' + fmt(f.fuel_left, 2) + ' fuel left' : f.outcome === 'crashed' ? 'crashed into ' + f.body : f.outcome === 'timeout' ? 'out of time' : f.outcome === 'lost' ? 'left the system' : f.outcome === 'burned' ? 'flew into the star' : f.outcome;
       return '<button type="button" data-id="' + f.id + '" role="option"><b>' + esc((f.pilot || 'pilot') + ' · ' + f.bot_name) + '</b><span>' + esc(when(f) + ' · ' + text) + '</span></button>';
     }).join('');
     els.replayMenu.innerHTML = options || '<div class="none">No launches yet.</div>';
@@ -676,7 +676,7 @@ label.name input{width:150px}
       case 'burned': return ['Flew into the star', 'Fuel used ' + fmt(r.fuelUsed, 3)];
       case 'lost': return ['Lost in space', 'Left the system'];
       case 'error': return ['Bot failed', r.error || ''];
-      default: return ['Deadline missed', 'Never reached ' + B.name];
+      default: return ['Out of time', 'Never reached ' + B.name];
     }
   }
 
