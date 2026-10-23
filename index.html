@@ -648,7 +648,7 @@ label.name input{width:150px}
     const w = opts.world || LanderPlan.worldAt(world, +rep.t_start || 0);   // the sky as it was when this flight was claimed
     const S = rep.samples;
     let tLaunch = null; for (let i = 0; i < S.length; i++) if (S[i][5] > 0) { tLaunch = S[i][0]; break; }
-    run = { world: w, samples: S, result: rep, tau: 0, idx: 0, done: false, tLaunch, held: false, hold: null, mine: !!opts.mine, practice: !!opts.practice, live: !!opts.live, pilot: opts.pilot || '', name: rep.bot_name || 'bot', label: opts.label };
+    run = { world: w, samples: S, result: rep, tau: 0, idx: 0, done: false, tLaunch, end: Math.min(S[S.length - 1][0], LanderPlan.flightDays(w)), held: false, hold: null, mine: !!opts.mine, practice: !!opts.practice, live: !!opts.live, pilot: opts.pilot || '', name: rep.bot_name || 'bot', label: opts.label };
     resetFx(); camS = null; burning = false; cutoffAt = 0;
     els.verdict.hidden = true;
     els.banner.classList.remove('live'); els.banner.classList.add('replay'); renderCta();
@@ -693,7 +693,7 @@ label.name input{width:150px}
   function addFlight(rep, opts){
     opts = opts || {};
     if (!world || flights.some(f => f.id === rep.id)) return;
-    const S = rep.samples, t0 = +rep.t_start || 0, end = S[S.length - 1][0], tau = liveT() - t0;
+    const S = rep.samples, t0 = +rep.t_start || 0, end = Math.min(S[S.length - 1][0], LanderPlan.flightDays(world)), tau = liveT() - t0;
     if (tau >= end) return;   // already over: it belongs to the board now
     const a0 = bodyAt(world, world.start, t0);
     const f = { id: rep.id, samples: S, result: rep, t0, end, idx: 0, pa0: Math.atan2(S[0][2] - a0.y, S[0][1] - a0.x), ignited: tau >= 0, finished: false, doneAt: 0, mine: !!opts.mine, pilot: opts.pilot || '', name: rep.bot_name || 'plan' };
@@ -1241,7 +1241,7 @@ label.name input{width:150px}
         if (now - run.doneAt > 5000) endReplay();
       }
       else {
-        const S = run.samples, end = S[S.length-1][0];
+        const S = run.samples, end = run.end;
         if (run.hold) { if (now >= run.hold.until) { run.hold = null; ignite(w); } }
         else {
           const st = sampleState(), nr = nearest(w, st), near = nr.d < nr.body.hill * 1.6, R = nr.body.radius;
@@ -1260,7 +1260,7 @@ label.name input{width:150px}
           if (!run.held && run.tLaunch != null && run.tau < run.tLaunch && next >= run.tLaunch) { next = run.tLaunch; run.held = true; run.hold = { until: now + 3000 }; }
           run.tau = next;
           if (run.tau >= end) {
-            run.tau = end; run.idx = S.length - 2; run.done = true; run.doneAt = now;
+            run.tau = end; run.done = true; run.doneAt = now;
             const stEnd = sampleState(), nrEnd = nearest(w, stEnd);
             if (run.result.outcome === 'crashed' || run.result.outcome === 'burned') explode(w, stEnd, nrEnd);
             if (run.result.outcome === 'landed') touchdown(w, stEnd, nrEnd);
