@@ -23,6 +23,7 @@ module.exports = async (req, res) => {
     if (!state || !state.game || state.game.id !== entry.game_id) return json(res, 409, { error: 'Game mismatch.' });
     // the flight starts from the sky as it looked when the launch was claimed
     let dials; try { dials = JSON.parse(entry.code); } catch (e) { dials = {}; }
+    dials.burn = Math.max(+dials.burn || 0, plan.minBurn(state.world, require('../lib/engine')));   // never so little thrust that it falls back on its own planet
     const tStart = +(Math.max(0, (new Date(entry.created_at).getTime() - new Date(entry.game_started_at).getTime()) / 1000) * plan.liveRate(state.world)).toFixed(4);
     const world = plan.flightWorld(state.world, tStart, dials);
 
