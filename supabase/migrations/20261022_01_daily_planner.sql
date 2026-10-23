@@ -156,3 +156,9 @@ create or replace function public.my_best_launch(p_game integer) returns jsonb l
   ) t
 $$;
 grant execute on function public.my_best_launch(integer) to authenticated;
+
+-- 2026-10-23 evening: the live sky. claim_launch no longer holds the pad (everyone may launch at once; api/launch stamps
+-- t_start five real seconds after the claim so viewers see the countdown). One replay per pilot per day: keep_best_replay /
+-- sweep_replays null the samples of a pilot's other flights once they are ten minutes old (called from finish_launch and
+-- claim_launch); leaderboard breaks ties by newest flight to match. game_list() and game_world(p_game) feed the board's
+-- day picker and replays from past days. Definitions live in the database (created via the Supabase MCP); see pg_get_functiondef.

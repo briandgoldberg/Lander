@@ -57,6 +57,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .livebadge{display:flex;flex:none;align-items:center;gap:8px;font-family:var(--display);font-size:12px;letter-spacing:.14em;background:rgba(7,10,20,.85);border:1px solid var(--live);border-radius:999px;padding:6px 12px;color:var(--fg)}
 .livebadge i{width:8px;height:8px;border-radius:50%;background:var(--live);box-shadow:0 0 10px var(--live);animation:pulse 1.2s infinite;flex:none}
 .livebadge small{font-family:var(--body);letter-spacing:0;color:var(--muted);font-size:12px}
+.livebadge.slow{border-color:var(--accent);color:var(--accent)}.livebadge.slow i{background:var(--accent);box-shadow:0 0 10px var(--accent);animation:pulse .5s infinite}.livebadge.slow small{color:var(--accent)}
 @media (max-width:640px){.livebadge small{display:none}}
 @media (max-width:760px){.how{grid-template-columns:1fr}}
 .how div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:15px;color:var(--fg);display:flex;gap:12px;align-items:center}
@@ -112,6 +113,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .tele b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .leftcol{display:flex;flex-direction:column;gap:14px;min-width:0}
 .boards{display:flex;flex-direction:column;gap:14px}
+.boardhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.boardhead h2{margin:0}
+.boardhead select{appearance:none;-webkit-appearance:none;font-family:var(--mono);font-size:12px;color:var(--fg);background:rgba(7,10,20,.85);border:1px solid var(--line);border-radius:999px;padding:6px 28px 6px 12px;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.list li{cursor:pointer}
 .picker{position:relative}
 @media (max-width:640px){.livebadge small{display:none}}
 .menu{position:absolute;left:0;top:calc(100% + 6px);min-width:260px;max-width:min(380px,80vw);max-height:280px;overflow:auto;background:rgba(10,14,26,.97);border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:2px;z-index:5;box-shadow:0 12px 30px rgba(0,0,0,.5)}
@@ -219,16 +223,15 @@ label.name input{width:150px}
       <pre class="err" id="err" hidden></pre>
     </section>
     <div class="card" id="referCard" hidden>
-      <h2>Share your best flight</h2>
       <div id="referPanel"></div>
     </div>
     </div>
     <div class="stagecol">
     <div class="stagebar">
       <div class="controls" id="controls">
-        <div class="picker"><button class="banner" id="banner" type="button" aria-haspopup="listbox" aria-expanded="false"><i></i><span id="bannerText">Waiting for the first launch</span><b class="caret" id="bannerCaret" hidden>▾</b></button><div class="menu" id="replayMenu" role="listbox" hidden></div></div>
+        <div class="picker"><button class="banner" id="banner" type="button" aria-haspopup="listbox" aria-expanded="false"><i></i><span id="bannerText">Waiting for the next launch</span><b class="caret" id="bannerCaret" hidden>▾</b></button><div class="menu" id="replayMenu" role="listbox" hidden></div></div>
       </div>
-      <div class="livebadge"><i></i>LIVE<small>every launch plays here as it happens</small></div>
+      <div class="livebadge" id="liveBadge"><i></i><span id="liveWord">LIVE</span><small id="liveNote">every launch plays here as it happens</small></div>
     </div>
     <section class="stage" id="stage" aria-label="System view">
       <canvas id="sky"></canvas>
@@ -262,7 +265,7 @@ label.name input{width:150px}
 
   <div class="boards">
   <div class="card">
-    <h2>Today's top pilots</h2>
+    <div class="boardhead"><h2 id="boardTitle">Today's top pilots</h2><select id="boardDay" aria-label="Which day"></select></div>
     <ul class="list" id="board"></ul>
     <p class="empty" id="boardEmpty">Nobody has landed yet today.</p>
     <p class="status" id="boardNote" hidden></p>
@@ -322,7 +325,7 @@ label.name input{width:150px}
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null, shots = null, creating = false;
-  let run = null, lastRun = null, idleT = 0;
+  let run = null, lastRun = null, idleT = 0, flights = [], focal = null;   // run: a replay; flights: what is in the live sky; focal: the live flight the camera follows
   let feed = [], seen = new Set(), playQueue = [], busyLaunch = null, feedLoaded = false;
   let W = 0, H = 0, CW = 0, CH = 0, dpr = 1, lastDraw = 0, last = 0, tnow = 0;
   const fx = { smoke: [], debris: [], rings: [], sparks: [], fire: [], flash: 0, skyFlash: 0, shake: 0, label: null, labelT: 0, fade: 0, punch: 0, punchK: -1, punchX: 0, punchY: 0, scar: null, flag: null, legs: 0 };
@@ -339,7 +342,12 @@ label.name input{width:150px}
   // ---------- world / mission card ----------
   function displayWorld(){ return run ? run.world : world; }
   // The idle map is live: a shared clock that started when the game opened, so every visitor sees the same sky.
-  function liveT(){ if (!world || !game) return idleT; const t0 = game.started_at ? new Date(game.started_at).getTime() : 0; return Math.max(0, (Date.now() - t0) / 1000) * LanderPlan.liveRate(world); }
+  // The clock is shared: it slows for everyone while any rocket of the day is burning (clockWindows, from the server).
+  let clockWindows = [];
+  function skyClock(){ return LanderPlan.skyClock(game.started_at ? new Date(game.started_at).getTime() : 0, LanderPlan.liveRate(world), clockWindows); }
+  function liveT(){ if (!world || !game) return idleT; return skyClock().sky(Date.now()); }
+  function realAt(skyT){ return skyClock().real(skyT); }
+  async function refreshClock(){ if (!game) return; const { data } = await sb.rpc('clock_events', { p_game: game.id }); if (data) clockWindows = LanderPlan.mergeWindows([].concat.apply([], data.map(e => (e.b || []).map(w => [+e.t + w[0], +e.t + w[1]])))); }
   function planetMagFor(w){
     let minGap = w.bodies[0].orbitR - w.sun.radius * SUN_MAG, maxR = 0;
     w.bodies.forEach((b, k) => { maxR = Math.max(maxR, b.radius); if (k > 0) minGap = Math.min(minGap, b.orbitR - w.bodies[k-1].orbitR); });
@@ -376,10 +384,9 @@ label.name input{width:150px}
   // One call to action. The top button leads to the planner; the planner's button launches.
   function shotsText(){ return ''; }
   function renderCta(){
-    const busy = !launching && (!!busyLaunch || !!(run && run.live && !run.done && !run.mine));
+    const busy = !launching && flights.some(f => f.mine && !f.finished);
     els.launchBtn.disabled = busy;
-    if (!session) { els.launchBtn.textContent = busy ? 'Launch in progress…' : 'Launch'; return; }
-    els.launchBtn.textContent = busy ? 'Launch in progress…' : 'Launch';
+    els.launchBtn.textContent = busy ? 'Your flight is in the air…' : 'Launch';
   }
   function go(){ clearTimeout(holdTimer); if (!session) return openSignin(); launch(); }
   els.launchBtn.onclick = go;
@@ -418,7 +425,16 @@ label.name input{width:150px}
 
   // ---------- share / beat my flight ----------
   // The share link is the replay of the pilot's best launch today (landed beats crashed beats a miss).
-  let challenge = null, myLast = null;
+  let myLast = null;
+  let boardGame = null, days = [], worlds = {};   // the board's day (null = today), the days so far, past systems by game id
+  async function worldFor(gid){ if (game && gid === game.id) return world; if (worlds[gid]) return worlds[gid]; const { data } = await sb.rpc('game_world', { p_game: gid }); if (data) worlds[gid] = data; return data; }
+  async function refreshDays(){
+    const { data } = await sb.rpc('game_list'); if (!data) return; days = data;
+    const sel = $('boardDay'), cur = boardGame || (game ? game.id : 0);
+    sel.innerHTML = days.map(d => { const label = (game && d.id === game.id) ? 'Today' : (d.name || 'Day ' + d.number) + (d.day ? ' · ' + new Date(d.day + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''); return '<option value="' + d.id + '">' + esc(label) + '</option>'; }).join('');
+    sel.value = String(cur); sel.hidden = days.length < 2;
+  }
+  $('boardDay').onchange = () => { const gid = +$('boardDay').value; boardGame = game && gid === game.id ? null : gid; refreshBoard(); };
   function myLastLaunch(){ try { return +localStorage.getItem('lander.mylaunch.' + (game ? game.id : 0)) || 0; } catch (e) { return 0; } }
   function rememberLaunch(id){ try { localStorage.setItem('lander.mylaunch.' + game.id, String(id)); } catch (e) {} }
   function shareLink(){ return location.origin + location.pathname + '?replay=' + myLast.id; }
@@ -446,25 +462,13 @@ label.name input{width:150px}
     document.querySelectorAll('.shareRef').forEach(b => b.onclick = () => { navigator.share({ title: 'Lander', text: msg, url: link }).catch(() => {}); });
   }
   async function loadChallenge(){
-    let id = 0, replayId = 0; try { const q = new URLSearchParams(location.search); id = +q.get('beat') || 0; replayId = +q.get('replay') || 0; } catch (e) {}
-    if (replayId) {
-      const { data } = await sb.rpc('beat_info', { p_launch: replayId });
-      if (data) { if (data.ref && !session) { try { localStorage.setItem('lander.ref', data.ref); } catch (e) {} } const rep = await sb.rpc('get_replay', { p_launch: replayId }); if (rep.data && rep.data.samples) playReplay(rep.data, { pilot: data.pilot, label: 'Replay' }); }
-      return;
-    }
-    if (!id) return;
-    const { data } = await sb.rpc('beat_info', { p_launch: id });
-    if (!data) return;
-    if (data.ref && !session) { try { localStorage.setItem('lander.ref', data.ref); } catch (e) {} }
-    challenge = data;
-    renderChallenge(); renderCta();
-  }
-  function renderChallenge(){
-    const box = $('challenge'); if (!challenge) { box.hidden = true; return; }
-    const c = challenge, today = game && c.game_id === game.id;
-    const what = c.outcome === 'landed' ? 'landed on <b>' + esc(c.body) + '</b> with <b>' + fmt(c.fuel_left, 2) + ' fuel left</b>' : c.outcome === 'crashed' ? 'crashed into <b>' + esc(c.body) + '</b>' : 'never made it';
-    box.innerHTML = '<span><b>' + esc(c.pilot) + '</b> ' + what + (today ? '. Beat it.' : ' on ' + esc(c.game_name) + '. Today is a new system: beat them on this one.') + '</span>' + (session ? '' : '<button class="cta" id="beatBtn">Sign up and beat ' + esc(c.pilot) + '</button>');
-    box.hidden = false; const bb = $('beatBtn'); if (bb) bb.onclick = openSignin;
+    // a shared link opens straight onto that flight's replay
+    let replayId = 0; try { replayId = +new URLSearchParams(location.search).get('replay') || 0; } catch (e) {}
+    if (!replayId) return;
+    const [info, rep] = await Promise.all([sb.rpc('beat_info', { p_launch: replayId }), sb.rpc('get_replay', { p_launch: replayId })]);
+    if (!rep.data || !rep.data.samples) return;
+    const base = await worldFor(rep.data.game_id); if (!base) return;
+    playReplay(rep.data, { pilot: info.data ? info.data.pilot : '', label: 'Replay', world: LanderPlan.worldAt(base, +rep.data.t_start || 0) });
   }
 
   // ---------- out of shots ----------
@@ -540,13 +544,7 @@ label.name input{width:150px}
       const { data, error } = await sb.rpc('claim_launch', { p_game: game.id, p_bot_name: planName(), p_code: JSON.stringify(P) });
       if (error) throw new Error(error.message);
       if (!data.ok) {
-        if (data.reason === 'hold') {
-          setStatus('Another launch is in flight. Yours goes automatically when it is done.', true);
-          els.bannerText.textContent = 'Holding for the pad…';
-          launching = false; els.launchBtn.disabled = true; els.launchBtn.textContent = 'Launch in progress…';
-          holdTimer = setTimeout(launch, Math.min(data.wait_ms || 3000, 4000));
-          return;
-        }
+        if (data.reason === 'in_flight') { setStatus('Your flight is still in the air. Launch again when it is over.', true); return; }
         if (data.reason === 'no_credits') { setStatus('Out of shots for today.', true); refreshShots(); openOut(); return; }
         if (data.reason === 'game_over') { setStatus("That system is over. Loading today's…", true); refreshGame(); return; }
         throw new Error(data.reason || 'could not claim');
@@ -563,8 +561,8 @@ label.name input{width:150px}
       const rep = await sb.rpc('get_replay', { p_launch: data.launch_id });
       if (rep.error || !rep.data) throw new Error('could not load the replay');
       seen.add(data.launch_id);
-      if (rep.data.samples) playReplay(rep.data, { mine: true });
-      setStatus(j.result.outcome === 'landed' ? 'Safe landing with ' + fmt(j.result.fuelLeft, 3) + ' fuel left. It counts for today.' : j.result.outcome === 'error' ? 'The flight did not run: ' + j.result.error : 'No landing. Adjust the dials and use another shot.', j.result.outcome !== 'landed');
+      if (rep.data.samples) addFlight(rep.data, { mine: true, pilot: session.user.email ? session.user.email.split('@')[0] : '' });
+      setStatus(j.result.outcome === 'error' ? 'The flight did not run: ' + j.result.error : 'Launch #' + data.launch_id + ' is on the pad.', j.result.outcome === 'error');
       if (j.result.outcome === 'error') showErr(j.result.error);
       await refreshFeed(); refreshBoard(); refreshShots();
     } catch (e) {
@@ -576,11 +574,12 @@ label.name input{width:150px}
   // The idle banner: waiting for the first launch, or an offer to replay the last one.
   function idleBanner(){
     if (run) return;
-    const done = doneLaunches(); els.bannerCaret.hidden = done.length === 0; els.banner.classList.toggle('pick', done.length > 0);
-    if (busyLaunch) { const f = feed.find(x => x.id === busyLaunch); els.banner.classList.add('live'); els.banner.classList.remove('replay'); els.bannerText.textContent = 'Launch in progress' + (f ? ': ' + f.pilot + "'s " + f.bot_name : '…'); return; }
-    els.banner.classList.remove('live');
-    if (!done.length) { els.banner.classList.remove('replay'); els.bannerText.textContent = 'Waiting for the first launch'; return; }
-    els.banner.classList.add('replay'); els.bannerText.textContent = '▶ Watch a launch · ' + done.length + ' so far';
+    els.bannerCaret.hidden = true; els.banner.classList.remove('pick', 'replay'); renderCta();
+    const live = flights.filter(f => !f.finished);
+    if (!live.length) { els.banner.classList.remove('live'); els.bannerText.textContent = 'Waiting for the next launch'; return; }
+    els.banner.classList.add('live');
+    const f = focal && !focal.finished ? focal : live[live.length - 1];
+    els.bannerText.textContent = (f.mine ? 'Your launch · ' + f.name : (f.pilot ? f.pilot + "'s " : '') + f.name) + (live.length > 1 ? ' · +' + (live.length - 1) + ' more in the air' : '');
   }
   function doneLaunches(){ return feed.filter(f => f.status === 'done' && f.outcome !== 'error'); }
   async function refreshGame(){
@@ -593,11 +592,11 @@ label.name input{width:150px}
     }
     if (!data || !data.game) return;
     const changed = !game || game.id !== data.game.id;
-    const wasBusy = busyLaunch; game = data.game; busyLaunch = game.busy ? game.busy_launch : null; if (!!wasBusy !== !!busyLaunch) renderCta();
+    game = data.game;
     if (changed) {
       world = data.world; buildSky(game.number || 1); renderMission();
-      feed = []; seen = new Set(); playQueue = []; lastRun = null; feedLoaded = false;
-      setupPlanner(); renderChallenge(); refreshShots(); renderShare();
+      feed = []; seen = new Set(); playQueue = []; lastRun = null; feedLoaded = false; flights = []; focal = null; run = null; boardGame = null; refreshDays();
+      setupPlanner(); refreshShots(); renderShare();
       if (!changed || game) { refreshFeed(); refreshBoard(); }
     }
     renderEnds();
@@ -605,41 +604,45 @@ label.name input{width:150px}
   }
   async function refreshFeed(){
     if (!game) return;
-    const { data, error } = await sb.from('launch_feed').select('*').eq('game_id', game.id).order('created_at', { ascending: false }).limit(25);
+    const [{ data, error }] = await Promise.all([sb.from('launch_feed').select('*').eq('game_id', game.id).order('created_at', { ascending: false }).limit(25), refreshClock()]);
     if (error || !data) return;
-    const firstLoad = !feedLoaded; feedLoaded = true;   // only the very first look at a day marks its flights as seen
+    const firstLoad = !feedLoaded; feedLoaded = true;
     feed = data;
-    const when = f => { const d = new Date(f.created_at); return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
-    const options = feed.filter(f => f.status === 'done' && f.outcome !== 'error').map(f => {
-      const text = f.outcome === 'landed' ? 'landed, ' + fmt(f.fuel_left, 2) + ' fuel left' : f.outcome === 'crashed' ? 'crashed into ' + f.body : f.outcome === 'timeout' ? 'out of time' : f.outcome === 'lost' ? 'left the system' : f.outcome === 'burned' ? 'flew into the star' : f.outcome;
-      return '<button type="button" data-id="' + f.id + '" role="option"><b>' + esc((f.pilot || 'pilot') + ' · ' + f.bot_name) + '</b><span>' + esc(when(f) + ' · ' + text) + '</span></button>';
-    }).join('');
-    els.replayMenu.innerHTML = options || '<div class="none">No launches yet.</div>';
-    els.replayMenu.querySelectorAll('button').forEach(b => b.onclick = () => { closeMenu(); watch(+b.dataset.id, false, 'Replay'); });
+    // a flight older than the longest possible flight is over; anything newer joins the live sky
+    const horizon = Date.now() - ((world ? LanderPlan.flightDays(world) / LanderPlan.liveRate(world) : 120) * 4 + 60) * 1000;
     for (const f of feed) {
-      if (f.status !== 'done') continue;
-      if (firstLoad) { seen.add(f.id); continue; }
-      if (!seen.has(f.id)) { seen.add(f.id); playQueue.push(f.id); }
+      if (f.status !== 'done' || f.outcome === 'error' || seen.has(f.id)) continue;
+      seen.add(f.id);
+      if (new Date(f.created_at).getTime() >= horizon) watchLive(f.id);
     }
-    if (playQueue.length && !(run && !run.done)) { const id = playQueue.shift(); watch(id, true); }
-    else if (!run) idleBanner();
+    if (!run) idleBanner();
     if (firstLoad) renderShare();
   }
-  async function watch(id, live, label){
+  async function watchLive(id){
     const { data } = await sb.rpc('get_replay', { p_launch: id });
     if (!data || !data.samples) return;
     const f = feed.find(x => x.id === id);
-    playReplay(data, { live, pilot: f ? f.pilot : '', label });
+    addFlight(data, { pilot: f ? f.pilot : '' });
+  }
+  // A flight from the board plays as a replay, with its own dramatic pacing; tap the pill to come back to the live sky.
+  async function watch(id, pilot, gid){
+    const { data } = await sb.rpc('get_replay', { p_launch: id });
+    if (!data || !data.samples) { setStatus('That flight has no replay.', true); return; }
+    const base = await worldFor(gid || data.game_id); if (!base) return;
+    playReplay(data, { pilot: pilot || '', label: 'Replay', world: LanderPlan.worldAt(base, +data.t_start || 0) });
+    if (innerWidth <= 1100) els.stage.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   async function refreshBoard(){
     if (!game) return;
-    const [day, at] = await Promise.all([sb.rpc('leaderboard', { p_game: game.id }), sb.rpc('alltime')]);
-    if (!day.error && day.data) {
-      els.boardEmpty.hidden = day.data.length > 0; els.boardEmpty.textContent = 'Nobody has flown yet today.';
+    const gid = boardGame || game.id, past = gid !== game.id, d0 = days.find(d => d.id === gid);
+    const [day, at] = await Promise.all([sb.rpc('leaderboard', { p_game: gid }), sb.rpc('alltime')]);
+    if (!day.error && day.data && gid === (boardGame || game.id)) {
+      $('boardTitle').textContent = past ? 'Top pilots · ' + ((d0 && d0.name) || 'Day') + (d0 && d0.system ? ' · ' + d0.system : '') : "Today's top pilots";
+      els.boardEmpty.hidden = day.data.length > 0; els.boardEmpty.textContent = past ? 'Nobody flew that day.' : 'Nobody has flown yet today.';
       const tag = r => r.outcome === 'landed' ? '<em class="tag good">Landed</em>' : r.rank === 1 ? '<em class="tag bad">Crashed</em>' : '<em class="tag">Never arrived</em>';
       const how = r => r.rank < 2 ? fmt(r.fuel_left, 2) + ' fuel left' : r.closest_approach != null ? 'missed by ' + fmt(r.closest_approach, 2) : '';
-      els.board.innerHTML = day.data.slice(0, 10).map((r, i) => '<li data-id="' + r.id + '"><span class="n">' + (i + 1) + '</span><b>' + esc(r.pilot || 'pilot') + '</b>' + tag(r) + '<span class="r">' + how(r) + '</span></li>').join('');
-      els.board.querySelectorAll('li').forEach(li => li.onclick = () => watch(+li.dataset.id, false));
+      els.board.innerHTML = day.data.map((r, i) => '<li data-id="' + r.id + '" data-pilot="' + esc(r.pilot || 'pilot') + '"><span class="n">' + (i + 1) + '</span><b>' + esc(r.pilot || 'pilot') + '</b>' + tag(r) + '<span class="r">' + how(r) + '</span></li>').join('');
+      els.board.querySelectorAll('li').forEach(li => li.onclick = () => watch(+li.dataset.id, li.dataset.pilot, gid));
       els.boardNote.textContent = '';
     }
     if (!at.error && at.data) {
@@ -656,16 +659,14 @@ label.name input{width:150px}
     let tLaunch = null; for (let i = 0; i < S.length; i++) if (S[i][5] > 0) { tLaunch = S[i][0]; break; }
     run = { world: w, samples: S, result: rep, tau: 0, idx: 0, done: false, tLaunch, held: false, hold: null, mine: !!opts.mine, practice: !!opts.practice, live: !!opts.live, pilot: opts.pilot || '', name: rep.bot_name || 'bot', label: opts.label };
     resetFx(); camS = null; burning = false; cutoffAt = 0;
-    els.verdict.hidden = true; els.bannerCaret.hidden = doneLaunches().length === 0; els.banner.classList.toggle('pick', doneLaunches().length > 0);
-    els.banner.classList.remove('replay'); els.banner.classList.toggle('live', !!opts.live || !!opts.mine); renderCta();
-    els.bannerText.textContent = opts.practice ? 'Practice run · random ' + w.name + ' system' : opts.mine ? 'Your launch · ' + run.name : (opts.live ? '' : (opts.label || 'Replay') + ' · ') + (run.pilot ? run.pilot + "'s " : '') + run.name;
+    els.verdict.hidden = true;
+    els.banner.classList.remove('live'); els.banner.classList.add('replay', 'pick'); renderCta();
+    els.bannerText.textContent = 'Replay · ' + (run.pilot ? run.pilot + "'s " : '') + run.name + ' · tap for live';
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
   }
-  function restartReplay(){ if (!run && lastRun) run = lastRun; if (!run) return; run.tau = 0; run.idx = 0; run.done = false; run.doneAt = 0; run.held = false; run.hold = null; resetFx(); els.verdict.hidden = true; }
-  function closeMenu(){ els.replayMenu.hidden = true; els.banner.setAttribute('aria-expanded', 'false'); }
-  els.banner.onclick = (e) => { e.stopPropagation(); if (els.bannerCaret.hidden) return; const open = els.replayMenu.hidden; els.replayMenu.hidden = !open; els.banner.setAttribute('aria-expanded', String(open)); };
-  document.addEventListener('click', (e) => { if (!els.replayMenu.hidden && !els.replayMenu.contains(e.target)) closeMenu(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeMenu(); els.fb.hidden = true; } });
+  function endReplay(){ if (!run) return; lastRun = run; run = null; idleT = liveT(); resetFx(); camS = null; noseAng = null; els.verdict.hidden = true; idleBanner(); }
+  els.banner.onclick = endReplay;
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { els.fb.hidden = true; } });
   function outcomeText(r, w){
     const B = w.bodies[w.target];
     switch (r.outcome) {
@@ -695,6 +696,27 @@ label.name input{width:150px}
     st.onPad = st.thr === 0 && Math.hypot(st.x - p.x, st.y - p.y) < 1e-5;
     return st;
   }
+  // A live flight: its samples are absolute positions, so at sky time T it sits at sample time T - t0.
+  function addFlight(rep, opts){
+    opts = opts || {};
+    if (!world || flights.some(f => f.id === rep.id)) return;
+    const S = rep.samples, t0 = +rep.t_start || 0, end = S[S.length - 1][0], tau = liveT() - t0;
+    if (tau >= end) return;   // already over: it belongs to the board now
+    const a0 = bodyAt(world, world.start, t0);
+    const f = { id: rep.id, samples: S, result: rep, t0, end, idx: 0, pa0: Math.atan2(S[0][2] - a0.y, S[0][1] - a0.x), ignited: tau >= 0, finished: false, doneAt: 0, mine: !!opts.mine, pilot: opts.pilot || '', name: rep.bot_name || 'plan' };
+    flights.push(f);
+    if (f.mine || !focal || focal.finished) { focal = f; camS = null; noseAng = null; }
+    idleBanner();
+  }
+  function flightState(f, T){
+    const S = f.samples, tau = T - f.t0, A = world.bodies[world.start];
+    if (tau < 0) { world.rocket.padAngle = f.pa0 + A.omega * tau; const st = padState(world, T); st.pre = -tau; return st; }
+    let i = f.idx; if (S[i][0] > tau) i = 0;
+    while (i < S.length - 2 && S[i+1][0] <= tau) i++;
+    f.idx = i;
+    const a = S[i], b = S[Math.min(i + 1, S.length - 1)], span = b[0] - a[0], fr = span > 0 ? Math.min(1, Math.max(0, (tau - a[0]) / span)) : 0;
+    return { t: T, x: a[1] + (b[1]-a[1])*fr, y: a[2] + (b[2]-a[2])*fr, vx: a[3], vy: a[4], thr: a[5], dx: a[6], dy: a[7], fuel: a[8] + (b[8]-a[8])*fr, onPad: false };
+  }
   function nearest(w, st){
     let best = null;
     for (let k = 0; k < w.bodies.length; k++) { const b = bodyAt(w, k, st.t), d = Math.hypot(st.x - b.x, st.y - b.y); if (!best || d < best.d) best = { k, d, b, body: w.bodies[k] }; }
@@ -709,8 +731,8 @@ label.name input{width:150px}
     return (st.thr > 0 ? 'BURNING · ' : 'CRUISING · ') + T.name + ' in ' + fmt(Math.max(0, dT), 2);
   }
   function phaseOf(w, st, nr){
-    if (run && run.done) return outcomeText(run.result, w)[0];
-    if (run && run.hold) return 'Countdown';
+    if (run ? run.done : focal && focal.finished) return outcomeText((run || focal).result, w)[0];
+    if ((run && run.hold) || (!run && focal && st.pre != null)) return 'Countdown';
     if (st.onPad) return 'On pad';
     if (nr.d < nr.body.hill * 1.5) return (nr.k === w.target ? 'Approach ' : nr.k === w.start ? 'Leaving ' : 'Flyby ') + nr.body.name;
     return st.thr > 0 ? 'Burn' : 'Cruise';
@@ -720,7 +742,7 @@ label.name input{width:150px}
     const left = Math.max(0, st.fuel), used = w.rocket.fuel - left;
     els.fuelBar.style.width = (100 * left / w.rocket.fuel).toFixed(1) + '%';
     els.fuelText.textContent = fmt(left, 2) + ' left';
-    els.tT.textContent = run && run.tLaunch != null && st.t >= run.tLaunch ? fmt(st.t - run.tLaunch, 1) : '—'; els.tPhase.textContent = phaseOf(w, st, nr);
+    els.tT.textContent = run ? (run.tLaunch != null && st.t >= run.tLaunch ? fmt(st.t - run.tLaunch, 1) : '—') : focal && st.t >= focal.t0 ? fmt(st.t - focal.t0, 1) : '—'; els.tPhase.textContent = phaseOf(w, st, nr);
     els.tSpeed.textContent = fmt(Math.hypot(st.vx, st.vy), 3); els.tNear.textContent = nr.body.name;
     els.tRange.textContent = fmt(Math.max(0, nr.d - nr.body.radius), 4); els.tRel.textContent = fmt(rel, 3);
     els.tBurn.classList.toggle('on', st.thr > 0); els.tUsed.textContent = fmt(used, 3);
@@ -966,7 +988,7 @@ label.name input{width:150px}
     CW = cam.clientWidth; CH = cam.clientHeight; cam.width = Math.round(CW*dpr); cam.height = Math.round(CH*dpr);
     ctx.imageSmoothingQuality = 'high'; cctx.imageSmoothingQuality = 'high';
   }
-  function drawSky(w, st, nr, dirx, diry, ended, flicker){
+  function drawSky(w, st, nr, dirx, diry, ended, flicker, countdown){
     const g = ctx;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.fillStyle = '#03050c'; g.fillRect(0, 0, W, H);
@@ -997,16 +1019,25 @@ label.name input{width:150px}
       g.restore();
     }
     const [rxw, ryw] = shown(st.x, st.y), rx = sx(rxw), ry = sy(ryw);
-    if (run) {
-      const S = run.samples, n = run.idx;
+    const trail = (S, n, ex, ey, dim) => {
       g.save(); g.lineJoin = 'round'; let mode = -1;
       for (let i = 0; i <= n; i++) {
         const p = S[i], burn = p[5] > 0 ? 1 : 0;
-        if (burn !== mode) { if (mode >= 0) g.stroke(); mode = burn; g.strokeStyle = burn ? 'rgba(255,190,90,0.95)' : 'rgba(170,180,210,0.7)'; g.lineWidth = burn ? 2.4 : 1.3; g.shadowColor = 'rgba(255,170,60,0.9)'; g.shadowBlur = burn ? 8 : 0; g.beginPath(); g.moveTo(sx(p[1]), sy(p[2])); }
+        if (burn !== mode) { if (mode >= 0) g.stroke(); mode = burn; g.strokeStyle = burn ? 'rgba(255,190,90,' + (dim ? 0.5 : 0.95) + ')' : 'rgba(170,180,210,' + (dim ? 0.35 : 0.7) + ')'; g.lineWidth = burn ? 2.4 : 1.3; g.shadowColor = 'rgba(255,170,60,0.9)'; g.shadowBlur = burn && !dim ? 8 : 0; g.beginPath(); g.moveTo(sx(p[1]), sy(p[2])); }
         else g.lineTo(sx(p[1]), sy(p[2]));
       }
-      if (mode >= 0) { g.lineTo(rx, ry); g.stroke(); }
+      if (mode >= 0) { g.lineTo(ex, ey); g.stroke(); }
       g.restore();
+    };
+    if (run) trail(run.samples, run.idx, rx, ry, false);
+    else for (const f of flights) {
+      // every flight in the air leaves a trail; the ones the camera is not on are drawn small, with the pilot's name
+      if (idleT < f.t0) continue;
+      if (f === focal) { trail(f.samples, f.idx, rx, ry, false); continue; }
+      const fs = flightState(f, idleT), fxp = sx(fs.x), fyp = sy(fs.y);
+      trail(f.samples, f.idx, fxp, fyp, true);
+      if (!f.finished) { const ddx = fs.thr > 0 ? fs.dx : fs.vx, ddy = fs.thr > 0 ? fs.dy : fs.vy, dl = Math.hypot(ddx, ddy) || 1; drawRocket(g, fxp, fyp, ddx / dl, ddy / dl, fs.thr, 6, flicker, 0); }
+      g.fillStyle = 'rgba(233,236,246,0.8)'; g.font = '500 10px "IBM Plex Sans", sans-serif'; g.textAlign = 'center'; g.fillText(f.pilot || f.name, fxp, fyp - 12); g.textAlign = 'start';
     }
     g.font = '500 11px "IBM Plex Sans", sans-serif'; g.textAlign = 'center';
     w.bodies.forEach((b, k) => {
@@ -1034,7 +1065,7 @@ label.name input{width:150px}
     else if (fx.flash > 0) { g.fillStyle = 'rgba(255,220,160,' + fx.flash + ')'; g.beginPath(); g.arc(rx, ry, 6 + 40*(1 - fx.flash), 0, TAU); g.fill(); }
     g.restore();
     let label = null, sub = null;
-    if (run && run.hold) { const left = Math.max(0, (run.hold.until - performance.now()) / 1000); label = 'T-' + Math.ceil(left); sub = 'Launching from ' + w.bodies[w.start].name; }
+    if (countdown != null) { label = 'T-' + Math.ceil(countdown); sub = 'Launching from ' + w.bodies[w.start].name; }
     else if (fx.label) label = fx.label;
     if (label) { const fs = Math.min(48, Math.max(26, W * 0.07)), ly = Math.max(H * 0.3, 120); g.save(); g.textAlign = 'center'; g.font = '700 ' + fs + 'px "Chakra Petch", sans-serif'; g.shadowColor = label === 'TOUCHDOWN' ? 'rgba(106,213,154,0.9)' : 'rgba(243,180,87,0.9)'; g.shadowBlur = 28; g.fillStyle = label === 'TOUCHDOWN' ? '#6ad59a' : label === 'IMPACT' ? '#ff8a4a' : '#f3b457'; g.fillText(label, W/2, ly); g.shadowBlur = 0; if (sub) { g.font = '500 13px "IBM Plex Sans", sans-serif'; g.fillStyle = '#e9ecf6'; g.fillText(sub, W/2, ly + 24); } g.restore(); }
     if (fx.skyFlash > 0) { g.fillStyle = 'rgba(255,230,190,' + (fx.skyFlash*0.5).toFixed(3) + ')'; g.fillRect(0, 0, W, H); }
@@ -1046,7 +1077,7 @@ label.name input{width:150px}
   // Everything is drawn at true scale; the camera center, zoom and heading ease between targets.
   let camS = null, prevThr = 0, camStars = null, preIgnite = 0, noseAng = null, burning = false, cutoffAt = 0, cutoffMult = 0.06;
   function camStarsInit(){ const rnd = seededRnd(777); camStars = [0, 1, 2].map(l => { const arr = []; for (let i = 0; i < 70; i++) arr.push([rnd(), rnd(), 0.6 + l * 0.5 + rnd() * 0.7, 0.2 + rnd() * 0.5]); return arr; }); }
-  function drawCam(w, st, nr, dirx, diry, ended, flicker, dt){
+  function drawCam(w, st, nr, dirx, diry, ended, flicker, dt, countdown){
     const g = cctx;
     if (!camStars) camStarsInit();
     const T = w.bodies[w.target], tp = bodyAt(w, w.target, st.t), dT = Math.hypot(st.x - tp.x, st.y - tp.y) - T.radius;
@@ -1158,7 +1189,7 @@ label.name input{width:150px}
         g.fillText(T.name + ' · ' + fmt(Math.max(0, dT), 2), ex + (ex > icx ? -14 : 14), ey + (ey > icy ? -8 : 16)); g.textAlign = 'start';
       }
     }
-    if (run && run.hold) { const left = Math.max(0, (run.hold.until - performance.now()) / 1000); g.save(); g.textAlign = 'center'; g.font = '700 34px "Chakra Petch", sans-serif'; g.shadowColor = 'rgba(243,180,87,0.9)'; g.shadowBlur = 18; g.fillStyle = '#f3b457'; g.fillText('T-' + Math.ceil(left), icx, icy - CH * 0.2); g.restore(); }
+    if (countdown != null) { const left = countdown; g.save(); g.textAlign = 'center'; g.font = '700 34px "Chakra Petch", sans-serif'; g.shadowColor = 'rgba(243,180,87,0.9)'; g.shadowBlur = 18; g.fillStyle = '#f3b457'; g.fillText('T-' + Math.ceil(left), icx, icy - CH * 0.2); g.restore(); }
     g.restore();
     const vg = g.createRadialGradient(icx, icy, Math.min(CW, CH) * 0.42, icx, icy, Math.max(CW, CH) * 0.72);
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.5)'); g.fillStyle = vg; g.fillRect(0, 0, CW, CH);
@@ -1174,44 +1205,47 @@ label.name input{width:150px}
     const w = displayWorld(); if (!w || W < 40 || H < 40 || CW < 40 || CH < 40) { resize(); return; }
     const fxDt = Math.min(0.1, (now - lastDraw) / 1000 || 0); lastDraw = now; tnow = now / 1000;
     updateFx(fxDt, w);
-    if (!run && P) { const A0 = w.bodies[w.start]; w.rocket.padAngle = A0.angle0 + A0.omega * idleT + Math.PI / 2 + (padRel != null ? padRel : P.aim * Math.PI / 180); }   // the launch spot keeps its angle to the direction of travel
-    const st = run ? sampleState() : padState(w, idleT);
+    const live = !run && focal ? focal : null;
+    if (!run && !live && P) { const A0 = w.bodies[w.start]; w.rocket.padAngle = A0.angle0 + A0.omega * idleT + Math.PI / 2 + (padRel != null ? padRel : P.aim * Math.PI / 180); }   // the launch spot keeps its angle to the direction of travel
+    const st = run ? sampleState() : live ? flightState(live, idleT) : padState(w, idleT);
     const nr = nearest(w, st), flicker = Math.random(), R = nr.body.radius;
+    const res = run ? run.result : live ? live.result : null, done = run ? run.done : live ? live.finished : false;
+    const countdown = run && run.hold ? Math.max(0, (run.hold.until - performance.now()) / 1000) : live && st.pre != null ? Math.max(0, (realAt(live.t0) - Date.now()) / 1000) : null;
     let dirx, diry;
     if (st.thr > 0) { dirx = st.dx; diry = st.dy; }
     else { dirx = st.vx; diry = st.vy; }
-    if (st.onPad || (run && run.done && run.result.outcome === 'landed')) { dirx = st.x - nr.b.x; diry = st.y - nr.b.y; }
+    if (st.onPad || (done && res.outcome === 'landed')) { dirx = st.x - nr.b.x; diry = st.y - nr.b.y; }
     const dn = Math.hypot(dirx, diry) || 1; dirx /= dn; diry /= dn;
     // the nose turns smoothly toward its new heading instead of snapping, except on the pad
-    { const want = Math.atan2(diry, dirx); if (noseAng == null || st.onPad || !run) noseAng = want; else { let d = want - noseAng; d = Math.atan2(Math.sin(d), Math.cos(d)); noseAng += d * Math.min(1, fxDt / 0.9); } dirx = Math.cos(noseAng); diry = Math.sin(noseAng); }
-    const ended = !!(run && run.done && (run.result.outcome === 'crashed' || run.result.outcome === 'burned'));
+    { const want = Math.atan2(diry, dirx); if (noseAng == null || st.onPad || (!run && !live)) noseAng = want; else { let d = want - noseAng; d = Math.atan2(Math.sin(d), Math.cos(d)); noseAng += d * Math.min(1, fxDt / 0.9); } dirx = Math.cos(noseAng); diry = Math.sin(noseAng); }
+    const ended = !!(done && (res.outcome === 'crashed' || res.outcome === 'burned'));
     preIgnite = 0;
-    if (run && run.hold) {
+    if (countdown != null) {
       // the last second before ignition: the engine glows, the pad vents
-      const left = Math.max(0, (run.hold.until - performance.now()) / 1000); preIgnite = left < 1 ? 1 - left : 0;
+      preIgnite = countdown < 1 ? 1 - countdown : 0;
       if (Math.random() < 0.5 && fx.smoke.length < 500) { const rx = st.x - nr.b.x, ry = st.y - nr.b.y, tx = -diry, ty = dirx, side = Math.random() < 0.5 ? 1 : -1;
         puff(fx.smoke, { k: nr.k, x: rx + tx * side * R * 0.02, y: ry + ty * side * R * 0.02, vx: tx * side * R * (0.05 + Math.random() * 0.08) + dirx * R * 0.02, vy: ty * side * R * (0.05 + Math.random() * 0.08) + diry * R * 0.02, size: R * 0.008, grow: R * 0.035, life: 1.2, tone: 215 }); }
     }
-    if (run && !run.done && st.thr > 0 && nr.d - R < R * 1.5 && fx.smoke.length < 500) {
+    if ((run || live) && !done && st.thr > 0 && nr.d - R < R * 1.5 && fx.smoke.length < 500) {
       // the plume hits the ground: dust in the planet's own color
       const d = nr.d || 1, ux = (st.x - nr.b.x) / d, uy = (st.y - nr.b.y) / d, gx = ux * R, gy = uy * R, tx = -uy, ty = ux, col = dustCol(nr.body), heat = Math.max(0.2, 1 - (nr.d - R) / (R * 1.5));
       for (let i = 0; i < 5; i++) { const side = Math.random() < 0.5 ? 1 : -1, sp = (0.2 + Math.random() * 0.7) * R * heat;
         puff(fx.smoke, { k: nr.k, x: gx + tx * side * R * 0.03 * Math.random(), y: gy + ty * side * R * 0.03 * Math.random(), vx: tx * side * sp + ux * R * 0.12 * Math.random(), vy: ty * side * sp + uy * R * 0.12 * Math.random(), size: R * (0.02 + Math.random() * 0.05), grow: R * 0.22, life: 0.9 + Math.random(), col }); }
     }
-    const wantLegs = !!(run && nr.k === w.target && nr.d - R < R * 1.2);
+    const wantLegs = !!((run || live) && nr.k === w.target && nr.d - R < R * 1.2);
     fx.legs += ((wantLegs ? 1 : 0) - fx.legs) * Math.min(1, fxDt * 2.5);
-    drawSky(w, st, nr, dirx, diry, ended, flicker);
-    drawCam(w, st, nr, dirx, diry, ended, flicker, fxDt);
+    drawSky(w, st, nr, dirx, diry, ended, flicker, countdown);
+    drawCam(w, st, nr, dirx, diry, ended, flicker, fxDt, countdown);
     setTelemetry(w, st);
   }
   function frame(now){
     const dts = Math.min(1, (now - last) / 1000 || 0); last = now;
     const w = displayWorld();
     if (w) {
-      if (!run) { if (!(fx.fade > 0.5)) idleT = liveT(); }
+      if (!run) { if (!(fx.fade > 0.5)) idleT = liveT(); liveStep(w, now); }
       else if (run.done) {
-        // after the verdict has had its moment, hand back to the live system; Replay brings it back
-        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); fx.fade = 1; camS = null; idleBanner(); renderCta(); els.verdict.classList.add('fade'); setTimeout(() => { if (!run) els.verdict.hidden = true; }, 950); }
+        // after the verdict has had its moment, hand back to the live sky
+        if (now - run.doneAt > 5000) endReplay();
       }
       else {
         const S = run.samples, end = S[S.length-1][0];
@@ -1237,17 +1271,46 @@ label.name input{width:150px}
             const stEnd = sampleState(), nrEnd = nearest(w, stEnd);
             if (run.result.outcome === 'crashed' || run.result.outcome === 'burned') explode(w, stEnd, nrEnd);
             if (run.result.outcome === 'landed') touchdown(w, stEnd, nrEnd);
-            const txt = outcomeText(run.result, w);
-            els.verdict.className = 'verdict ' + (run.result.outcome === 'landed' ? 'good' : 'bad');
-            els.verdict.innerHTML = esc(txt[0]) + '<span>' + esc(txt[1]) + '</span>'; els.verdict.classList.remove('fade'); els.verdict.hidden = false;
-            els.banner.classList.remove('live');
-            if (playQueue.length) { const id = playQueue.shift(); setTimeout(() => watch(id, true), 2500); }
+            showVerdict(run.result, w);
           }
         }
       }
       try { draw(now); } catch (e) { console.error(e); }   // one bad frame must never stop the loop
     }
     requestAnimationFrame(frame);
+  }
+  function showVerdict(r, w){
+    const txt = outcomeText(r, w);
+    els.verdict.className = 'verdict ' + (r.outcome === 'landed' ? 'good' : 'bad');
+    els.verdict.innerHTML = esc(txt[0]) + '<span>' + esc(txt[1]) + '</span>'; els.verdict.classList.remove('fade'); els.verdict.hidden = false;
+  }
+  // The live sky: every flight claimed today plays at the moment it happens, all on the one shared clock.
+  let slowShown = null;
+  function liveStep(w, now){
+    const T = idleT, rate = LanderPlan.liveRate(w);
+    // the pill says when the shared sky is in slow motion
+    const slow = clockWindows.some(win => T >= win[0] && T <= win[1]);
+    if (slow !== slowShown) { slowShown = slow; const b = $('liveBadge'); b.classList.toggle('slow', slow); $('liveWord').textContent = slow ? 'SLOW MOTION' : 'LIVE'; $('liveNote').textContent = slow ? 'engines burning · time slows for everyone' : 'every launch plays here as it happens'; }
+    let changed = false;
+    for (const f of flights) {
+      const tau = T - f.t0;
+      if (!f.ignited && tau >= 0) { f.ignited = true; changed = true; if (tau < rate * 2) { w.rocket.padAngle = f.pa0; ignite(w); } }
+      if (!f.finished && tau >= f.end) {
+        f.finished = true; f.doneAt = now; changed = true;
+        const fresh = tau - f.end < rate * 3;   // a flight that ended while a replay was playing gets no fireworks
+        const stEnd = flightState(f, f.t0 + f.end), nrEnd = nearest(w, stEnd);
+        if (fresh && (f.result.outcome === 'crashed' || f.result.outcome === 'burned')) explode(w, stEnd, nrEnd);
+        if (fresh && f.result.outcome === 'landed') touchdown(w, stEnd, nrEnd);
+        if (f === focal && fresh) showVerdict(f.result, w);
+        if (f.mine) { refreshBoard(); refreshShots(); }
+      }
+    }
+    // flights that have had their moment leave the sky; the camera moves on to the next one
+    const kept = flights.filter(f => !f.finished || now - f.doneAt < 5000);
+    if (kept.length !== flights.length) { flights = kept; changed = true; }
+    if (focal && !flights.includes(focal)) { focal = null; resetFx(); fx.fade = 1; camS = null; noseAng = null; els.verdict.classList.add('fade'); setTimeout(() => { if (!focal && !run) els.verdict.hidden = true; }, 950); }
+    if (!focal || focal.finished) { const live = flights.filter(f => !f.finished); if (live.length) { const next = live.find(f => f.mine) || live[live.length - 1]; if (next !== focal) { focal = next; camS = null; noseAng = null; changed = true; } } }
+    if (changed) idleBanner();
   }
 
   // ---------- boot ----------
@@ -1259,10 +1322,10 @@ label.name input{width:150px}
     if (!world) { setStatus('No star system is loaded. Check back in a moment.', true); }
     resize(); new ResizeObserver(resize).observe(sky); new ResizeObserver(resize).observe(cam);
     requestAnimationFrame(frame);
-    await refreshFeed(); refreshBoard(); renderShare(); loadChallenge();
+    await refreshDays(); await refreshFeed(); refreshBoard(); renderShare(); loadChallenge();
     setInterval(refreshGame, 1500); setInterval(refreshFeed, 2000); setInterval(refreshBoard, 10000); setInterval(renderEnds, 30000);
     // a page left open reloads itself after a new build goes live, once nothing is flying
-    let build = null; const checkBuild = async () => { try { const v = (await (await fetch('version.json', { cache: 'no-store' })).json()).v; if (build === null) build = v; else if (v !== build && !run && !launching) location.reload(); } catch (e) {} }; checkBuild(); setInterval(checkBuild, 45000);
+    let build = null; const checkBuild = async () => { try { const v = (await (await fetch('version.json', { cache: 'no-store' })).json()).v; if (build === null) build = v; else if (v !== build && !run && !flights.length && !launching) location.reload(); } catch (e) {} }; checkBuild(); setInterval(checkBuild, 45000);
    } catch (e) { console.error('boot failed', e); setStatus('Something went wrong loading the game: ' + (e.message || e), true); }
   }
   boot();

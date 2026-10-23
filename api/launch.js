@@ -4,6 +4,7 @@ const { runBot } = require('../lib/runner');
 const plan = require('../lib/plan');
 
 const BUDGET_MS = 10000;
+const LEAD_S = 5;   // real seconds between the claim and liftoff
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return json(res, 405, { error: 'POST only' });
@@ -21,10 +22,14 @@ module.exports = async (req, res) => {
     if (!entry || entry.status !== 'running') return json(res, 409, { error: 'This launch already ran.' });
     const state = await rpc('game_state', {});
     if (!state || !state.game || state.game.id !== entry.game_id) return json(res, 409, { error: 'Game mismatch.' });
-    // the flight starts from the sky as it looked when the launch was claimed
+    // the flight lifts off from the live sky a few seconds after the claim: everyone watching sees the countdown
     let dials; try { dials = JSON.parse(entry.code); } catch (e) { dials = {}; }
     dials.s1 = Math.max(+dials.s1 || 0, plan.stage1(state.world, require('../lib/engine')));   // the departure burn is the pilot's, but never too small to clear the home planet
-    const tStart = +(Math.max(0, (new Date(entry.created_at).getTime() - new Date(entry.game_started_at).getTime()) / 1000) * plan.liveRate(state.world)).toFixed(4);
+    // sky time at liftoff, on the shared clock that slows while any rocket of the day is burning
+    const events = (await rpc('clock_events', { p_game: entry.game_id })) || [];
+    const windows = plan.mergeWindows([].concat.apply([], events.map(e => (e.b || []).map(w => [+e.t + w[0], +e.t + w[1]]))));
+    const clock = plan.skyClock(new Date(entry.game_started_at).getTime(), plan.liveRate(state.world), windows);
+    const tStart = +clock.sky(new Date(entry.created_at).getTime() + LEAD_S * 1000).toFixed(4);
     const world = plan.flightWorld(state.world, tStart, dials, require('../lib/engine'));
 
     // the stored entry is the plan's dials; the autopilot source is built here, never taken from the client
@@ -41,9 +46,11 @@ module.exports = async (req, res) => {
     if (out.type === 'result') {
       const r = out.result;
       result = { outcome: r.outcome, body: r.body, fuelUsed: r.fuelUsed, fuelLeft: +(world.rocket.fuel - r.fuelUsed).toFixed(4),
-        landingSpeed: r.landingSpeed, closestApproach: r.closestApproach, tStart, time: r.time, flights: out.flights, thinkMs: out.thinkMs, samples: r.samples, error: null };
+        landingSpeed: r.landingSpeed, closestApproach: r.closestApproach, tStart, time: r.time, flights: out.flights, thinkMs: out.thinkMs, samples: r.samples, burns: plan.burnWindows(r.samples), error: null };
+      const mine = result.burns.map(w => [tStart + w[0], tStart + w[1]]);
+      result.landsAt = Math.round(plan.skyClock(new Date(entry.game_started_at).getTime(), plan.liveRate(state.world), plan.mergeWindows(windows.concat(mine))).real(tStart + r.time));
     } else {
-      result = { outcome: 'error', body: null, fuelUsed: 0, fuelLeft: 0, landingSpeed: null, closestApproach: null, tStart, time: 0, flights: 0, thinkMs: 0, samples: null, error: out.message };
+      result = { outcome: 'error', body: null, fuelUsed: 0, fuelLeft: 0, landingSpeed: null, closestApproach: null, tStart, time: 0, flights: 0, thinkMs: 0, samples: null, burns: [], landsAt: null, error: out.message };
     }
     const payload = JSON.stringify(result);
     await rpc('finish_launch', { p_launch: id, p_result: payload, p_sig: sign(id + '|' + payload) });
