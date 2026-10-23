@@ -577,7 +577,7 @@ label.name input{width:150px}
     if (!live.length) { els.banner.classList.remove('live'); els.bannerText.textContent = 'Waiting for the next launch'; return; }
     els.banner.classList.add('live');
     const f = focal && !focal.finished ? focal : live[live.length - 1];
-    els.bannerText.textContent = (f.mine ? 'Your launch · ' + f.name : (f.pilot ? f.pilot + "'s " : '') + f.name) + (live.length > 1 ? ' · +' + (live.length - 1) + ' more in the air' : '');
+    els.bannerText.textContent = (f.mine ? 'Your flight' : (f.pilot ? f.pilot + "'s flight" : 'A flight')) + (live.length > 1 ? ' · +' + (live.length - 1) + ' more in the air' : '');
   }
   function doneLaunches(){ return feed.filter(f => f.status === 'done' && f.outcome !== 'error'); }
   async function refreshGame(){
