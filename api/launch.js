@@ -55,8 +55,9 @@ module.exports = async (req, res) => {
     // fly the plan as dialled; a near miss gets the departure burn quietly tried one percent smaller and larger
     const B = world.bodies[world.target], assist = ['easy', 'medium', 'hard'].indexOf(dials.assist) >= 0 ? dials.assist : 'medium';
     let out = await runBot(plan.botSource(world, dials), world, BUDGET_MS);
-    // the assist level is how far the autopilot may nudge the departure burn for a near miss: none, one percent, or up to three
-    const nudges = assist === 'hard' ? [] : assist === 'easy' ? [-0.01, 0.01, -0.02, 0.02, -0.03, 0.03] : [-0.01, 0.01];
+    // the assist level is how far the autopilot may nudge the departure burn for a near miss: none, up to two percent, or up to five
+    const steps = n => { const out = []; for (let i = 1; i <= n; i++) out.push(-i / 100, i / 100); return out; };
+    const nudges = assist === 'hard' ? [] : assist === 'easy' ? steps(5) : steps(2);
     const near = nudges.length > 0 && out.type === 'result' && out.result.outcome !== 'landed' && (out.result.outcome === 'crashed' ? out.result.body === B.name : out.result.closestApproach != null && out.result.closestApproach < B.hill * (assist === 'easy' ? 2 : 1));
     if (near) {
       for (const d of nudges) {
