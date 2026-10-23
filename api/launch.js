@@ -1,7 +1,7 @@
 // POST /api/launch { launch_id }  — flies a claimed launch's plan on the server and records the official flight.
-const { rpc, getUser, bearer, json, readJson, sign, configured } = require('../lib/db');
-const { runBot } = require('../lib/runner');
-const plan = require('../lib/plan');
+const { rpc, getUser, bearer, json, readJson, sign, configured } = require('./_lib/db');
+const { runBot } = require('./_lib/runner');
+const plan = require('./_lib/plan');
 
 const BUDGET_MS = 10000;
 const LEAD_S = 0;   // liftoff the moment the launch is claimed
@@ -22,15 +22,18 @@ module.exports = async (req, res) => {
     if (!entry || entry.status !== 'running') return json(res, 409, { error: 'This launch already ran.' });
     const state = await rpc('game_state', {});
     if (!state || !state.game || state.game.id !== entry.game_id) return json(res, 409, { error: 'Game mismatch.' });
+    // the page only ever sees the public sky; the full system (masses, thrust) comes to the server alone, signed
+    const full = await rpc('game_world_full', { p_game: entry.game_id, p_sig: sign('world|' + entry.game_id) });
+    if (!full) return json(res, 500, { error: 'No system.' });
     // the flight lifts off from the live sky a few seconds after the claim: everyone watching sees the countdown
     let dials; try { dials = JSON.parse(entry.code); } catch (e) { dials = {}; }
-    dials.s1 = Math.max(+dials.s1 || 0, plan.stage1(state.world, require('../lib/engine')));   // the departure burn is the pilot's, but never too small to clear the home planet
+    dials.s1 = Math.max(+dials.s1 || 0, plan.stage1(full, require('./_lib/engine')));   // the departure burn is the pilot's, but never too small to clear the home planet
     // sky time at liftoff, on the shared clock that slows while any rocket of the day is burning
     const events = (await rpc('clock_events', { p_game: entry.game_id })) || [];
     const windows = plan.slowWindows(events);
-    const clock = plan.skyClock(new Date(entry.game_started_at).getTime(), plan.liveRate(state.world), windows);
+    const clock = plan.skyClock(new Date(entry.game_started_at).getTime(), plan.liveRate(full), windows);
     const tStart = +clock.sky(new Date(entry.created_at).getTime() + LEAD_S * 1000).toFixed(4);
-    const world = plan.flightWorld(state.world, tStart, dials, require('../lib/engine'));
+    const world = plan.flightWorld(full, tStart, dials, require('./_lib/engine'));
 
     // the stored entry is the plan's dials; the autopilot source is built here, never taken from the client
     // fly the plan as dialled; if it does not land, quietly try the departure burn one percent smaller and larger and keep a landing
@@ -47,7 +50,7 @@ module.exports = async (req, res) => {
       const r = out.result;
       result = { outcome: r.outcome, body: r.body, fuelUsed: r.fuelUsed, fuelLeft: +(world.rocket.fuel - r.fuelUsed).toFixed(4),
         landingSpeed: r.landingSpeed, closestApproach: r.closestApproach, tStart, time: r.time, flights: out.flights, thinkMs: out.thinkMs, samples: r.samples, burns: plan.burnWindows(r.samples), error: null };
-      result.landsAt = Math.round(plan.skyClock(new Date(entry.game_started_at).getTime(), plan.liveRate(state.world), plan.slowWindows(events.concat([{ t: tStart, b: result.burns }]))).real(tStart + r.time));
+      result.landsAt = Math.round(plan.skyClock(new Date(entry.game_started_at).getTime(), plan.liveRate(full), plan.slowWindows(events.concat([{ t: tStart, b: result.burns }]))).real(tStart + r.time));
     } else {
       result = { outcome: 'error', body: null, fuelUsed: 0, fuelLeft: 0, landingSpeed: null, closestApproach: null, tStart, time: 0, flights: 0, thinkMs: 0, samples: null, burns: [], landsAt: null, error: out.message };
     }

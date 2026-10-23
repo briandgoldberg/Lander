@@ -306,8 +306,7 @@ label.name input{width:150px}
   </div>
 </div>
 
-<script src="lib/engine.js"></script>
-<script src="lib/plan.js"></script>
+<script src="lib/sky.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 (function(){
@@ -491,7 +490,8 @@ label.name input{width:150px}
   function setupPlanner(){
     tb = LanderPlan.textbook(world);
     P = LanderPlan.clean(world, Object.assign(loadPlan() || { aim: 0, s1: 0.35, brake: 1 }, { wait: 0 }));
-    syncDials(); burnReach = null; reachShown = null; burnDot = null; fireDot = null; padRel = null; scheduleReach(); reachWorkerReady().then(wk => wk.postMessage({ id: 0, minburn: true, world }));
+    syncDials(); burnReach = null; reachShown = null; burnDot = null; fireDot = null; padRel = null;
+    { const mb = Math.round((world.floor || 0.3) * 100); dials.s1.min = mb; if (P.s1 * 100 < mb - 0.01) { P.s1 = mb / 100; syncDials(); savePlan(); } }   // the departure burn is never too small to clear the home planet
   }
   function syncDials(){ dials.aim.value = P.aim > 180 ? P.aim - 360 : P.aim; dials.s1.value = Math.round(P.s1 * 100); dials.brake.value = P.brake; renderDialValues(); }
   function renderDialValues(){
@@ -503,27 +503,10 @@ label.name input{width:150px}
     P = LanderPlan.clean(world, { wait: 0, s1: +dials.s1.value / 100, aim: +dials.aim.value, brake: +dials.brake.value });
     renderDialValues(); savePlan(); scheduleReach();
   }));
-  // How far the launch burn carries you: fly the plan from the sky as it is now, in a worker, and read the orbit right after the burn ends.
-  let reachWorker = null, reachId = 0, burnReach = null, burnDot = null, fireDot = null, padRel = null, reachTimer = null;
-  async function reachWorkerReady(){
-    if (reachWorker) return reachWorker;
-    const [eng, pl] = await Promise.all([fetch('lib/engine.js').then(r => r.text()), fetch('lib/plan.js').then(r => r.text())]);
-    const src = eng + '\n' + pl + '\nonmessage = function(e){ var d = e.data; if (d.minburn) { postMessage({ id: d.id, s1: stage1(d.world, { fly: fly, bodyAt: bodyAt }) }); return; } var E = { fly: fly, bodyAt: bodyAt }, w = flightWorld(d.world, d.t0, d.P, E), r = fly(w, makeController(w, d.P), { record: true }), S = r.samples, burns = 0, out = null, dot = null, fire = null, tH = d.world.hints && d.world.hints.transferTime ? d.world.hints.transferTime : 10;' +
-      ' for (var i = 1; i < S.length; i++) { if (S[i-1][5] > 0 && S[i][5] === 0) { burns++; if (burns === 1) { var x = S[i][1], y = S[i][2], vx = S[i][3], vy = S[i][4], rr = Math.hypot(x, y), eps = (vx*vx + vy*vy) / 2 - w.sun.mass / rr, hh = x*vy - y*vx, sma = -w.sun.mass / (2 * eps), ecc = Math.sqrt(Math.max(0, 1 + 2 * eps * hh * hh / (w.sun.mass * w.sun.mass)));' +
-      ' out = { peri: sma * (1 - ecc), apo: eps < 0 ? sma * (1 + ecc) : null }; var tAfter = S[i][0] + tH * 0.08; for (var j = i; j < S.length; j++) if (S[j][0] >= tAfter) { dot = [S[j][1], S[j][2]]; break; } if (!dot) dot = [S[S.length-1][1], S[S.length-1][2]]; break; } } }' +
-      '' +
-      ' postMessage({ id: d.id, reach: out, dot: dot, fire: fire, padRel: w.rocket.padAngle - (w.bodies[d.world.start].angle0 + Math.PI / 2) }); };';
-    reachWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
-    reachWorker.onmessage = e => { if (e.data.s1 != null) { const mb = Math.round(e.data.s1 * 100); dials.s1.min = mb; if (P.s1 * 100 < mb - 0.01) { P.s1 = mb / 100; syncDials(); savePlan(); scheduleReach(); } return; } if (e.data.id === reachId) { burnReach = e.data.reach; burnDot = e.data.dot; fireDot = e.data.fire; if (e.data.padRel != null) padRel = e.data.padRel; } };
-    return reachWorker;
-  }
-  async function updateReach(){
-    if (!world || !P || run) return;
-    const wk = await reachWorkerReady(); reachId++;
-    wk.postMessage({ id: reachId, world, t0: idleT, P });
-  }
-  function scheduleReach(){ clearTimeout(reachTimer); reachTimer = setTimeout(updateReach, 30); }
-  setInterval(() => { if (!run) updateReach(); }, 600);
+  // No physics in the browser: the page shows the sky and the dials, and the server flies the plan.
+  let burnReach = null, burnDot = null, fireDot = null, padRel = null;
+  function scheduleReach(){}
+  function updateReach(){}
   let reachShown = null;   // the ring eases toward each new answer instead of jumping
   function savePlan(){ try { localStorage.setItem('lander.plan.' + game.id, JSON.stringify(P)); } catch (e) {} }
   function loadPlan(){ try { return JSON.parse(localStorage.getItem('lander.plan.' + game.id)); } catch (e) { return null; } }
@@ -706,7 +689,7 @@ label.name input{width:150px}
     if (tau >= f.end) {
       // the flight is over: the rocket stays where it ended, riding along with the planet it is on
       const L = sampleAtTau(f, f.end);
-      if (f.anchor === undefined) { const nr = nearest(world, Object.assign({}, L, { t: f.t0 + f.end })); f.anchor = nr.d < nr.body.hill * 1.5 ? { k: nr.k, dx: L.x - nr.b.x, dy: L.y - nr.b.y } : null; }
+      if (f.anchor === undefined) { const nr = nearest(world, Object.assign({}, L, { t: f.t0 + f.end })); f.anchor = nr.d < nr.body.zone * 1.5 ? { k: nr.k, dx: L.x - nr.b.x, dy: L.y - nr.b.y } : null; }
       if (f.anchor) { const b = bodyAt(world, f.anchor.k, T); return { t: T, x: b.x + f.anchor.dx, y: b.y + f.anchor.dy, vx: b.vx, vy: b.vy, thr: 0, dx: L.dx, dy: L.dy, fuel: L.fuel, onPad: false }; }
       return Object.assign(L, { t: T, thr: 0, onPad: false });
     }
@@ -730,14 +713,14 @@ label.name input{width:150px}
     if (run && run.done) return outcomeText(run.result, w)[0].toUpperCase();
     if (run && run.hold) return 'COUNTDOWN ON THE PLANET ' + w.bodies[w.start].name.toUpperCase() + ' LAUNCHPAD';
     if (st.onPad) return 'ROCKET ON THE PLANET ' + w.bodies[w.start].name.toUpperCase() + ' LAUNCHPAD';
-    if (nr.d < nr.body.hill * 1.5) return (nr.k === w.target ? 'APPROACHING ' : nr.k === w.start ? 'LEAVING ' : 'FLYBY OF ') + nr.body.name.toUpperCase();
+    if (nr.d < nr.body.zone * 1.5) return (nr.k === w.target ? 'APPROACHING ' : nr.k === w.start ? 'LEAVING ' : 'FLYBY OF ') + nr.body.name.toUpperCase();
     return (st.thr > 0 ? 'BURNING · ' : 'CRUISING · ') + T.name + ' in ' + fmt(Math.max(0, dT), 2);
   }
   function phaseOf(w, st, nr){
     if (run ? run.done : focal && focal.finished) return outcomeText((run || focal).result, w)[0];
     if ((run && run.hold) || (!run && focal && st.pre != null)) return 'Countdown';
     if (st.onPad) return 'On pad';
-    if (nr.d < nr.body.hill * 1.5) return (nr.k === w.target ? 'Approach ' : nr.k === w.start ? 'Leaving ' : 'Flyby ') + nr.body.name;
+    if (nr.d < nr.body.zone * 1.5) return (nr.k === w.target ? 'Approach ' : nr.k === w.start ? 'Leaving ' : 'Flyby ') + nr.body.name;
     return st.thr > 0 ? 'Burn' : 'Cruise';
   }
   function setTelemetry(w, st){
@@ -1003,7 +986,7 @@ label.name input{width:150px}
     const outer = w.bodies[w.bodies.length-1].orbitR, scale = (Math.min(W, H) / 2 - 14) / outer, cx = W/2, cy = H/2, mag = planetMagFor(w);
     const sx = x => cx + x*scale, sy = y => cy - y*scale;
     // Planets are magnified here, so near one the rocket is pushed out to the magnified surface; the gap above it stays true.
-    const shown = (x, y) => { const R = nr.body.radius, hill = nr.body.hill, dx = x - nr.b.x, dy = y - nr.b.y, d = Math.hypot(dx, dy) || 1e-9; const f = Math.max(0, Math.min(1, 1 - (d - R) / (hill - R))); if (f <= 0) return [x, y]; const kk = (mag - 1) * R * f; return [x + dx / d * kk, y + dy / d * kk]; };
+    const shown = (x, y) => { const R = nr.body.radius, hill = nr.body.zone, dx = x - nr.b.x, dy = y - nr.b.y, d = Math.hypot(dx, dy) || 1e-9; const f = Math.max(0, Math.min(1, 1 - (d - R) / (hill - R))); if (f <= 0) return [x, y]; const kk = (mag - 1) * R * f; return [x + dx / d * kk, y + dy / d * kk]; };
     const bodyPos = kk => bodyAt(w, kk, st.t);
     g.save();
     if (fx.punch > 0 && fx.punchK >= 0) { const bp = bodyPos(fx.punchK), ex = sx(bp.x + fx.punchX * mag), ey = sy(bp.y + fx.punchY * mag), z = 1 + 1.1 * fx.punch; g.translate(ex, ey); g.scale(z, z); g.translate(-ex, -ey); }
@@ -1086,7 +1069,7 @@ label.name input{width:150px}
     const g = cctx;
     if (!camStars) camStarsInit();
     const T = w.bodies[w.target], tp = bodyAt(w, w.target, st.t), dT = Math.hypot(st.x - tp.x, st.y - tp.y) - T.radius;
-    const locked = nr.d < nr.body.hill * 2.0;
+    const locked = nr.d < nr.body.zone * 2.0;
     const k = locked ? nr.k : -1, b = locked ? nr.body : null, p = locked ? nr.b : null;
     const alt = locked ? nr.d - b.radius : Infinity, speed = Math.hypot(st.vx, st.vy), rLen = rocketLen(w);
     let ux = 0, uy = 1; if (locked) { const d = nr.d || 1; ux = (st.x - p.x) / d; uy = (st.y - p.y) / d; }
@@ -1094,7 +1077,7 @@ label.name input{width:150px}
     // The camera rides on the rocket; only the framing offset, zoom and heading ease, so nothing lags at high zoom.
     let tgt;
     if (locked) {
-      const R = b.radius, r = Math.min(b.hill * 1.3, Math.max(R * 0.28, alt * 1.7 + R * 0.22)), lift = Math.max(0, Math.min(1, 1 - alt / (R * 3)));
+      const R = b.radius, r = Math.min(b.zone * 1.3, Math.max(R * 0.28, alt * 1.7 + R * 0.22)), lift = Math.max(0, Math.min(1, 1 - alt / (R * 3)));
       tgt = { ox: ux * r * 0.38 * lift, oy: uy * r * 0.38 * lift, r, ang: Math.PI / 2 - Math.atan2(uy, ux) };
     } else tgt = { ox: 0, oy: 0, r: Math.min(0.7, Math.max(0.09, speed * 0.45)), ang: 0 };
     if (!camS) camS = { ox: tgt.ox, oy: tgt.oy, lr: Math.log(tgt.r), ang: tgt.ang };
@@ -1139,7 +1122,7 @@ label.name input{width:150px}
       const pp = bodyPos(kk), [x, y] = P(pp.x, pp.y), r = bb.radius * sc, ring = hasRing(bb) && r > 6, reach = ring ? r * 2.1 : r * 1.25;
       if (x + reach < -60 || x - reach > CW + 60 || y + reach < -60 || y - reach > CH + 60) return;
       const ln = Math.hypot(pp.x, pp.y) || 1, lx = RX(-pp.x, -pp.y) / ln, ly = -RY(-pp.x, -pp.y) / ln;   // toward the star, on screen
-      if (kk === k && rv > bb.hill * 0.6) { g.strokeStyle = 'rgba(243,180,87,0.15)'; g.setLineDash([3,5]); g.beginPath(); g.arc(x, y, bb.hill * sc, 0, TAU); g.stroke(); g.setLineDash([]); }
+      if (kk === k && rv > bb.zone * 0.6) { g.strokeStyle = 'rgba(243,180,87,0.15)'; g.setLineDash([3,5]); g.beginPath(); g.arc(x, y, bb.zone * sc, 0, TAU); g.stroke(); g.setLineDash([]); }
       if (ring) drawRing(g, bb, x, y, r, false);
       if (r > 9) drawAtmo(g, bb, x, y, r);
       drawPlanet(g, bb, x, y, r, lx, ly, r > 6, -camS.ang - (kk === w.start ? bb.omega * st.t : 0));   // the home planet turns with its pad, so the ground stays under the rocket
@@ -1256,7 +1239,7 @@ label.name input{width:150px}
         const S = run.samples, end = run.end;
         if (run.hold) { if (now >= run.hold.until) { run.hold = null; ignite(w); } }
         else {
-          const st = sampleState(), nr = nearest(w, st), near = nr.d < nr.body.hill * 1.6, R = nr.body.radius;
+          const st = sampleState(), nr = nearest(w, st), near = nr.d < nr.body.zone * 1.6, R = nr.body.radius;
           const base = w.deadline / 36;
           // replay speed: a smooth ramp by altitude, slow on arrival, brisk when leaving, full speed in open space
           let mult;
