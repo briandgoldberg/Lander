@@ -995,7 +995,6 @@ label.name input{width:150px}
       // where the launch burn carries you: the closest (or furthest) the flight would get to the star
       const reach = burnReach ? (tb.outward ? burnReach.apo : burnReach.peri) : null;
       if (reach && reach > 0) { reachShown = reachShown == null ? reach : reachShown + (reach - reachShown) * 0.2; } else reachShown = null;
-      if (burnDot) { g.setLineDash([]); g.fillStyle = 'rgba(243,180,87,0.95)'; g.beginPath(); g.arc(sx(burnDot[0]), sy(burnDot[1]), 3.5, 0, TAU); g.fill(); g.setLineDash([2,5]); }
       if (fireDot) { g.setLineDash([]); g.fillStyle = 'rgba(255,120,60,0.95)'; g.beginPath(); g.arc(sx(fireDot[0]), sy(fireDot[1]), 4.5, 0, TAU); g.fill(); g.strokeStyle = 'rgba(255,120,60,0.9)'; g.lineWidth = 1.5; g.beginPath(); g.arc(sx(fireDot[0]), sy(fireDot[1]), 8, 0, TAU); g.stroke(); lab('2nd stage', sx(fireDot[0]), sy(fireDot[1]) + 20); g.setLineDash([2,5]); g.strokeStyle = 'rgba(243,180,87,0.6)'; }
       const tp = bodyAt(w, w.target, st.t), bx = sx(tp.x), by = sy(tp.y), br = (1 + P.brake) * B.radius * scale * mag; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.stroke(); lab('brakes on', bx, by + br + 13);
       g.restore();
