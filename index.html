@@ -57,7 +57,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .livebadge{display:flex;flex:none;white-space:nowrap;align-items:center;gap:8px;font-family:var(--display);font-size:12px;letter-spacing:.14em;background:rgba(7,10,20,.85);border:1px solid var(--live);border-radius:999px;padding:6px 12px;color:var(--fg)}
 .livebadge i{width:8px;height:8px;border-radius:50%;background:var(--live);box-shadow:0 0 10px var(--live);animation:pulse 1.2s infinite;flex:none}
 .livebadge small{font-family:var(--body);letter-spacing:0;color:var(--muted);font-size:12px}
-.livebadge[hidden]{display:none}
+.livebadge[hidden],.controls[hidden]{display:none}
 .livebadge.slow{border-color:var(--accent);color:var(--accent)}.livebadge.slow i{background:var(--accent);box-shadow:0 0 10px var(--accent);animation:pulse .5s infinite}.livebadge.slow small{color:var(--accent)}
 @media (max-width:900px){.livebadge small{display:none}}
 @media (max-width:760px){.how{grid-template-columns:1fr}}
@@ -230,7 +230,8 @@ label.name input{width:150px}
     </div>
     <div class="stagecol">
     <div class="stagebar">
-      <div class="controls" id="controls">
+      <div class="livebadge" id="liveBadge"><i></i><span id="liveWord">LIVE</span><small id="liveNote">every launch plays here as it happens</small></div>
+      <div class="controls" id="controls" hidden>
         <div class="picker"><button class="banner" id="banner" type="button" aria-haspopup="listbox" aria-expanded="false"><i></i><span id="bannerText">Waiting for the next launch</span><b class="caret" id="bannerCaret" hidden>▾</b></button><div class="menu" id="replayMenu" role="listbox" hidden></div></div>
       </div>
       <button class="btn small" id="backLive" type="button" hidden>Back to live</button>
@@ -551,7 +552,6 @@ label.name input{width:150px}
       if (innerWidth <= 1100) els.stage.scrollIntoView({ behavior: 'smooth', block: 'start' });   // phones scroll up to the map; desktop stays put
       const t0 = performance.now();
       const tick = setInterval(() => setStatus('Launch #' + data.launch_id + ' · flying for real on the server · ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s'), 100);
-      els.bannerText.textContent = 'Your launch is on the pad…'; els.banner.classList.add('live');
       const res = await fetch('/api/launch', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ launch_id: data.launch_id }) });
       clearInterval(tick);
       const j = await res.json();
@@ -574,10 +574,8 @@ label.name input{width:150px}
     if (run) return;
     els.bannerCaret.hidden = true; els.banner.classList.remove('pick', 'replay'); renderCta();
     const live = flights.filter(f => !f.finished);
-    if (!live.length) { els.banner.classList.remove('live'); els.bannerText.textContent = 'Waiting for the next launch'; return; }
-    els.banner.classList.add('live');
+    if (!live.length) return;
     const f = focal && !focal.finished ? focal : live[live.length - 1];
-    els.bannerText.textContent = (f.mine ? 'Your flight' : (f.pilot ? f.pilot + "'s flight" : 'A flight')) + (live.length > 1 ? ' · +' + (live.length - 1) + ' more in the air' : '');
   }
   function doneLaunches(){ return feed.filter(f => f.status === 'done' && f.outcome !== 'error'); }
   async function refreshGame(){
@@ -657,10 +655,10 @@ label.name input{width:150px}
     els.banner.classList.remove('live'); els.banner.classList.add('replay'); renderCta();
     const when = rep.created_at ? new Date(rep.created_at).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric', year: '2-digit' }) : '';
     els.bannerText.textContent = (run.pilot ? run.pilot + "'s " : '') + 'best flight' + (when ? ' ' + when : '');
-    $('backLive').hidden = false; $('liveBadge').hidden = true;
+    $('backLive').hidden = false; $('controls').hidden = false; $('liveBadge').hidden = true;
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
   }
-  function endReplay(){ if (!run) return; lastRun = run; run = null; idleT = liveT(); resetFx(); camS = null; noseAng = null; els.verdict.hidden = true; $('backLive').hidden = true; $('liveBadge').hidden = false; idleBanner(); }
+  function endReplay(){ if (!run) return; lastRun = run; run = null; idleT = liveT(); resetFx(); camS = null; noseAng = null; els.verdict.hidden = true; $('backLive').hidden = true; $('controls').hidden = true; $('liveBadge').hidden = false; idleBanner(); }
   $('backLive').onclick = endReplay;
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { els.fb.hidden = true; } });
   function outcomeText(r, w){
