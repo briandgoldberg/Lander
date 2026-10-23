@@ -213,7 +213,7 @@ label.name input{width:150px}
       <p class="hint">Set the dials, then press Launch when the sky looks right. The rocket leaves the moment you press. Ten shots a day.</p>
       <div class="dials">
         <label class="dial"><span class="dl"><span id="lReach">Far point</span> <b id="vReach"></b></span><input type="range" id="dReach" min="0" max="2" step="0.001"><small id="hReach">How far your rocket swings, as a share of your home planet's distance from the star.</small></label>
-        <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="-180" max="180" step="0.5"><small>Which way the engine pushes when you leave.</small></label>
+        <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="0" max="360" step="1"><small>Where on your planet the rocket sits. It climbs straight out from there.</small></label>
         <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"><small>How high above the target planet the brakes come on.</small></label>
       </div>
       <div class="status" id="status"></div>
@@ -502,7 +502,8 @@ label.name input{width:150px}
   function syncDials(){ dials.reach.value = P.reach; dials.aim.value = P.aim; dials.brake.value = P.brake; renderDialValues(); }
   function renderDialValues(){
     const A = world.bodies[world.start]; $('vReach').textContent = Math.round(P.reach / A.orbitR * 100) + '% of ' + A.name + "'s distance";
-    $('vAim').textContent = (P.aim > 0 ? '+' : '') + fmt(P.aim, 1) + '°';
+    $('vAim').textContent = fmt(P.aim, 0) + '°';
+    world.rocket.padAngle = P.aim * Math.PI / 180;   // the rocket sits where the dial says
     $('vBrake').textContent = fmt(P.brake, 2) + ' planet radii';
   }
   Object.keys(dials).forEach(k => dials[k].addEventListener('input', () => {
@@ -978,11 +979,6 @@ label.name input{width:150px}
       g.save(); g.setLineDash([2,5]); g.strokeStyle = 'rgba(243,180,87,0.6)'; g.lineWidth = 1.5;
       const rr = P.reach * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab(tb.outward ? 'far point' : 'near point', cx, cy + rr + 14);
       const tp = bodyAt(w, w.target, st.t), bx = sx(tp.x), by = sy(tp.y), br = (1 + P.brake) * B.radius * scale * mag; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.stroke(); lab('brakes on', bx, by + br + 13);
-      const ta = bodyAt(w, w.start, st.t), ax = sx(ta.x), ay = sy(ta.y), ar = A.radius * scale * mag;
-      const sgn = tb.outward ? 1 : -1, c = Math.cos(P.aim * Math.PI / 180), s = Math.sin(P.aim * Math.PI / 180), vn = Math.hypot(ta.vx, ta.vy) || 1, ux0 = sgn * ta.vx / vn, uy0 = sgn * ta.vy / vn, dxv = ux0 * c - uy0 * s, dyv = ux0 * s + uy0 * c, L = ar + 30;
-      g.setLineDash([]); g.strokeStyle = 'rgba(243,180,87,0.9)'; g.lineWidth = 2; g.beginPath(); g.moveTo(ax + dxv * (ar + 4), ay - dyv * (ar + 4)); g.lineTo(ax + dxv * L, ay - dyv * L); g.stroke();
-      g.fillStyle = 'rgba(243,180,87,0.9)'; g.save(); g.translate(ax + dxv * L, ay - dyv * L); g.rotate(Math.atan2(-dyv, dxv)); g.beginPath(); g.moveTo(7, 0); g.lineTo(-5, -5); g.lineTo(-5, 5); g.closePath(); g.fill(); g.restore();
-      lab('aim', ax + dxv * (L + 14), ay - dyv * (L + 14) + 4);
       g.restore();
     }
     const [rxw, ryw] = shown(st.x, st.y), rx = sx(rxw), ry = sy(ryw);
