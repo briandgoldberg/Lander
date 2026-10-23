@@ -667,14 +667,13 @@ label.name input{width:150px}
       const turn = (pts, t0) => { const th = Math.PI / 2 - (A.angle0 + A.omega * t0), c = Math.cos(th), s = Math.sin(th); return pts.map(p => [p[0] * c - p[1] * s, p[0] * s + p[1] * c]); };
       const paths = [];
       for (const f of flights) paths.push({ layer: 'pilots', pts: turn(f.path || [], +f.t_start || 0), label: (f.pilot || 'pilot') + ' · ' + (f.outcome === 'landed' ? 'landed' : f.outcome === 'crashed' ? 'crashed' : f.outcome === 'aborted' ? 'aborted' : 'never arrived'), landed: f.outcome === 'landed' });
-      for (let i = list.length - 1; i >= 1; i--) paths.push({ layer: 'plans', pts: list[i].path, label: 'A way to land' });
-      if (list[0]) paths.push({ layer: 'best', pts: list[0].path, label: 'The best way to land' });
+      if (list[0]) paths.push({ layer: 'best', pts: list[0].path, label: 'Best path' });
       alm = { w, paths, hover: null };
       const landed = flights.filter(f => f.outcome === 'landed').length;
-      $('almanacNote').textContent = flights.length ? flights.length + (flights.length === 1 ? ' pilot flew' : ' pilots flew') + ' · ' + (landed ? landed + ' landed' : 'nobody landed') + ' · ' + (list.length ? list.length + ' ways to land' : 'no way to land was found') + '. Hover a path to see whose it is.'
-        : 'Nobody flew yesterday. ' + (list.length ? list.length + ' ways to land were there for the taking.' : '');
+      $('almanacNote').textContent = flights.length ? flights.length + (flights.length === 1 ? ' pilot flew' : ' pilots flew') + ' · ' + (landed ? landed + ' landed' : 'nobody landed') + '. Hover a path to see whose it is.'
+        : 'Nobody flew yesterday.';
       const leg = $('almanacLegend');
-      leg.innerHTML = [['pilots', 'Pilots', '#e9ecf6'], ['plans', 'Ways to land', '#6ad59a'], ['best', 'The best', '#f3b457']].map(([k, t, c]) => '<button type="button" data-k="' + k + '" class="' + (almLayers[k] ? '' : 'off') + '"><i style="background:' + c + '"></i>' + t + '</button>').join('');
+      leg.innerHTML = [['pilots', 'Pilots', '#e9ecf6'], ['best', 'Best path', '#ffd94a']].map(([k, t, c]) => '<button type="button" data-k="' + k + '" class="' + (almLayers[k] ? '' : 'off') + '"><i style="background:' + c + '"></i>' + t + '</button>').join('');
       leg.querySelectorAll('button').forEach(b => b.onclick = () => { const k = b.dataset.k; almLayers[k] = !almLayers[k]; b.classList.toggle('off', !almLayers[k]); drawAlmanac(); });
       drawAlmanac();
     } catch (e) { $('almanacNote').textContent = 'The results could not be loaded.'; }
@@ -694,9 +693,9 @@ label.name input{width:150px}
     g.setLineDash([]);
     g.fillStyle = '#ffd27a'; g.beginPath(); g.arc(cx, cy, Math.max(3, w.sun.radius * sc * SUN_MAG), 0, TAU); g.fill();
     const trace = (pts, style, width, glow) => { if (!pts || pts.length < 2) return; g.save(); g.strokeStyle = style; g.lineWidth = width; g.lineJoin = 'round'; g.lineCap = 'round'; if (glow) { g.shadowColor = glow; g.shadowBlur = 12; } g.beginPath(); g.moveTo(X(pts[0][0]), Y(pts[0][1])); for (let i = 1; i < pts.length; i++) g.lineTo(X(pts[i][0]), Y(pts[i][1])); g.stroke(); g.restore(); };
-    const base = { pilots: p => p.landed ? 'rgba(233,236,246,0.75)' : 'rgba(233,236,246,0.3)', plans: () => 'rgba(106,213,154,0.35)', best: () => '#f3b457' };
-    for (const p of alm.paths) { if (!almLayers[p.layer] || p === alm.hover) continue; trace(p.pts, base[p.layer](p), p.layer === 'best' ? 3 : 1.4, p.layer === 'best' ? 'rgba(243,180,87,0.9)' : null); }
-    if (alm.hover && almLayers[alm.hover.layer]) { const p = alm.hover, col = p.layer === 'best' ? '#f3b457' : p.layer === 'plans' ? '#6ad59a' : '#ffffff'; trace(p.pts, col, 3.5, col); const e = p.pts[p.pts.length - 1]; g.fillStyle = col; g.beginPath(); g.arc(X(e[0]), Y(e[1]), 5, 0, TAU); g.fill(); }
+    const base = { pilots: p => p.landed ? 'rgba(233,236,246,0.8)' : 'rgba(233,236,246,0.35)', best: () => '#ffd94a' };
+    for (const p of alm.paths) { if (!almLayers[p.layer] || p === alm.hover) continue; trace(p.pts, base[p.layer](p), p.layer === 'best' ? 3 : 1.4, p.layer === 'best' ? 'rgba(255,217,74,0.9)' : null); }
+    if (alm.hover && almLayers[alm.hover.layer]) { const p = alm.hover, col = p.layer === 'best' ? '#ffd94a' : '#ffffff'; trace(p.pts, col, 3.5, col); const e = p.pts[p.pts.length - 1]; g.fillStyle = col; g.beginPath(); g.arc(X(e[0]), Y(e[1]), 5, 0, TAU); g.fill(); }
     const A = w.bodies[w.start], T = w.bodies[w.target];
     g.fillStyle = '#e9ecf6'; g.beginPath(); g.arc(cx, cy - A.orbitR * sc, 4, 0, TAU); g.fill();
     g.font = '600 13px "IBM Plex Sans", sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(233,236,246,0.9)'; g.fillText('Launch from ' + A.name, cx, cy - A.orbitR * sc + 22);
