@@ -71,7 +71,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .editor .editor-head .row{display:flex}
 .editor .editor-head .cta{flex:1}
 .editor .hint{font-size:14px}
-@media (max-width:1100px){.stagegrid{grid-template-columns:1fr}.leftcol,.stagecol,.side{display:contents}.stagebar{order:1}.stage{order:2}#editor{order:3}.camwrap{order:4}#teleCard{order:5}#todayCard{order:6}#referCard{order:7}}
+@media (max-width:1100px){.stagegrid{grid-template-columns:1fr}.leftcol,.stagecol,.side{display:contents}#editor{order:1}.stagebar{order:2}.stage{order:3}.camwrap{order:4}#teleCard{order:5}#todayCard{order:6}#referCard{order:7}}
 .stage{position:relative;background:var(--sky);border:1px solid var(--line);border-radius:10px;overflow:hidden;aspect-ratio:1/1;max-width:100%}
 .stage canvas,.camwrap canvas{display:block;width:100%;height:100%}
 .verdict{position:absolute;left:12px;right:12px;top:12px;padding:10px 14px;border-radius:6px;font-family:var(--display);font-size:20px;letter-spacing:.08em;text-transform:uppercase;background:rgba(7,10,20,.88);border:1px solid var(--line);pointer-events:none}
@@ -989,12 +989,12 @@ label.name input{width:150px}
     g.setLineDash([]);
     drawStar(g, cx, cy, Math.max(4, w.sun.radius * scale * SUN_MAG), tnow);
     if (!run && P && tb) {
-      // where the launch burn carries you: the closest (or furthest) the flight would get to the star
-      const reach = burnReach ? (tb.outward ? burnReach.apo : burnReach.peri) : null;
-      if (reach && reach > 0) { const rr = reach * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab('your burn carries you to here', cx, cy + rr + 14); }
       // the brake ring around the target shows where the landing autopilot takes over
       const A = w.bodies[w.start], B = w.bodies[w.target], lab = (t, x, y) => { g.fillStyle = 'rgba(243,180,87,0.9)'; g.font = '600 11px "IBM Plex Sans", sans-serif'; g.textAlign = 'center'; g.fillText(t, x, y); g.textAlign = 'start'; };
       g.save(); g.setLineDash([2,5]); g.strokeStyle = 'rgba(243,180,87,0.6)'; g.lineWidth = 1.5;
+      // where the launch burn carries you: the closest (or furthest) the flight would get to the star
+      const reach = burnReach ? (tb.outward ? burnReach.apo : burnReach.peri) : null;
+      if (reach && reach > 0) { const rr = reach * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab('your burn carries you to here', cx, cy + rr + 14); }
       const tp = bodyAt(w, w.target, st.t), bx = sx(tp.x), by = sy(tp.y), br = (1 + P.brake) * B.radius * scale * mag; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.stroke(); lab('brakes on', bx, by + br + 13);
       g.restore();
     }
