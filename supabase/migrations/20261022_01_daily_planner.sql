@@ -136,3 +136,6 @@ update public.games set ends_at = now() where number = 1 and ends_at > now();
 -- Applied later as migration "lander_flights_start_from_now": launches.t_start, get_launch_code returns
 -- created_at and the game's started_at, finish_launch stores tStart, get_replay returns t_start.
 -- A flight starts from the sky as it looked when the launch was claimed (see lib/plan.js liveRate/worldAt).
+
+-- Applied as "lander_day_exists" (day_exists(p_day) helper for api/today) and "lander_current_game_started":
+-- game_state only treats a game as current once its started_at has passed, since tomorrow's system is made a day ahead.
