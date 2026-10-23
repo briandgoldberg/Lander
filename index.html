@@ -422,7 +422,7 @@ label.name input{width:150px}
     if (!session || !game) { shots = null; renderAuth(); return; }
     const { data, error } = await sb.rpc('shots_left', { p_game: game.id });
     if (!error && data) shots = data;
-    renderAuth();
+    renderAuth(); refreshMine();
   }
   sb.auth.onAuthStateChange((event, s) => { session = s; refreshProfile(); if (s && event === 'SIGNED_IN') els.signin.hidden = true; });
   function openSignin(){ els.signin.hidden = false; els.signinMsg.textContent = ''; setTimeout(() => els.googleBtn.focus(), 50); }
@@ -431,14 +431,15 @@ label.name input{width:150px}
 
   // ---------- share / beat my flight ----------
   // One link does both jobs: it carries the sharer's referral and, after a launch, the flight to beat.
-  let challenge = null;
+  let challenge = null, myLast = null;
   function myLastLaunch(){ try { return +localStorage.getItem('lander.mylaunch.' + (game ? game.id : 0)) || 0; } catch (e) { return 0; } }
   function rememberLaunch(id){ try { localStorage.setItem('lander.mylaunch.' + game.id, String(id)); } catch (e) {} }
-  function shareLink(){ const id = myLastLaunch(); return location.origin + location.pathname + (id ? '?beat=' + id : '?ref=' + (profile ? profile.referral_code : '')); }
+  function shareLink(){ return location.origin + location.pathname + (myLast ? '?beat=' + myLast.id : '?ref=' + (profile ? profile.referral_code : '')); }
+  async function refreshMine(){ if (!session || !game) { myLast = null; return; } const { data } = await sb.rpc('my_last_launch', { p_game: game.id }); myLast = data || null; renderShare(); }
   function renderShare(){
     const card = $('referCard');
     if (!session || !profile || !profile.referral_code) { card.hidden = true; els.outReferral.innerHTML = ''; return; }
-    const link = shareLink(), mine = myLastLaunch() ? feed.find(f => f.id === myLastLaunch() && f.status === 'done') : null;
+    const link = shareLink(), mine = myLast;
     const T = world ? world.bodies[world.target].name : 'the planet';
     const msg = mine && mine.outcome === 'landed' ? 'I landed on ' + T + ' with ' + fmt(mine.fuel_left, 2) + ' fuel left. Beat my flight: ' + link
       : mine ? 'I just crashed into ' + T + '. Think you can land it? ' + link
@@ -564,7 +565,7 @@ label.name input{width:150px}
       if (rep.data.samples) playReplay(rep.data, { mine: true });
       setStatus(j.result.outcome === 'landed' ? 'Safe landing with ' + fmt(j.result.fuelLeft, 3) + ' fuel left. It counts for today.' : j.result.outcome === 'error' ? 'The flight did not run: ' + j.result.error : 'No landing. Adjust the dials and use another shot.', j.result.outcome !== 'landed');
       if (j.result.outcome === 'error') showErr(j.result.error);
-      await refreshFeed(); refreshBoard(); refreshShots(); renderShare();
+      await refreshFeed(); refreshBoard(); refreshShots();
     } catch (e) {
       setStatus('Launch failed: ' + (e.message || e), true);
     } finally { launching = false; els.launchBtn.disabled = false; renderCta(); }
