@@ -234,7 +234,6 @@ label.name input{width:150px}
       <div class="controls" id="controls" hidden>
         <div class="picker"><button class="banner" id="banner" type="button" aria-haspopup="listbox" aria-expanded="false"><i></i><span id="bannerText">Waiting for the next launch</span><b class="caret" id="bannerCaret" hidden>▾</b></button><div class="menu" id="replayMenu" role="listbox" hidden></div></div>
       </div>
-      <button class="btn small" id="backLive" type="button" hidden>Back to live</button>
     </div>
     <section class="stage" id="stage" aria-label="System view">
       <canvas id="sky"></canvas>
@@ -651,14 +650,14 @@ label.name input{width:150px}
     run = { world: w, samples: S, result: rep, tau: 0, idx: 0, done: false, tLaunch, end: Math.min(S[S.length - 1][0], LanderPlan.flightDays(w)), held: false, hold: null, mine: !!opts.mine, practice: !!opts.practice, live: !!opts.live, pilot: opts.pilot || '', name: rep.bot_name || 'bot', label: opts.label };
     resetFx(); camS = null; burning = false; cutoffAt = 0;
     els.verdict.hidden = true;
-    els.banner.classList.remove('live'); els.banner.classList.add('replay'); renderCta();
+    els.banner.classList.remove('live'); els.banner.classList.add('replay', 'pick'); renderCta();
     const when = rep.created_at ? new Date(rep.created_at).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric', year: '2-digit' }) : '';
-    els.bannerText.textContent = (run.pilot ? run.pilot + "'s " : '') + 'best flight' + (when ? ' ' + when : '');
-    $('backLive').hidden = false; $('controls').hidden = false; $('liveBadge').hidden = true;
+    els.bannerText.innerHTML = esc((run.pilot ? run.pilot + "'s " : '') + 'best flight' + (when ? ' ' + when : '')) + ' · <u>back to live</u>';
+    $('controls').hidden = false; $('liveBadge').hidden = true;
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
   }
-  function endReplay(){ if (!run) return; lastRun = run; run = null; idleT = liveT(); resetFx(); camS = null; noseAng = null; els.verdict.hidden = true; $('backLive').hidden = true; $('controls').hidden = true; $('liveBadge').hidden = false; idleBanner(); }
-  $('backLive').onclick = endReplay;
+  function endReplay(){ if (!run) return; lastRun = run; run = null; idleT = liveT(); resetFx(); camS = null; noseAng = null; els.verdict.hidden = true; $('controls').hidden = true; $('liveBadge').hidden = false; idleBanner(); }
+  els.banner.onclick = endReplay;
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { els.fb.hidden = true; } });
   function outcomeText(r, w){
     const B = w.bodies[w.target];
