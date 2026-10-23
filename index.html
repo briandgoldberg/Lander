@@ -540,41 +540,30 @@ label.name input{width:150px}
   // ---------- launch ----------
   let launching = false;
   function planName(){ return 'aim ' + fmt(P.aim > 180 ? P.aim - 360 : P.aim, 0) + ' burn ' + Math.round(P.s1 * 100) + '% brake ' + fmt(P.brake, 1); }
+  let launchPending = false;   // between the press and the flight's arrival the pad vents and the engine glows
   async function launch(){
     if (launching) return;
     if (!session) return openSignin();
     showErr('');
-    launching = true; els.launchBtn.disabled = true; fadeVerdict();
+    launching = true; launchPending = true; els.launchBtn.disabled = true; els.launchBtn.textContent = 'Launching…'; fadeVerdict();
+    if (innerWidth <= 1100) els.stage.scrollIntoView({ behavior: 'smooth', block: 'start' });   // phones scroll up to the map; desktop stays put
     try {
-      setStatus('Asking for the launch slot…');
-      const { data, error } = await sb.rpc('claim_launch', { p_game: game.id, p_bot_name: planName(), p_code: JSON.stringify(P) });
-      if (error) throw new Error(error.message);
-      if (!data.ok) {
-        if (data.reason === 'in_flight') { setStatus('Your flight is still in the air. Launch again when it is over.', true); return; }
-        if (data.reason === 'no_credits') { setStatus('Out of shots for today.', true); refreshShots(); openOut(); return; }
-        if (data.reason === 'game_over') { setStatus("That system is over. Loading today's…", true); refreshGame(); return; }
-        throw new Error(data.reason || 'could not claim');
-      }
-      renderAuth(); rememberLaunch(data.launch_id);
-      if (innerWidth <= 1100) els.stage.scrollIntoView({ behavior: 'smooth', block: 'start' });   // phones scroll up to the map; desktop stays put
-      const t0 = performance.now();
-      const tick = setInterval(() => setStatus('Launch #' + data.launch_id + ' · flying for real on the server · ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s'), 100);
-      const res = await fetch('/api/launch', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ launch_id: data.launch_id }) });
-      clearInterval(tick);
+      const res = await fetch('/api/launch', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ game: game.id, code: JSON.stringify(P), name: planName() }) });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || 'launch failed');
-      const rep = await sb.rpc('get_replay', { p_launch: data.launch_id });
-      if (rep.error || !rep.data) throw new Error('could not load the replay');
-      seen.add(data.launch_id);
-      if (rep.data.samples) addFlight(rep.data, { mine: true, pilot: session.user.email ? session.user.email.split('@')[0] : '' });
-      setStatus(j.result.outcome === 'error' ? 'The flight did not run: ' + j.result.error : 'Launch #' + data.launch_id + ' is on the pad.', j.result.outcome === 'error');
+      if (!j.ok) {
+        if (j.reason === 'in_flight') { setStatus('Your flight is still in the air.', true); return; }
+        if (j.reason === 'game_over') { setStatus("That system is over. Loading today's…", true); refreshGame(); return; }
+        throw new Error(j.reason || 'could not claim');
+      }
+      renderAuth(); rememberLaunch(j.launch_id); seen.add(j.launch_id);
+      if (j.replay && j.replay.samples) addFlight(j.replay, { mine: true, pilot: session.user.email ? session.user.email.split('@')[0] : '' });
       if (j.result.outcome === 'error') showErr(j.result.error);
-      await refreshFeed(); refreshBoard(); refreshShots();
+      refreshFeed(); refreshBoard(); refreshShots();
     } catch (e) {
       setStatus('Launch failed: ' + (e.message || e), true);
-    } finally { launching = false; els.launchBtn.disabled = false; renderCta(); }
+    } finally { launching = false; launchPending = false; els.launchBtn.disabled = false; renderCta(); }
   }
-
   $('abortBtn').onclick = async () => {
     const f = flights.find(x => x.mine && !x.finished); if (!f) return;
     $('abortBtn').disabled = true;
@@ -1163,7 +1152,7 @@ label.name input{width:150px}
     else if (fx.flash > 0) { g.fillStyle = 'rgba(255,220,160,' + fx.flash + ')'; g.beginPath(); g.arc(rx, ry, 6 + 40*(1 - fx.flash), 0, TAU); g.fill(); }
     g.restore();
     let label = null, sub = null;
-    if (countdown != null) { label = 'T-' + Math.ceil(countdown); sub = 'Launching from ' + w.bodies[w.start].name; }
+    if (countdown != null) { label = launchPending && !run && !focal ? 'IGNITION' : 'T-' + Math.ceil(countdown); sub = 'Launching from ' + w.bodies[w.start].name; }
     else if (fx.label) label = fx.label;
     if (label) { const fs = Math.min(48, Math.max(26, W * 0.07)), ly = Math.max(H * 0.3, 120); g.save(); g.textAlign = 'center'; g.font = '700 ' + fs + 'px "Chakra Petch", sans-serif'; g.shadowColor = label === 'TOUCHDOWN' ? 'rgba(106,213,154,0.9)' : 'rgba(243,180,87,0.9)'; g.shadowBlur = 28; g.fillStyle = label === 'TOUCHDOWN' ? '#6ad59a' : label === 'IMPACT' ? '#ff8a4a' : '#f3b457'; g.fillText(label, W/2, ly); g.shadowBlur = 0; if (sub) { g.font = '500 13px "IBM Plex Sans", sans-serif'; g.fillStyle = '#e9ecf6'; g.fillText(sub, W/2, ly + 24); } g.restore(); }
     if (fx.skyFlash > 0) { g.fillStyle = 'rgba(255,230,190,' + (fx.skyFlash*0.5).toFixed(3) + ')'; g.fillRect(0, 0, W, H); }
@@ -1308,7 +1297,7 @@ label.name input{width:150px}
     const st = run ? sampleState() : live ? flightState(live, idleT) : padState(w, idleT);
     const nr = nearest(w, st), flicker = Math.random(), R = nr.body.radius;
     const res = run ? run.result : live ? live.result : null, done = run ? run.done : live ? live.finished : false;
-    const countdown = run && run.hold ? Math.max(0, (run.hold.until - performance.now()) / 1000) : live && st.pre != null ? Math.max(0, (realAt(live.t0) - Date.now()) / 1000) : null;
+    const countdown = run && run.hold ? Math.max(0, (run.hold.until - performance.now()) / 1000) : live && st.pre != null ? Math.max(0, (realAt(live.t0) - Date.now()) / 1000) : (!run && !live && launchPending) ? 0.5 : null;
     let dirx, diry;
     if (st.thr > 0) { dirx = st.dx; diry = st.dy; }
     else { dirx = st.vx; diry = st.vy; }
