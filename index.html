@@ -644,7 +644,7 @@ label.name input{width:150px}
       els.board.querySelectorAll('li').forEach(li => li.onclick = () => watch(+li.dataset.id, li.dataset.pilot, gid));
       els.boardNote.textContent = '';
     }
-    showAlmanac(past ? gid : null);
+    { const y = days.find(d => !game || d.id !== game.id); showAlmanac(y ? y.id : null); }   // the almanac is always yesterday's
   }
 
   // ---------- almanac ----------
@@ -659,7 +659,7 @@ label.name input{width:150px}
       const [w, fl, al] = await Promise.all([worldFor(gid), sb.rpc('almanac_flights', { p_game: gid }), fetch('/api/almanac?game=' + gid).then(r => r.json())]);
       if (almanacFor !== gid) return;
       const d0 = days.find(d => d.id === gid);
-      $('almanacTitle').textContent = 'Almanac · Game #' + ((d0 && d0.number) || '');
+      $('almanacTitle').textContent = "Yesterday's almanac · Game #" + ((d0 && d0.number) || '');
       if (!w || !al || !al.ended) { $('almanacNote').textContent = 'The almanac opens when the day is over.'; return; }
       const flights = fl.data || [], sol = al.data || { list: [] };
       drawAlmanac(w, sol, flights);
