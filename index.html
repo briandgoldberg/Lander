@@ -1013,7 +1013,6 @@ label.name input{width:150px}
     if (!ended) {
       if (st.thr > 0) { const gl = g.createRadialGradient(rx, ry, 0, rx, ry, 18); gl.addColorStop(0, 'rgba(255,180,90,0.45)'); gl.addColorStop(1, 'rgba(255,120,40,0)'); g.fillStyle = gl; g.beginPath(); g.arc(rx, ry, 18, 0, TAU); g.fill(); }
       drawRocket(g, rx, ry, dirx, diry, st.thr, 8, flicker, 0);
-      g.fillStyle = '#f3b457'; g.font = '600 11px "IBM Plex Sans", sans-serif'; g.fillText('you ▲', rx + 10, ry + 15);
     }
     else if (fx.flash > 0) { g.fillStyle = 'rgba(255,220,160,' + fx.flash + ')'; g.beginPath(); g.arc(rx, ry, 6 + 40*(1 - fx.flash), 0, TAU); g.fill(); }
     g.restore();
