@@ -657,7 +657,7 @@ label.name input{width:150px}
     const S = rep.samples;
     let tLaunch = null; for (let i = 0; i < S.length; i++) if (S[i][5] > 0) { tLaunch = S[i][0]; break; }
     run = { world: w, samples: S, result: rep, tau: 0, idx: 0, done: false, tLaunch, held: false, hold: null, mine: !!opts.mine, practice: !!opts.practice, live: !!opts.live, pilot: opts.pilot || '', name: rep.bot_name || 'bot', label: opts.label };
-    resetFx(); camS = null;
+    resetFx(); camS = null; burning = false; cutoffAt = 0;
     els.verdict.hidden = true; els.bannerCaret.hidden = doneLaunches().length === 0; els.banner.classList.toggle('pick', doneLaunches().length > 0);
     els.banner.classList.remove('replay'); els.banner.classList.toggle('live', !!opts.live || !!opts.mine); renderCta();
     els.bannerText.textContent = opts.practice ? 'Practice run · random ' + w.name + ' system' : opts.mine ? 'Your launch · ' + run.name : (opts.live ? '' : (opts.label || 'Replay') + ' · ') + (run.pilot ? run.pilot + "'s " : '') + run.name;
@@ -1049,7 +1049,7 @@ label.name input{width:150px}
   // The cam: a tight shot on the rocket at the surface that pulls back with altitude, a chase cam in deep space.
   // The frame turns so that "down" is toward the nearest planet whenever the rocket is in its sphere of influence.
   // Everything is drawn at true scale; the camera center, zoom and heading ease between targets.
-  let camS = null, prevThr = 0, camStars = null, preIgnite = 0, noseAng = null;
+  let camS = null, prevThr = 0, camStars = null, preIgnite = 0, noseAng = null, burning = false, cutoffAt = 0;
   function camStarsInit(){ const rnd = seededRnd(777); camStars = [0, 1, 2].map(l => { const arr = []; for (let i = 0; i < 70; i++) arr.push([rnd(), rnd(), 0.6 + l * 0.5 + rnd() * 0.7, 0.2 + rnd() * 0.5]); return arr; }); }
   function drawCam(w, st, nr, dirx, diry, ended, flicker, dt){
     const g = cctx;
@@ -1188,7 +1188,7 @@ label.name input{width:150px}
     if (st.onPad || (run && run.done && run.result.outcome === 'landed')) { dirx = st.x - nr.b.x; diry = st.y - nr.b.y; }
     const dn = Math.hypot(dirx, diry) || 1; dirx /= dn; diry /= dn;
     // the nose turns smoothly toward its new heading instead of snapping, except on the pad
-    { const want = Math.atan2(diry, dirx); if (noseAng == null || st.onPad || !run) noseAng = want; else { let d = want - noseAng; d = Math.atan2(Math.sin(d), Math.cos(d)); noseAng += d * Math.min(1, fxDt / 0.35); } dirx = Math.cos(noseAng); diry = Math.sin(noseAng); }
+    { const want = Math.atan2(diry, dirx); if (noseAng == null || st.onPad || !run) noseAng = want; else { let d = want - noseAng; d = Math.atan2(Math.sin(d), Math.cos(d)); noseAng += d * Math.min(1, fxDt / 0.9); } dirx = Math.cos(noseAng); diry = Math.sin(noseAng); }
     const ended = !!(run && run.done && (run.result.outcome === 'crashed' || run.result.outcome === 'burned'));
     preIgnite = 0;
     if (run && run.hold) {
@@ -1231,6 +1231,8 @@ label.name input{width:150px}
           else if (nr.k === w.target) mult = 0.02 + 0.98 * ease(a / 10);
           else if (nr.k === w.start) mult = 0.3 + 0.7 * ease(a / 8);
           else mult = 0.4 + 0.6 * ease(a / 6);
+          // every burn plays slowly, and the moment the engine cuts off the pace eases back up over two seconds
+          if (!st.onPad) { if (st.thr > 0) { burning = true; mult = Math.min(mult, 0.15); } else if (burning) { burning = false; cutoffAt = now; } if (cutoffAt && now - cutoffAt < 2000) mult = Math.min(mult, 0.15 + (mult - 0.15) * ease((now - cutoffAt) / 2000)); }
           let next = run.tau + dts * base * mult;
           if (!run.held && run.tLaunch != null && run.tau < run.tLaunch && next >= run.tLaunch) { next = run.tLaunch; run.held = true; run.hold = { until: now + 3000 }; }
           run.tau = next;
