@@ -680,7 +680,7 @@ label.name input{width:150px}
     } catch (e) { $('almanacNote').textContent = 'The results could not be loaded.'; }
   }
   function almanacGeom(){
-    const cv = $('almanac'), size = Math.min(560, cv.clientWidth || 560), w = alm.w, outer = w.bodies[w.bodies.length - 1].orbitR, sc = (size / 2 - 12) / outer;
+    const cv = $('almanac'), size = Math.min(560, cv.clientWidth || 560), w = alm.w, outer = w.bodies[w.bodies.length - 1].orbitR, sc = (size / 2 - 26) / outer;
     return { cv, size, sc, cx: size / 2, cy: size / 2 };
   }
   function drawAlmanac(){
@@ -699,7 +699,7 @@ label.name input{width:150px}
     if (alm.hover && almLayers[alm.hover.layer]) { const p = alm.hover, col = p.layer === 'best' ? '#f3b457' : p.layer === 'plans' ? '#6ad59a' : '#ffffff'; trace(p.pts, col, 3.5, col); const e = p.pts[p.pts.length - 1]; g.fillStyle = col; g.beginPath(); g.arc(X(e[0]), Y(e[1]), 5, 0, TAU); g.fill(); }
     const A = w.bodies[w.start], T = w.bodies[w.target];
     g.fillStyle = '#e9ecf6'; g.beginPath(); g.arc(cx, cy - A.orbitR * sc, 4, 0, TAU); g.fill();
-    g.font = '600 13px "IBM Plex Sans", sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(233,236,246,0.9)'; g.fillText('Launch from ' + A.name, cx, cy - A.orbitR * sc - 10);
+    g.font = '600 13px "IBM Plex Sans", sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(233,236,246,0.9)'; g.fillText('Launch from ' + A.name, cx, cy - A.orbitR * sc + 22);
     g.fillStyle = 'rgba(243,180,87,0.9)'; g.fillText(T.name + "'s orbit", cx, cy + T.orbitR * sc + 16);
   }
   // hover or tap: the nearest path within a few pixels lights up and says whose it is
