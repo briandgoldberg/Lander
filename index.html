@@ -71,7 +71,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .editor .editor-head .row{display:flex}
 .editor .editor-head .cta{flex:1}
 .editor .hint{font-size:14px}
-@media (max-width:1100px){.stagegrid{grid-template-columns:1fr}.stagecol{order:1}.leftcol{order:2}.side{order:3}}
+@media (max-width:1100px){.stagegrid{grid-template-columns:1fr}.leftcol,.stagecol,.side{display:contents}.stagebar{order:1}.stage{order:2}#editor{order:3}.camwrap{order:4}#teleCard{order:5}#todayCard{order:6}#referCard{order:7}.boards{order:8}}
 .stage{position:relative;background:var(--sky);border:1px solid var(--line);border-radius:10px;overflow:hidden;aspect-ratio:1/1;max-width:100%}
 .stage canvas,.camwrap canvas{display:block;width:100%;height:100%}
 .verdict{position:absolute;left:12px;right:12px;top:12px;padding:10px 14px;border-radius:6px;font-family:var(--display);font-size:20px;letter-spacing:.08em;text-transform:uppercase;background:rgba(7,10,20,.88);border:1px solid var(--line);pointer-events:none}
@@ -253,7 +253,7 @@ label.name input{width:150px}
     </div>
     <aside class="side">
       <div class="camwrap"><canvas id="cam"></canvas><div class="camlabel" id="camLabel">APPROACH CAM</div><div class="camfoot" id="camFoot"></div></div>
-      <div class="card">
+      <div class="card" id="teleCard">
         <h2>Telemetry</h2>
         <div class="gauge"><span>Fuel</span><div class="bar"><i id="fuelBar"></i></div><span id="fuelText"></span></div>
         <div class="tele">
@@ -267,7 +267,7 @@ label.name input{width:150px}
           <div><span>Fuel used</span><b id="tUsed">0.00</b></div>
         </div>
       </div>
-    <div class="card">
+    <div class="card" id="todayCard">
       <h2>Today's system <small id="systemName"></small></h2>
       <p class="brief" id="brief"></p>
       <dl class="facts" id="facts"></dl>
