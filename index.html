@@ -54,19 +54,20 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .ctarow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .maincol{display:flex;flex-direction:column;gap:14px;min-width:0}
 .how{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.livebadge{display:flex;flex:none;align-items:center;gap:8px;font-family:var(--display);font-size:12px;letter-spacing:.14em;background:rgba(7,10,20,.85);border:1px solid var(--live);border-radius:999px;padding:6px 12px;color:var(--fg)}
+.livebadge{display:flex;flex:none;white-space:nowrap;align-items:center;gap:8px;font-family:var(--display);font-size:12px;letter-spacing:.14em;background:rgba(7,10,20,.85);border:1px solid var(--live);border-radius:999px;padding:6px 12px;color:var(--fg)}
 .livebadge i{width:8px;height:8px;border-radius:50%;background:var(--live);box-shadow:0 0 10px var(--live);animation:pulse 1.2s infinite;flex:none}
 .livebadge small{font-family:var(--body);letter-spacing:0;color:var(--muted);font-size:12px}
 .livebadge[hidden]{display:none}
 .livebadge.slow{border-color:var(--accent);color:var(--accent)}.livebadge.slow i{background:var(--accent);box-shadow:0 0 10px var(--accent);animation:pulse .5s infinite}.livebadge.slow small{color:var(--accent)}
-@media (max-width:640px){.livebadge small{display:none}}
+@media (max-width:900px){.livebadge small{display:none}}
 @media (max-width:760px){.how{grid-template-columns:1fr}}
 .how div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:15px;color:var(--fg);display:flex;gap:12px;align-items:center}
 .how b{font-family:var(--display);color:var(--accent);font-size:22px;line-height:1;min-width:24px}
 .how .cta{padding:10px 14px;font-size:14px}
 .stagegrid{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;gap:14px;align-items:start}
 .stagecol{display:flex;flex-direction:column;gap:8px;min-width:0}
-.stagebar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.stagebar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:nowrap}
+.stagebar .picker{min-width:0;flex:1 1 auto}.banner{overflow:hidden}#bannerText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stage{width:100%}
 .editor .dials{grid-template-columns:1fr;gap:12px}
 .editor .editor-head{flex-direction:column;align-items:stretch}
@@ -1285,7 +1286,7 @@ label.name input{width:150px}
     const T = idleT, rate = LanderPlan.liveRate(w);
     // the pill says when the shared sky is in slow motion
     const slow = clockWindows.some(win => T >= win[0] && T <= win[1]);
-    if (slow !== slowShown) { slowShown = slow; const b = $('liveBadge'); b.classList.toggle('slow', slow); $('liveWord').textContent = slow ? 'SLOW MOTION' : 'LIVE'; $('liveNote').textContent = slow ? 'engines burning · time slows for everyone' : 'every launch plays here as it happens'; }
+    if (slow !== slowShown) { slowShown = slow; const b = $('liveBadge'); b.classList.toggle('slow', slow); $('liveWord').textContent = slow ? 'SLOW MOTION' : 'LIVE'; $('liveNote').textContent = slow ? 'engines on' : 'every launch plays here as it happens'; }
     let changed = false;
     for (const f of flights) {
       const tau = T - f.t0;
