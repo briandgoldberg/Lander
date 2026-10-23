@@ -1048,7 +1048,7 @@ label.name input{width:150px}
   // The cam: a tight shot on the rocket at the surface that pulls back with altitude, a chase cam in deep space.
   // The frame turns so that "down" is toward the nearest planet whenever the rocket is in its sphere of influence.
   // Everything is drawn at true scale; the camera center, zoom and heading ease between targets.
-  let camS = null, prevThr = 0, camStars = null, preIgnite = 0, noseAng = null, burning = false, cutoffAt = 0;
+  let camS = null, prevThr = 0, camStars = null, preIgnite = 0, noseAng = null, burning = false, cutoffAt = 0, cutoffMult = 0.06;
   function camStarsInit(){ const rnd = seededRnd(777); camStars = [0, 1, 2].map(l => { const arr = []; for (let i = 0; i < 70; i++) arr.push([rnd(), rnd(), 0.6 + l * 0.5 + rnd() * 0.7, 0.2 + rnd() * 0.5]); return arr; }); }
   function drawCam(w, st, nr, dirx, diry, ended, flicker, dt){
     const g = cctx;
@@ -1231,7 +1231,8 @@ label.name input{width:150px}
           else if (nr.k === w.start) mult = 0.3 + 0.7 * ease(a / 8);
           else mult = 0.4 + 0.6 * ease(a / 6);
           // every burn plays slowly, and the moment the engine cuts off the pace eases back up over two seconds
-          if (!st.onPad) { if (st.thr > 0) { burning = true; mult = Math.min(mult, 0.15); } else if (burning) { burning = false; cutoffAt = now; } if (cutoffAt && now - cutoffAt < 2000) mult = Math.min(mult, 0.15 + (mult - 0.15) * ease((now - cutoffAt) / 2000)); }
+          if (!st.onPad) { const slow = (run.tLaunch != null && st.t - run.tLaunch < 1.5) ? 0.02 : 0.06;   // the launch burn is tiny in flight time, so it plays very slowly
+            if (st.thr > 0) { burning = true; mult = Math.min(mult, slow); } else if (burning) { burning = false; cutoffAt = now; cutoffMult = slow; } if (cutoffAt && now - cutoffAt < 2500) mult = Math.min(mult, cutoffMult + (mult - cutoffMult) * ease((now - cutoffAt) / 2500)); }
           let next = run.tau + dts * base * mult;
           if (!run.held && run.tLaunch != null && run.tau < run.tLaunch && next >= run.tLaunch) { next = run.tLaunch; run.held = true; run.hold = { until: now + 3000 }; }
           run.tau = next;
