@@ -210,9 +210,8 @@ label.name input{width:150px}
           <button class="cta" id="launchBtn">Launch</button>
         </div>
       </div>
-      <p class="hint">Set the four dials and launch. You find out how it went when it flies. Ten shots a day.</p>
+      <p class="hint">Set the dials, then press Launch when the sky looks right. The rocket leaves the moment you press. Ten shots a day.</p>
       <div class="dials">
-        <label class="dial"><span class="dl">Launch time <b id="vWait"></b></span><input type="range" id="dWait" min="0" max="100" step="0.1"><small>How long to wait before takeoff, from the moment you press Launch. The takeoff circle on the map is where your planet will be.</small></label>
         <label class="dial"><span class="dl"><span id="lReach">Far point</span> <b id="vReach"></b></span><input type="range" id="dReach" min="0" max="2" step="0.001"><small id="hReach">How far your rocket swings, as a share of your home planet's distance from the star. The dotted ring on the map.</small></label>
         <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="-180" max="180" step="0.5"><small>Which way the engine pushes when you leave. The arrow on the map.</small></label>
         <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"><small>How high above the target planet the brakes come on. The ring around it on the map.</small></label>
@@ -491,25 +490,23 @@ label.name input{width:150px}
   // ---------- planner ----------
   // Four dials and nothing else. What they do shows when the rocket flies.
   let P = null, tb = null;
-  const dials = { wait: $('dWait'), reach: $('dReach'), aim: $('dAim'), brake: $('dBrake') };
+  const dials = { reach: $('dReach'), aim: $('dAim'), brake: $('dBrake') };
   function setupPlanner(){
     tb = LanderPlan.textbook(world);
-    P = LanderPlan.clean(world, loadPlan() || { wait: tb.latest * 0.2, reach: (tb.reachMin + tb.reachMax) / 2, aim: 0, brake: 1 });
-    dials.wait.min = 0; dials.wait.max = tb.latest.toFixed(2); dials.wait.step = (tb.latest / 1000).toFixed(4);
+    P = LanderPlan.clean(world, Object.assign(loadPlan() || { reach: (tb.reachMin + tb.reachMax) / 2, aim: 0, brake: 1 }, { wait: 0 }));
     dials.reach.min = tb.reachMin.toFixed(3); dials.reach.max = tb.reachMax.toFixed(3); dials.reach.step = ((tb.reachMax - tb.reachMin) / 500).toFixed(5);
     $('lReach').textContent = tb.outward ? 'Far point' : 'Near point';
     $('hReach').textContent = (tb.outward ? 'How far out your rocket swings, as a share of ' : 'How far in your rocket dives, as a share of ') + world.bodies[world.start].name + "'s distance from the star. The dotted ring on the map.";
     syncDials();
   }
-  function syncDials(){ dials.wait.value = P.wait; dials.reach.value = P.reach; dials.aim.value = P.aim; dials.brake.value = P.brake; renderDialValues(); }
+  function syncDials(){ dials.reach.value = P.reach; dials.aim.value = P.aim; dials.brake.value = P.brake; renderDialValues(); }
   function renderDialValues(){
-    $('vWait').textContent = 'T+' + fmt(P.wait, 1);
     const A = world.bodies[world.start]; $('vReach').textContent = Math.round(P.reach / A.orbitR * 100) + '% of ' + A.name + "'s distance";
     $('vAim').textContent = (P.aim > 0 ? '+' : '') + fmt(P.aim, 1) + '°';
     $('vBrake').textContent = fmt(P.brake, 2) + ' planet radii';
   }
   Object.keys(dials).forEach(k => dials[k].addEventListener('input', () => {
-    P = LanderPlan.clean(world, { wait: +dials.wait.value, reach: +dials.reach.value, aim: +dials.aim.value, brake: +dials.brake.value });
+    P = LanderPlan.clean(world, { wait: 0, reach: +dials.reach.value, aim: +dials.aim.value, brake: +dials.brake.value });
     renderDialValues(); savePlan();
   }));
   function savePlan(){ try { localStorage.setItem('lander.plan.' + game.id, JSON.stringify(P)); } catch (e) {} }
@@ -517,7 +514,7 @@ label.name input{width:150px}
 
   // ---------- launch ----------
   let launching = false;
-  function planName(){ return 'T+' + fmt(P.wait, 1) + ' r' + fmt(P.reach, 2) + ' a' + fmt(P.aim, 0) + ' b' + fmt(P.brake, 1); }
+  function planName(){ return 'r' + fmt(P.reach, 2) + ' a' + fmt(P.aim, 0) + ' b' + fmt(P.brake, 1); }
   async function launch(){
     if (launching) return;
     if (!session) return openSignin();
@@ -981,7 +978,7 @@ label.name input{width:150px}
       g.save(); g.setLineDash([2,5]); g.strokeStyle = 'rgba(243,180,87,0.6)'; g.lineWidth = 1.5;
       const rr = P.reach * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab(tb.outward ? 'far point' : 'near point', cx, cy + rr + 14);
       const tp = bodyAt(w, w.target, st.t), bx = sx(tp.x), by = sy(tp.y), br = (1 + P.brake) * B.radius * scale * mag; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.stroke(); lab('brakes on', bx, by + br + 13);
-      const ta = bodyAt(w, w.start, st.t + P.wait), ax = sx(ta.x), ay = sy(ta.y), ar = A.radius * scale * mag; g.beginPath(); g.arc(ax, ay, ar + 3, 0, TAU); g.stroke(); lab('takeoff', ax, ay + ar + 16);
+      const ta = bodyAt(w, w.start, st.t), ax = sx(ta.x), ay = sy(ta.y), ar = A.radius * scale * mag;
       const sgn = tb.outward ? 1 : -1, c = Math.cos(P.aim * Math.PI / 180), s = Math.sin(P.aim * Math.PI / 180), vn = Math.hypot(ta.vx, ta.vy) || 1, ux0 = sgn * ta.vx / vn, uy0 = sgn * ta.vy / vn, dxv = ux0 * c - uy0 * s, dyv = ux0 * s + uy0 * c, L = ar + 30;
       g.setLineDash([]); g.strokeStyle = 'rgba(243,180,87,0.9)'; g.lineWidth = 2; g.beginPath(); g.moveTo(ax + dxv * (ar + 4), ay - dyv * (ar + 4)); g.lineTo(ax + dxv * L, ay - dyv * L); g.stroke();
       g.fillStyle = 'rgba(243,180,87,0.9)'; g.save(); g.translate(ax + dxv * L, ay - dyv * L); g.rotate(Math.atan2(-dyv, dxv)); g.beginPath(); g.moveTo(7, 0); g.lineTo(-5, -5); g.lineTo(-5, 5); g.closePath(); g.fill(); g.restore();
