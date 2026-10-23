@@ -28,10 +28,10 @@ module.exports = async (req, res) => {
     const world = plan.flightWorld(state.world, tStart, dials, require('../lib/engine'));
 
     // the stored entry is the plan's dials; the autopilot source is built here, never taken from the client
-    // fly the plan as dialled; if it does not land, quietly try the second stage one percent of the way earlier and later and keep a landing
+    // fly the plan as dialled; if it does not land, quietly try the second stage a third of a day earlier and later and keep a landing
     let out = await runBot(plan.botSource(world, dials), world, BUDGET_MS);
     if (!(out.type === 'result' && out.result.outcome === 'landed')) {
-      for (const d of [-0.01, 0.01]) {
+      for (const d of [-0.3, 0.3]) {
         const alt = Object.assign({}, dials, { when: +((+dials.when || 0) + d).toFixed(3), exact: true });
         const o2 = await runBot(plan.botSource(world, alt), world, BUDGET_MS);
         if (o2.type === 'result' && o2.result.outcome === 'landed') { out = o2; break; }
