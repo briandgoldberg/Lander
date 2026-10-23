@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
     if (!state || !state.game || state.game.id !== entry.game_id) return json(res, 409, { error: 'Game mismatch.' });
     // the flight starts from the sky as it looked when the launch was claimed
     const tStart = +(Math.max(0, (new Date(entry.created_at).getTime() - new Date(entry.game_started_at).getTime()) / 1000) * plan.liveRate(state.world)).toFixed(4);
-    const world = plan.worldAt(state.world, tStart);
+    const world = plan.flightWorld(state.world, tStart);
 
     // the stored entry is the plan's dials; the autopilot source is built here, never taken from the client
     let dials; try { dials = JSON.parse(entry.code); } catch (e) { dials = {}; }
