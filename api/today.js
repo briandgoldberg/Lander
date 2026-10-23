@@ -1,20 +1,27 @@
 // GET/POST /api/today — makes sure today's star system exists. Called by the page when the day
 // rolls over and by a daily cron. Idempotent: the day's world is a pure function of the date.
 const { rpc, json, sign, configured } = require('../lib/db');
-const { makeWorld } = require('../lib/engine');
+const engine = require('../lib/engine');
+const plan = require('../lib/plan');
+const { makeWorld } = engine;
 
 function daySeed(day) { let h = 2166136261; for (const ch of 'lander-' + day) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+async function ensureDay(day) {
+  if (await rpc('day_exists', { p_day: day })) return { day, existing: true };   // the landability sweep is slow, so only run it when a day is actually new
+  let w = null; for (let attempt = 0; attempt < 64; attempt++) { w = makeWorld(daySeed(day + (attempt ? '#' + attempt : ''))); w.rocket.fuel = +(w.rocket.fuel * 0.7).toFixed(2); if (Math.abs(w.start - w.target) >= 2 && plan.landable(w, engine).ok) break; }
+  const world = JSON.stringify(w);
+  return rpc('ensure_game', { p_day: day, p_world: world, p_sig: sign('game|' + day + '|' + world) });
+}
 
 module.exports = async (req, res) => {
   if (!configured) return json(res, 503, { error: 'Server is not configured yet.' });
   try {
-    const day = new Date().toISOString().slice(0, 10);
-    // the day's system: the first candidate whose start and target orbits have at least one orbit between them
-    let w = null; for (let attempt = 0; attempt < 64; attempt++) { w = makeWorld(daySeed(day + (attempt ? '#' + attempt : ''))); if (Math.abs(w.start - w.target) >= 2) break; }
-    w.rocket.fuel = +(w.rocket.fuel * 0.7).toFixed(2);   // a tighter tank than the generator's: landing with fuel to spare should be hard
-    const world = JSON.stringify(w);
-    const game = await rpc('ensure_game', { p_day: day, p_world: world, p_sig: sign('game|' + day + '|' + world) });
-    return json(res, 200, { ok: true, day, game });
+    const day = new Date().toISOString().slice(0, 10), tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    const game = await ensureDay(day);
+    // tomorrow's system is made ahead of time so the midnight rollover is instant
+    let next = null; try { next = await ensureDay(tomorrow); } catch (e) {}
+    return json(res, 200, { ok: true, day, game, next });
   } catch (e) {
     return json(res, e.status || 500, { error: e.message || String(e) });
   }

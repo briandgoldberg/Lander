@@ -211,7 +211,7 @@ label.name input{width:150px}
       </div>
       <p class="hint">Set the dials, then press Launch when the sky looks right. The rocket leaves the moment you press. Ten shots a day.</p>
       <div class="dials">
-        <label class="dial"><span class="dl">Thrusters <b id="vBurn"></b></span><input type="range" id="dBurn" min="0" max="30" step="0.5"></label>
+        <label class="dial"><span class="dl">Thrusters <b id="vBurn"></b></span><input type="range" id="dBurn" min="0" max="70" step="0.5"></label>
         <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="0" max="360" step="1"></label>
         <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"></label>
       </div>
@@ -230,7 +230,7 @@ label.name input{width:150px}
       </div>
       <div class="livebadge"><i></i>LIVE<small>every launch plays here as it happens</small></div>
     </div>
-    <section class="stage" aria-label="System view">
+    <section class="stage" id="stage" aria-label="System view">
       <canvas id="sky"></canvas>
       <div class="verdict" id="verdict" hidden></div>
       <div class="scalebar" id="scalebar"></div>
@@ -318,7 +318,7 @@ label.name input{width:150px}
   const $ = id => document.getElementById(id);
   const sky = $('sky'), ctx = sky.getContext('2d'), cam = $('cam'), cctx = cam.getContext('2d');
   const els = {};
-  ['gameChip','endsChip','authArea','banner','bannerText','verdict','controls','bannerCaret','replayMenu','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','launchBtn','status','board','boardEmpty','boardNote','editor','err','outNote','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose','fbBtn','fb','fbClose','fbText','fbEmail','fbSend','fbMsg'].forEach(id => els[id] = $(id));
+  ['gameChip','endsChip','authArea','banner','bannerText','verdict','controls','bannerCaret','replayMenu','stage','scalebar','camLabel','camFoot','fuelBar','fuelText','tT','tPhase','tSpeed','tNear','tRange','tRel','tBurn','tUsed','systemName','brief','facts','launchBtn','status','board','boardEmpty','boardNote','editor','err','outNote','signin','googleBtn','signinMsg','signinClose','out','outReferral','outClose','fbBtn','fb','fbClose','fbText','fbEmail','fbSend','fbMsg'].forEach(id => els[id] = $(id));
 
   // ---------- state ----------
   let world = null, game = null, session = null, profile = null, shots = null, creating = false;
@@ -491,7 +491,7 @@ label.name input{width:150px}
   const dials = { burn: $('dBurn'), aim: $('dAim'), brake: $('dBrake') };
   function setupPlanner(){
     tb = LanderPlan.textbook(world);
-    P = LanderPlan.clean(world, Object.assign(loadPlan() || { burn: 0.1, aim: 0, brake: 1 }, { wait: 0 }));
+    P = LanderPlan.clean(world, Object.assign(loadPlan() || { burn: 0.35, aim: 0, brake: 1 }, { wait: 0 }));
     syncDials(); burnReach = null; reachShown = null; scheduleReach();
   }
   function syncDials(){ dials.burn.value = (P.burn * 100).toFixed(1); dials.aim.value = P.aim; dials.brake.value = P.brake; renderDialValues(); }
@@ -510,7 +510,7 @@ label.name input{width:150px}
     if (reachWorker) return reachWorker;
     const [eng, pl] = await Promise.all([fetch('lib/engine.js').then(r => r.text()), fetch('lib/plan.js').then(r => r.text())]);
     const src = eng + '\n' + pl + '\nonmessage = function(e){ var d = e.data, w = flightWorld(d.world, d.t0, d.P), r = fly(w, makeController(w, d.P), { record: true }), S = r.samples, burns = 0, out = null;' +
-      ' for (var i = 1; i < S.length; i++) { if (S[i-1][5] > 0 && S[i][5] === 0) { burns++; if (burns === 2) { var x = S[i][1], y = S[i][2], vx = S[i][3], vy = S[i][4], rr = Math.hypot(x, y), eps = (vx*vx + vy*vy) / 2 - w.sun.mass / rr, hh = x*vy - y*vx, sma = -w.sun.mass / (2 * eps), ecc = Math.sqrt(Math.max(0, 1 + 2 * eps * hh * hh / (w.sun.mass * w.sun.mass)));' +
+      ' for (var i = 1; i < S.length; i++) { if (S[i-1][5] > 0 && S[i][5] === 0) { burns++; if (burns === 1) { var x = S[i][1], y = S[i][2], vx = S[i][3], vy = S[i][4], rr = Math.hypot(x, y), eps = (vx*vx + vy*vy) / 2 - w.sun.mass / rr, hh = x*vy - y*vx, sma = -w.sun.mass / (2 * eps), ecc = Math.sqrt(Math.max(0, 1 + 2 * eps * hh * hh / (w.sun.mass * w.sun.mass)));' +
       ' out = { peri: sma * (1 - ecc), apo: eps < 0 ? sma * (1 + ecc) : null }; break; } } }' +
       ' postMessage({ id: d.id, reach: out }); };';
     reachWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
@@ -554,7 +554,7 @@ label.name input{width:150px}
         throw new Error(data.reason || 'could not claim');
       }
       shots = Object.assign(shots || {}, { left: data.shots_left }); renderAuth(); rememberLaunch(data.launch_id);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (innerWidth <= 1100) els.stage.scrollIntoView({ behavior: 'smooth', block: 'start' });   // phones scroll up to the map; desktop stays put
       const t0 = performance.now();
       const tick = setInterval(() => setStatus('Launch #' + data.launch_id + ' · flying for real on the server · ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s'), 100);
       els.bannerText.textContent = 'Your launch is on the pad…'; els.banner.classList.add('live');
