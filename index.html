@@ -270,11 +270,6 @@ label.name input{width:150px}
     <p class="empty" id="boardEmpty">Nobody has landed yet today.</p>
     <p class="status" id="boardNote" hidden></p>
   </div>
-  <div class="card">
-    <h2>All-time top pilots</h2>
-    <ul class="list" id="alltime"></ul>
-    <p class="empty" id="alltimeEmpty">No landings yet.</p>
-  </div>
   </div>
 </div>
 
@@ -635,7 +630,7 @@ label.name input{width:150px}
   async function refreshBoard(){
     if (!game) return;
     const gid = boardGame || game.id, past = gid !== game.id, d0 = days.find(d => d.id === gid);
-    const [day, at] = await Promise.all([sb.rpc('leaderboard', { p_game: gid }), sb.rpc('alltime')]);
+    const day = await sb.rpc('leaderboard', { p_game: gid });
     if (!day.error && day.data && gid === (boardGame || game.id)) {
       $('boardTitle').textContent = past ? 'Top pilots · ' + ((d0 && d0.name) || 'Day') + (d0 && d0.system ? ' · ' + d0.system : '') : "Today's top pilots";
       els.boardEmpty.hidden = day.data.length > 0; els.boardEmpty.textContent = past ? 'Nobody flew that day.' : 'Nobody has flown yet today.';
@@ -644,10 +639,6 @@ label.name input{width:150px}
       els.board.innerHTML = day.data.map((r, i) => '<li data-id="' + r.id + '" data-pilot="' + esc(r.pilot || 'pilot') + '"><span class="n">' + (i + 1) + '</span><b>' + esc(r.pilot || 'pilot') + '</b>' + tag(r) + '<span class="r">' + how(r) + '</span></li>').join('');
       els.board.querySelectorAll('li').forEach(li => li.onclick = () => watch(+li.dataset.id, li.dataset.pilot, gid));
       els.boardNote.textContent = '';
-    }
-    if (!at.error && at.data) {
-      $('alltimeEmpty').hidden = at.data.length > 0;
-      $('alltime').innerHTML = at.data.slice(0, 10).map((r, i) => '<li><span class="n">' + (i + 1) + '</span><b>' + esc(r.pilot || 'pilot') + '</b><span class="r">' + r.points + ' pts · ' + r.days + ' day' + (r.days == 1 ? '' : 's') + '</span></li>').join('');
     }
   }
 
