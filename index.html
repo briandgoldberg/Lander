@@ -492,7 +492,7 @@ label.name input{width:150px}
   function setupPlanner(){
     tb = LanderPlan.textbook(world);
     P = LanderPlan.clean(world, Object.assign(loadPlan() || { burn: 0.1, aim: 0, brake: 1 }, { wait: 0 }));
-    syncDials(); burnReach = null; scheduleReach();
+    syncDials(); burnReach = null; reachShown = null; scheduleReach();
   }
   function syncDials(){ dials.burn.value = (P.burn * 100).toFixed(1); dials.aim.value = P.aim; dials.brake.value = P.brake; renderDialValues(); }
   function renderDialValues(){
@@ -522,8 +522,9 @@ label.name input{width:150px}
     const wk = await reachWorkerReady(); reachId++;
     wk.postMessage({ id: reachId, world, t0: idleT, P });
   }
-  function scheduleReach(){ clearTimeout(reachTimer); reachTimer = setTimeout(updateReach, 120); }
-  setInterval(() => { if (!run) updateReach(); }, 1500);
+  function scheduleReach(){ clearTimeout(reachTimer); reachTimer = setTimeout(updateReach, 30); }
+  setInterval(() => { if (!run) updateReach(); }, 600);
+  let reachShown = null;   // the ring eases toward each new answer instead of jumping
   function savePlan(){ try { localStorage.setItem('lander.plan.' + game.id, JSON.stringify(P)); } catch (e) {} }
   function loadPlan(){ try { return JSON.parse(localStorage.getItem('lander.plan.' + game.id)); } catch (e) { return null; } }
 
@@ -993,7 +994,8 @@ label.name input{width:150px}
       g.save(); g.setLineDash([2,5]); g.strokeStyle = 'rgba(243,180,87,0.6)'; g.lineWidth = 1.5;
       // where the launch burn carries you: the closest (or furthest) the flight would get to the star
       const reach = burnReach ? (tb.outward ? burnReach.apo : burnReach.peri) : null;
-      if (reach && reach > 0) { const rr = reach * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab('Thrusters turn off', cx, cy + rr + 14); }
+      if (reach && reach > 0) { reachShown = reachShown == null ? reach : reachShown + (reach - reachShown) * 0.2; } else reachShown = null;
+      if (reachShown) { const rr = reachShown * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab('Thrusters Off', cx, cy + rr + 14); }
       const tp = bodyAt(w, w.target, st.t), bx = sx(tp.x), by = sy(tp.y), br = (1 + P.brake) * B.radius * scale * mag; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.stroke(); lab('brakes on', bx, by + br + 13);
       g.restore();
     }
