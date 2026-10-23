@@ -211,7 +211,7 @@ label.name input{width:150px}
       </div>
       <p class="hint">Set the dials, then press Launch when the sky looks right. The rocket leaves the moment you press. Ten shots a day.</p>
       <div class="dials">
-        <label class="dial"><span class="dl">Launch burn <b id="vBurn"></b></span><input type="range" id="dBurn" min="0" max="30" step="0.5"></label>
+        <label class="dial"><span class="dl">Thrusters <b id="vBurn"></b></span><input type="range" id="dBurn" min="0" max="30" step="0.5"></label>
         <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="0" max="360" step="1"></label>
         <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"></label>
       </div>
@@ -530,7 +530,7 @@ label.name input{width:150px}
 
   // ---------- launch ----------
   let launching = false;
-  function planName(){ return 'burn ' + Math.round(P.burn * 100) + '% a' + fmt(P.aim, 0) + ' b' + fmt(P.brake, 1); }
+  function planName(){ return 'thrust ' + Math.round(P.burn * 100) + '% a' + fmt(P.aim, 0) + ' b' + fmt(P.brake, 1); }
   async function launch(){
     if (launching) return;
     if (!session) return openSignin();
@@ -994,7 +994,7 @@ label.name input{width:150px}
       g.save(); g.setLineDash([2,5]); g.strokeStyle = 'rgba(243,180,87,0.6)'; g.lineWidth = 1.5;
       // where the launch burn carries you: the closest (or furthest) the flight would get to the star
       const reach = burnReach ? (tb.outward ? burnReach.apo : burnReach.peri) : null;
-      if (reach && reach > 0) { const rr = reach * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab('your burn carries you to here', cx, cy + rr + 14); }
+      if (reach && reach > 0) { const rr = reach * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab('your thrusters carry you to here', cx, cy + rr + 14); }
       const tp = bodyAt(w, w.target, st.t), bx = sx(tp.x), by = sy(tp.y), br = (1 + P.brake) * B.radius * scale * mag; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.stroke(); lab('brakes on', bx, by + br + 13);
       g.restore();
     }
