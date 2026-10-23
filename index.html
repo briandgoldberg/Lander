@@ -221,7 +221,6 @@ label.name input{width:150px}
         </div>
         <button class="cta abort" id="abortBtn" type="button">Abort</button>
       </div>
-      <p class="hint">Set the dials, then press Launch when the sky looks right. The rocket leaves the moment you press.</p>
       <div class="dials">
         <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="-180" max="180" step="1"></label>
         <label class="dial"><span class="dl">Departure burn <b id="vS1"></b></span><input type="range" id="dS1" min="25" max="60" step="5"></label>
@@ -342,7 +341,8 @@ label.name input{width:150px}
 
   function fmt(n, d){ return (+n).toFixed(d); }
   function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-  function setStatus(s, warn){ els.status.textContent = s; els.status.classList.toggle('warn', !!warn); }
+  let statusTimer = null;
+  function setStatus(s, warn){ els.status.textContent = s; els.status.classList.toggle('warn', !!warn); clearTimeout(statusTimer); if (s) statusTimer = setTimeout(() => { if (els.status.textContent === s) els.status.textContent = ''; }, warn ? 12000 : 6000); }
   function showErr(msg){ els.err.textContent = msg; els.err.hidden = !msg; }
   function resetFx(){ fx.smoke.length = 0; fx.debris.length = 0; fx.rings.length = 0; fx.sparks.length = 0; fx.fire.length = 0; fx.flash = 0; fx.skyFlash = 0; fx.shake = 0; fx.label = null; fx.labelT = 0; fx.fade = 0; fx.punch = 0; fx.scar = null; fx.flag = null; fx.legs = 0; }
   function seededRnd(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
@@ -531,15 +531,15 @@ label.name input{width:150px}
     if (!game) return;
     const shown = hintsShown(), ul = $('hintList'), btn = $('hintBtn');
     ul.innerHTML = shown.length ? '<li>' + esc(shown[shown.length - 1]) + '</li>' : '';
-    btn.hidden = shown.length >= 4; btn.textContent = shown.length ? 'Reveal another hint' : 'Reveal a hint';
+    btn.hidden = false; btn.textContent = shown.length ? 'Reveal another hint' : 'Reveal a hint';
   }
   $('hintBtn').onclick = async () => {
     const btn = $('hintBtn'); btn.disabled = true;
     try {
-      const shown = hintsShown(), { data } = await sb.rpc('reveal_hint', { p_game: game.id, p_n: shown.length });
-      if (data && data.hint) { shown.push(data.hint); try { localStorage.setItem('lander.hints.' + game.id, JSON.stringify(shown)); } catch (e) {} if (shown.length >= (data.total || 4)) { try { localStorage.setItem('lander.hints.' + game.id, JSON.stringify(shown)); } catch (e) {} } }
-      else setStatus('No more hints today.', true);
-      renderHints(); if (data && data.total && hintsShown().length >= data.total) btn.hidden = true;
+      const shown = hintsShown(), total = +(localStorage.getItem('lander.hintTotal.' + game.id) || 4) || 4, { data } = await sb.rpc('reveal_hint', { p_game: game.id, p_n: shown.length % total });
+      if (data && data.hint) { shown.push(data.hint); try { localStorage.setItem('lander.hints.' + game.id, JSON.stringify(shown)); localStorage.setItem('lander.hintTotal.' + game.id, String(data.total || 4)); } catch (e) {} }
+      else setStatus('No hints for this one.', true);
+      renderHints();
     } catch (e) { setStatus('Could not fetch a hint.', true); }
     finally { btn.disabled = false; }
   };
