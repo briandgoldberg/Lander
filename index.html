@@ -1032,12 +1032,14 @@ label.name input{width:150px}
       if (mode >= 0) { g.lineTo(ex, ey); g.stroke(); }
       g.restore();
     };
+    rocketHits.length = 0;
     if (run) trail(run.samples, run.idx, rx, ry, false);
     else for (const f of flights) {
       // every flight in the air leaves a trail; the ones the camera is not on are drawn small, with the pilot's name
       if (idleT < f.t0) continue;
-      if (f === focal) { trail(f.samples, f.idx, rx, ry, false); continue; }
+      if (f === focal) { trail(f.samples, f.idx, rx, ry, false); rocketHits.push({ f, x: rx, y: ry }); continue; }
       const fs = flightState(f, idleT), fxp = sx(fs.x), fyp = sy(fs.y);
+      if (!f.finished) rocketHits.push({ f, x: fxp, y: fyp });
       trail(f.samples, f.idx, fxp, fyp, true);
       if (!f.finished) { const ddx = fs.thr > 0 ? fs.dx : fs.vx, ddy = fs.thr > 0 ? fs.dy : fs.vy, dl = Math.hypot(ddx, ddy) || 1; drawRocket(g, fxp, fyp, ddx / dl, ddy / dl, fs.thr, 6, flicker, 0); }
       g.fillStyle = 'rgba(233,236,246,0.8)'; g.font = '500 10px "IBM Plex Sans", sans-serif'; g.textAlign = 'center'; g.fillText(f.pilot || f.name, fxp, fyp - 12); g.textAlign = 'start';
@@ -1288,6 +1290,14 @@ label.name input{width:150px}
     els.verdict.innerHTML = esc(txt[0]) + '<span>' + esc(txt[1]) + '</span>'; els.verdict.classList.remove('fade'); els.verdict.hidden = false;
   }
   // The live sky: every flight claimed today plays at the moment it happens, all on the one shared clock.
+  // Tap a rocket on the map to put the camera on it.
+  const rocketHits = [];
+  sky.addEventListener('pointerdown', e => {
+    if (run || !rocketHits.length) return;
+    const r = sky.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    let best = null; for (const hit of rocketHits) { const d = Math.hypot(hit.x - px, hit.y - py); if (d < 28 && (!best || d < best.d)) best = { d, f: hit.f }; }
+    if (best && best.f !== focal) { focal = best.f; camS = null; noseAng = null; els.verdict.hidden = true; idleBanner(); }
+  });
   let slowShown = null;
   function liveStep(w, now){
     const T = idleT, rate = LanderPlan.liveRate(w);
@@ -1313,7 +1323,7 @@ label.name input{width:150px}
     if (kept.length !== flights.length) { flights = kept; changed = true; }
     if (focal && !flights.includes(focal)) { focal = null; resetFx(); fx.fade = 1; camS = null; noseAng = null; els.verdict.classList.add('fade'); setTimeout(() => { if (!focal && !run) els.verdict.hidden = true; }, 950); }
     if (!focal || focal.finished) { const live = flights.filter(f => !f.finished); if (live.length) { const next = live.find(f => f.mine) || live[live.length - 1]; if (next !== focal) { focal = next; camS = null; noseAng = null; changed = true; } } }
-    if (changed) idleBanner();
+    if (changed) { idleBanner(); const n = flights.filter(f => !f.finished).length; els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG + (n > 1 ? ' · tap a rocket to follow it' : ''); }
   }
 
   // ---------- boot ----------
