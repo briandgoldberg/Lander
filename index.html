@@ -182,7 +182,7 @@ label.name input{width:150px}
 .challenge span{flex:1;min-width:200px}
 .challenge .cta{padding:9px 14px;font-size:13px}
 .dials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 22px}
-.hints{margin-top:4px;display:flex;flex-direction:column;gap:8px}.hints ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}.hints ul:empty{display:none}.hints button{align-self:flex-start}.hints li{font-size:14px;line-height:1.45;color:var(--fg);background:rgba(243,180,87,.08);border:1px solid rgba(243,180,87,.35);border-radius:6px;padding:7px 10px}.hints button[hidden]{display:none}
+.hints{margin-top:2px}.hints button{display:block;width:100%;text-align:left;white-space:normal;line-height:1.4;transition:opacity .45s ease}.hints button.showing{cursor:default;color:var(--accent);border-color:rgba(243,180,87,.45)}.hints button.fading{opacity:0}.hints li{font-size:14px;line-height:1.45;color:var(--fg);background:rgba(243,180,87,.08);border:1px solid rgba(243,180,87,.35);border-radius:6px;padding:7px 10px}.hints button[hidden]{display:none}
 @media (max-width:640px){.dials{grid-template-columns:1fr}}
 .dial{display:flex;flex-direction:column;gap:4px;font-size:13px}
 .dial .dl{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-weight:600}
@@ -226,8 +226,7 @@ label.name input{width:150px}
         <label class="dial"><span class="dl">Departure burn <b id="vS1"></b></span><input type="range" id="dS1" min="25" max="60" step="5"></label>
         <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"></label>
       </div>
-      <div class="status" id="status"></div>
-      <div class="hints" id="hints"><ul id="hintList"></ul><button class="btn" id="hintBtn" type="button">Reveal a hint</button></div>
+      <div class="hints" id="hints"><button class="btn" id="hintBtn" type="button">Reveal a hint</button></div>
       <pre class="err" id="err" hidden></pre>
     </section>
     <div class="card" id="referCard" hidden>
@@ -341,7 +340,7 @@ label.name input{width:150px}
 
   function fmt(n, d){ return (+n).toFixed(d); }
   function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-  function setStatus(s, warn){ els.status.textContent = s; els.status.classList.toggle('warn', !!warn); }
+  function setStatus(s, warn){ if (warn && s) console.warn(s); }   // no status line on the page
   function showErr(msg){ els.err.textContent = msg; els.err.hidden = !msg; }
   function resetFx(){ fx.smoke.length = 0; fx.debris.length = 0; fx.rings.length = 0; fx.sparks.length = 0; fx.fire.length = 0; fx.flash = 0; fx.skyFlash = 0; fx.shake = 0; fx.label = null; fx.labelT = 0; fx.fade = 0; fx.punch = 0; fx.scar = null; fx.flag = null; fx.legs = 0; }
   function seededRnd(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
@@ -524,23 +523,17 @@ label.name input{width:150px}
   function loadPlan(){ try { return JSON.parse(localStorage.getItem('lander.plan.' + game.id)); } catch (e) { return null; } }
 
   // ---------- hints ----------
-  // Four clues a day, revealed one at a time; what you have revealed stays revealed for the day.
-  function hintsShown(){ try { return JSON.parse(localStorage.getItem('lander.hints.' + game.id)) || []; } catch (e) { return []; } }
-  function renderHints(){
-    if (!game) return;
-    const shown = hintsShown(), ul = $('hintList'), btn = $('hintBtn');
-    ul.innerHTML = shown.length ? '<li>' + esc(shown[shown.length - 1]) + '</li>' : '';
-    btn.hidden = false; btn.textContent = shown.length ? 'Reveal another hint' : 'Reveal a hint';
-  }
+  // Four clues a day. Press, and the button's own words become the next hint for a few seconds, then fade back.
+  let hintN = 0, hintTimer = null;
+  function renderHints(){ const b = $('hintBtn'); hintN = 0; clearTimeout(hintTimer); b.className = 'btn'; b.textContent = 'Reveal a hint'; }
   $('hintBtn').onclick = async () => {
-    const btn = $('hintBtn'); btn.disabled = true;
-    try {
-      const shown = hintsShown(), total = +(localStorage.getItem('lander.hintTotal.' + game.id) || 4) || 4, { data } = await sb.rpc('reveal_hint', { p_game: game.id, p_n: shown.length % total });
-      if (data && data.hint) { shown.push(data.hint); try { localStorage.setItem('lander.hints.' + game.id, JSON.stringify(shown)); localStorage.setItem('lander.hintTotal.' + game.id, String(data.total || 4)); } catch (e) {} }
-      else setStatus('No hints for this one.', true);
-      renderHints();
-    } catch (e) { setStatus('Could not fetch a hint.', true); }
-    finally { btn.disabled = false; }
+    const b = $('hintBtn'); if (b.classList.contains('showing') || !game) return;
+    const { data } = await sb.rpc('reveal_hint', { p_game: game.id, p_n: hintN });
+    if (!data || !data.hint) return;
+    hintN = (hintN + 1) % (data.total || 4);
+    b.textContent = data.hint; b.classList.add('showing');
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => { b.classList.add('fading'); setTimeout(() => { b.textContent = 'Reveal a hint'; b.classList.remove('showing'); b.classList.remove('fading'); }, 450); }, 6000);
   };
 
   // ---------- launch ----------
