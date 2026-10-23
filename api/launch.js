@@ -2,7 +2,6 @@
 // records the official flight, all in one call, and hands the flight straight back so the page can show it at once.
 // (The older { launch_id } form, for a launch claimed by the page itself, still works.)
 const { rpc, getUser, bearer, json, readJson, sign, configured } = require('./_lib/db');
-const { runBot } = require('./_lib/runner');
 const plan = require('./_lib/plan');
 const engine = require('./_lib/engine');
 
@@ -49,31 +48,41 @@ module.exports = async (req, res) => {
     const startMs = new Date(entry.game_started_at).getTime();
     const clock = plan.skyClock(startMs, plan.liveRate(full), windows);
     const tStart = +clock.sky(new Date(entry.created_at).getTime() + LEAD_S * 1000).toFixed(4);
-    const world = plan.flightWorld(full, tStart, dials, engine);
 
-    // the stored entry is the plan's dials; the autopilot source is built here, never taken from the client.
-    // fly the plan as dialled; a near miss gets the departure burn quietly tried one percent smaller and larger
-    const B = world.bodies[world.target], assist = ['easy', 'medium', 'hard'].indexOf(dials.assist) >= 0 ? dials.assist : 'medium';
-    let out = await runBot(plan.botSource(world, dials), world, BUDGET_MS);
-    // the assist level is how far the autopilot may nudge the departure burn for a near miss: none, up to two percent, or up to five
-    const steps = n => { const out = []; for (let i = 1; i <= n; i++) out.push(-i / 100, i / 100); return out; };
-    const nudges = assist === 'hard' ? [] : assist === 'easy' ? steps(5) : steps(2);
-    const near = nudges.length > 0 && out.type === 'result' && out.result.outcome !== 'landed' && (out.result.outcome === 'crashed' ? out.result.body === B.name : out.result.closestApproach != null && out.result.closestApproach < B.hill * (assist === 'easy' ? 2 : 1));
-    if (near) {
-      for (const d of nudges) {
-        const alt = Object.assign({}, dials, { s1: +((+dials.s1 || 0) + d).toFixed(3), exact: true });
-        const o2 = await runBot(plan.botSource(world, alt), world, BUDGET_MS);
-        if (o2.type === 'result' && o2.result.outcome === 'landed') { out = o2; break; }
+    // the stored entry is the plan's dials; the autopilot is the server's own, never code from the client.
+    // fly the plan as dialled; for a near miss the assist may quietly nudge the burn, the aim and the brake altitude,
+    // as far as the level allows: Easy up to 5% / 5° / a higher brake, Medium up to 2% / 2° / a little higher, Hard not at all
+    const t0 = Date.now();
+    const flyP = (Q) => { const fw = plan.flightWorld(full, tStart, Q, engine); return { fw, r: engine.fly(fw, plan.makeController(fw, Q), { record: true }) }; };
+    const assist = ['easy', 'medium', 'hard'].indexOf(dials.assist) >= 0 ? dials.assist : 'medium';
+    let flights = 1, out;
+    try { out = flyP(dials); } catch (e) { out = null; var flyErr = e; }
+    const B = full.bodies[full.target];
+    if (out) {
+      const r0 = out.r, reach = assist === 'easy' ? 2 : assist === 'medium' ? 1 : 0;
+      const near = reach > 0 && r0.outcome !== 'landed' && (r0.outcome === 'crashed' ? r0.body === B.name : r0.closestApproach != null && r0.closestApproach < B.hill * reach);
+      if (near) {
+        const span = assist === 'easy' ? 5 : 2, brakes = assist === 'easy' ? [0, 0.2, 0.5, 1.0] : [0, 0.3];
+        let best = null;
+        for (let da = -span; da <= span; da++) for (let bi = 0; bi < brakes.length; bi++) for (let ds = -span; ds <= span; ds++) {
+          const cost = Math.abs(da) + Math.abs(ds) + bi * 2; if (best && cost >= best.cost) continue;
+          const Q = Object.assign({}, dials, { exact: true, aim: (+dials.aim || 0) + da, s1: +((+dials.s1 || 0) + ds / 100).toFixed(3), brake: +((+dials.brake || 1) + brakes[bi]).toFixed(2) });
+          let t; try { t = flyP(Q); flights++; } catch (e) { continue; }
+          if (t.r.outcome === 'landed') best = { cost, t };
+        }
+        if (best) out = best.t;
       }
     }
+    const world = out ? out.fw : plan.flightWorld(full, tStart, dials, engine);
+    const thinkMs = Date.now() - t0;
     let result;
-    if (out.type === 'result') {
-      const r = out.result;
+    if (out) {
+      const r = out.r;
       result = { outcome: r.outcome, body: r.body, fuelUsed: r.fuelUsed, fuelLeft: +(world.rocket.fuel - r.fuelUsed).toFixed(4),
-        landingSpeed: r.landingSpeed, closestApproach: r.closestApproach, tStart, time: r.time, flights: out.flights, thinkMs: out.thinkMs, samples: r.samples, burns: plan.burnWindows(r.samples), assist, error: null };
+        landingSpeed: r.landingSpeed, closestApproach: r.closestApproach, tStart, time: r.time, flights, thinkMs, samples: r.samples, burns: plan.burnWindows(r.samples), assist, error: null };
       result.landsAt = Math.round(plan.skyClock(startMs, plan.liveRate(full), plan.slowWindows((events || []).concat([{ t: tStart, b: result.burns }]))).real(tStart + r.time));
     } else {
-      result = { outcome: 'error', body: null, fuelUsed: 0, fuelLeft: 0, landingSpeed: null, closestApproach: null, tStart, time: 0, flights: 0, thinkMs: 0, samples: null, burns: [], landsAt: null, assist, error: out.message };
+      result = { outcome: 'error', body: null, fuelUsed: 0, fuelLeft: 0, landingSpeed: null, closestApproach: null, tStart, time: 0, flights: 0, thinkMs: 0, samples: null, burns: [], landsAt: null, assist, error: String((flyErr && flyErr.message) || 'the flight could not run') };
     }
     const payload = JSON.stringify(result);
     await rpc('finish_launch', { p_launch: id, p_result: payload, p_sig: sign(id + '|' + payload) });
