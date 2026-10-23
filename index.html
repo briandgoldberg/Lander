@@ -390,7 +390,7 @@ label.name input{width:150px}
   function shotsText(){ if (!shots) return ''; return shots.left + ' shot' + (shots.left === 1 ? '' : 's') + ' left'; }
   function renderCta(){
     if (!session) { els.launchBtn.textContent = 'Launch'; return; }
-    const busy = !!busyLaunch && !launching;
+    const busy = !launching && (!!busyLaunch || !!(run && run.live && !run.done && !run.mine));
     els.launchBtn.disabled = busy;
     els.launchBtn.textContent = busy ? 'Launch in progress…' : shots && shots.left < 1 ? 'Out of shots today' : 'Launch' + (shots ? ' · ' + shotsText() : '');
   }
@@ -655,7 +655,7 @@ label.name input{width:150px}
     run = { world: w, samples: S, result: rep, tau: 0, idx: 0, done: false, tLaunch, held: false, hold: null, mine: !!opts.mine, practice: !!opts.practice, live: !!opts.live, pilot: opts.pilot || '', name: rep.bot_name || 'bot', label: opts.label };
     resetFx(); camS = null;
     els.verdict.hidden = true; els.bannerCaret.hidden = doneLaunches().length === 0; els.banner.classList.toggle('pick', doneLaunches().length > 0);
-    els.banner.classList.remove('replay'); els.banner.classList.toggle('live', !!opts.live || !!opts.mine);
+    els.banner.classList.remove('replay'); els.banner.classList.toggle('live', !!opts.live || !!opts.mine); renderCta();
     els.bannerText.textContent = opts.practice ? 'Practice run · random ' + w.name + ' system' : opts.mine ? 'Your launch · ' + run.name : (opts.live ? 'LIVE · ' : (opts.label || 'Replay') + ' · ') + (run.pilot ? run.pilot + "'s " : '') + run.name;
     els.scalebar.innerHTML = 'orbits to scale · planets ×' + planetMagFor(w) + ' · star ×' + SUN_MAG;
   }
@@ -1201,7 +1201,7 @@ label.name input{width:150px}
       if (!run) { if (!(fx.fade > 0.5)) idleT = liveT(); }
       else if (run.done) {
         // after the verdict has had its moment, hand back to the live system; Replay brings it back
-        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); fx.fade = 1; camS = null; idleBanner(); els.verdict.classList.add('fade'); setTimeout(() => { if (!run) els.verdict.hidden = true; }, 950); }
+        if (now - run.doneAt > 5000) { lastRun = run; idleT = run.tau; run = null; resetFx(); fx.fade = 1; camS = null; idleBanner(); renderCta(); els.verdict.classList.add('fade'); setTimeout(() => { if (!run) els.verdict.hidden = true; }, 950); }
       }
       else {
         const S = run.samples, end = S[S.length-1][0];
@@ -1245,7 +1245,9 @@ label.name input{width:150px}
     resize(); new ResizeObserver(resize).observe(sky); new ResizeObserver(resize).observe(cam);
     requestAnimationFrame(frame);
     await refreshFeed(); refreshBoard(); renderShare(); loadChallenge();
-    setInterval(refreshGame, 3000); setInterval(refreshFeed, 3000); setInterval(refreshBoard, 10000); setInterval(renderEnds, 30000);
+    setInterval(refreshGame, 1500); setInterval(refreshFeed, 2000); setInterval(refreshBoard, 10000); setInterval(renderEnds, 30000);
+    // a page left open reloads itself after a new build goes live, once nothing is flying
+    let build = null; const checkBuild = async () => { try { const v = (await (await fetch('version.json', { cache: 'no-store' })).json()).v; if (build === null) build = v; else if (v !== build && !run && !launching) location.reload(); } catch (e) {} }; checkBuild(); setInterval(checkBuild, 45000);
    } catch (e) { console.error('boot failed', e); setStatus('Something went wrong loading the game: ' + (e.message || e), true); }
   }
   boot();
