@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
     let dials; try { dials = JSON.parse(entry.code); } catch (e) { dials = {}; }
     dials.burn = Math.max(+dials.burn || 0, plan.minBurn(state.world, require('../lib/engine')));   // never so little thrust that it falls back on its own planet
     const tStart = +(Math.max(0, (new Date(entry.created_at).getTime() - new Date(entry.game_started_at).getTime()) / 1000) * plan.liveRate(state.world)).toFixed(4);
-    const world = plan.flightWorld(state.world, tStart, dials);
+    const world = plan.flightWorld(state.world, tStart, dials, require('../lib/engine'));
 
     // the stored entry is the plan's dials; the autopilot source is built here, never taken from the client
     const out = await runBot(plan.botSource(world, dials), world, BUDGET_MS);

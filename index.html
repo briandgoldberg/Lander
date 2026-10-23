@@ -211,7 +211,7 @@ label.name input{width:150px}
       </div>
       <p class="hint">Set the dials, then press Launch when the sky looks right. The rocket leaves the moment you press.</p>
       <div class="dials">
-        <label class="dial"><span class="dl">Thrusters <b id="vBurn"></b></span><input type="range" id="dBurn" min="0" max="70" step="0.5"></label>
+        <label class="dial"><span class="dl">Thrusters <b id="vBurn"></b></span><input type="range" id="dBurn" min="0" max="70" step="5"></label>
         <label class="dial"><span class="dl">Aim <b id="vAim"></b></span><input type="range" id="dAim" min="0" max="360" step="1"></label>
         <label class="dial"><span class="dl">Brake altitude <b id="vBrake"></b></span><input type="range" id="dBrake" min="0.1" max="4" step="0.02"></label>
       </div>
@@ -492,11 +492,11 @@ label.name input{width:150px}
   function setupPlanner(){
     tb = LanderPlan.textbook(world);
     P = LanderPlan.clean(world, Object.assign(loadPlan() || { burn: 0.35, aim: 0, brake: 1 }, { wait: 0 }));
-    syncDials(); burnReach = null; reachShown = null; scheduleReach(); reachWorkerReady().then(wk => wk.postMessage({ id: 0, minburn: true, world }));
+    syncDials(); burnReach = null; reachShown = null; burnDot = null; padRel = null; scheduleReach(); reachWorkerReady().then(wk => wk.postMessage({ id: 0, minburn: true, world }));
   }
   function syncDials(){ dials.burn.value = (P.burn * 100).toFixed(1); dials.aim.value = P.aim; dials.brake.value = P.brake; renderDialValues(); }
   function renderDialValues(){
-    $('vBurn').textContent = fmt(P.burn * 100, 1).replace(/\.0$/, '') + '% of fuel';
+    $('vBurn').textContent = Math.round(P.burn * 100) + '% of fuel';
     $('vAim').textContent = fmt(P.aim, 0) + '°';
     $('vBrake').textContent = fmt(P.brake, 2) + ' planet radii';
   }
@@ -505,16 +505,16 @@ label.name input{width:150px}
     renderDialValues(); savePlan(); scheduleReach();
   }));
   // How far the launch burn carries you: fly the plan from the sky as it is now, in a worker, and read the orbit right after the burn ends.
-  let reachWorker = null, reachId = 0, burnReach = null, reachTimer = null;
+  let reachWorker = null, reachId = 0, burnReach = null, burnDot = null, padRel = null, reachTimer = null;
   async function reachWorkerReady(){
     if (reachWorker) return reachWorker;
     const [eng, pl] = await Promise.all([fetch('lib/engine.js').then(r => r.text()), fetch('lib/plan.js').then(r => r.text())]);
-    const src = eng + '\n' + pl + '\nonmessage = function(e){ var d = e.data; if (d.minburn) { postMessage({ id: d.id, minburn: minBurn(d.world, { fly: fly, bodyAt: bodyAt }) }); return; } var w = flightWorld(d.world, d.t0, d.P), r = fly(w, makeController(w, d.P), { record: true }), S = r.samples, burns = 0, out = null;' +
+    const src = eng + '\n' + pl + '\nonmessage = function(e){ var d = e.data; if (d.minburn) { postMessage({ id: d.id, minburn: minBurn(d.world, { fly: fly, bodyAt: bodyAt }) }); return; } var E = { fly: fly, bodyAt: bodyAt }, w = flightWorld(d.world, d.t0, d.P, E), r = fly(w, makeController(w, d.P), { record: true }), S = r.samples, burns = 0, out = null, dot = null, tH = d.world.hints && d.world.hints.transferTime ? d.world.hints.transferTime : 10;' +
       ' for (var i = 1; i < S.length; i++) { if (S[i-1][5] > 0 && S[i][5] === 0) { burns++; if (burns === 1) { var x = S[i][1], y = S[i][2], vx = S[i][3], vy = S[i][4], rr = Math.hypot(x, y), eps = (vx*vx + vy*vy) / 2 - w.sun.mass / rr, hh = x*vy - y*vx, sma = -w.sun.mass / (2 * eps), ecc = Math.sqrt(Math.max(0, 1 + 2 * eps * hh * hh / (w.sun.mass * w.sun.mass)));' +
-      ' out = { peri: sma * (1 - ecc), apo: eps < 0 ? sma * (1 + ecc) : null }; break; } } }' +
-      ' postMessage({ id: d.id, reach: out }); };';
+      ' out = { peri: sma * (1 - ecc), apo: eps < 0 ? sma * (1 + ecc) : null }; var tAfter = S[i][0] + tH * 0.08; for (var j = i; j < S.length; j++) if (S[j][0] >= tAfter) { dot = [S[j][1], S[j][2]]; break; } if (!dot) dot = [S[S.length-1][1], S[S.length-1][2]]; break; } } }' +
+      ' postMessage({ id: d.id, reach: out, dot: dot, padRel: w.rocket.padAngle - (w.bodies[d.world.start].angle0 + Math.PI / 2) }); };';
     reachWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
-    reachWorker.onmessage = e => { if (e.data.minburn != null) { dials.burn.min = (e.data.minburn * 100).toFixed(1); if (P.burn < e.data.minburn) { P.burn = e.data.minburn; syncDials(); savePlan(); scheduleReach(); } return; } if (e.data.id === reachId) burnReach = e.data.reach; };
+    reachWorker.onmessage = e => { if (e.data.minburn != null) { const mb = Math.ceil(e.data.minburn * 20) / 20; dials.burn.min = (mb * 100).toFixed(0); if (P.burn < mb) { P.burn = mb; syncDials(); savePlan(); scheduleReach(); } return; } if (e.data.id === reachId) { burnReach = e.data.reach; burnDot = e.data.dot; if (e.data.padRel != null) padRel = e.data.padRel; } };
     return reachWorker;
   }
   async function updateReach(){
@@ -994,6 +994,7 @@ label.name input{width:150px}
       // where the launch burn carries you: the closest (or furthest) the flight would get to the star
       const reach = burnReach ? (tb.outward ? burnReach.apo : burnReach.peri) : null;
       if (reach && reach > 0) { reachShown = reachShown == null ? reach : reachShown + (reach - reachShown) * 0.2; } else reachShown = null;
+      if (burnDot) { g.setLineDash([]); g.fillStyle = 'rgba(243,180,87,0.95)'; g.beginPath(); g.arc(sx(burnDot[0]), sy(burnDot[1]), 3.5, 0, TAU); g.fill(); g.setLineDash([2,5]); }
       if (reachShown) { const rr = reachShown * scale; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.stroke(); lab('Aim point', cx, cy + rr + 14); }
       const tp = bodyAt(w, w.target, st.t), bx = sx(tp.x), by = sy(tp.y), br = (1 + P.brake) * B.radius * scale * mag; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.stroke(); lab('brakes on', bx, by + br + 13);
       g.restore();
@@ -1176,7 +1177,7 @@ label.name input{width:150px}
     const w = displayWorld(); if (!w || W < 40 || H < 40 || CW < 40 || CH < 40) { resize(); return; }
     const fxDt = Math.min(0.1, (now - lastDraw) / 1000 || 0); lastDraw = now; tnow = now / 1000;
     updateFx(fxDt, w);
-    if (!run && P) { const A0 = w.bodies[w.start]; w.rocket.padAngle = A0.angle0 + A0.omega * idleT + Math.PI / 2 + P.aim * Math.PI / 180; }   // the launch spot keeps its angle to the direction of travel
+    if (!run && P) { const A0 = w.bodies[w.start]; w.rocket.padAngle = A0.angle0 + A0.omega * idleT + Math.PI / 2 + (padRel != null ? padRel : P.aim * Math.PI / 180); }   // the launch spot keeps its angle to the direction of travel
     const st = run ? sampleState() : padState(w, idleT);
     const nr = nearest(w, st), flicker = Math.random(), R = nr.body.radius;
     let dirx, diry;
