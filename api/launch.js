@@ -23,16 +23,16 @@ module.exports = async (req, res) => {
     if (!state || !state.game || state.game.id !== entry.game_id) return json(res, 409, { error: 'Game mismatch.' });
     // the flight starts from the sky as it looked when the launch was claimed
     let dials; try { dials = JSON.parse(entry.code); } catch (e) { dials = {}; }
-    dials.burn = Math.max(+dials.burn || 0, plan.minBurn(state.world, require('../lib/engine')));   // never so little thrust that it falls back on its own planet
+    dials.s1 = plan.stage1(state.world, require('../lib/engine'));   // the first stage is automated: just enough to clear the home planet
     const tStart = +(Math.max(0, (new Date(entry.created_at).getTime() - new Date(entry.game_started_at).getTime()) / 1000) * plan.liveRate(state.world)).toFixed(4);
     const world = plan.flightWorld(state.world, tStart, dials, require('../lib/engine'));
 
     // the stored entry is the plan's dials; the autopilot source is built here, never taken from the client
-    // fly the plan as dialled; if it does not land, quietly try the thrusters one percent down and up and keep a landing
+    // fly the plan as dialled; if it does not land, quietly try the second stage one percent down and up and keep a landing
     let out = await runBot(plan.botSource(world, dials), world, BUDGET_MS);
     if (!(out.type === 'result' && out.result.outcome === 'landed')) {
       for (const d of [-0.01, 0.01]) {
-        const alt = Object.assign({}, dials, { burn: +((+dials.burn || 0) + d).toFixed(3), exact: true });
+        const alt = Object.assign({}, dials, { s2: +((+dials.s2 || 0) + d).toFixed(3), exact: true });
         const o2 = await runBot(plan.botSource(world, alt), world, BUDGET_MS);
         if (o2.type === 'result' && o2.result.outcome === 'landed') { out = o2; break; }
       }
