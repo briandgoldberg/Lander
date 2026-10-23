@@ -703,11 +703,22 @@ label.name input{width:150px}
   function flightState(f, T){
     const S = f.samples, tau = T - f.t0, A = world.bodies[world.start];
     if (tau < 0) { world.rocket.padAngle = f.pa0 + A.omega * tau; const st = padState(world, T); st.pre = -tau; return st; }
+    if (tau >= f.end) {
+      // the flight is over: the rocket stays where it ended, riding along with the planet it is on
+      const L = sampleAtTau(f, f.end);
+      if (f.anchor === undefined) { const nr = nearest(world, Object.assign({}, L, { t: f.t0 + f.end })); f.anchor = nr.d < nr.body.hill * 1.5 ? { k: nr.k, dx: L.x - nr.b.x, dy: L.y - nr.b.y } : null; }
+      if (f.anchor) { const b = bodyAt(world, f.anchor.k, T); return { t: T, x: b.x + f.anchor.dx, y: b.y + f.anchor.dy, vx: b.vx, vy: b.vy, thr: 0, dx: L.dx, dy: L.dy, fuel: L.fuel, onPad: false }; }
+      return Object.assign(L, { t: T, thr: 0, onPad: false });
+    }
+    return Object.assign(sampleAtTau(f, tau), { t: T, onPad: false });
+  }
+  function sampleAtTau(f, tau){
+    const S = f.samples;
     let i = f.idx; if (S[i][0] > tau) i = 0;
     while (i < S.length - 2 && S[i+1][0] <= tau) i++;
     f.idx = i;
     const a = S[i], b = S[Math.min(i + 1, S.length - 1)], span = b[0] - a[0], fr = span > 0 ? Math.min(1, Math.max(0, (tau - a[0]) / span)) : 0;
-    return { t: T, x: a[1] + (b[1]-a[1])*fr, y: a[2] + (b[2]-a[2])*fr, vx: a[3], vy: a[4], thr: a[5], dx: a[6], dy: a[7], fuel: a[8] + (b[8]-a[8])*fr, onPad: false };
+    return { x: a[1] + (b[1]-a[1])*fr, y: a[2] + (b[2]-a[2])*fr, vx: a[3], vy: a[4], thr: a[5], dx: a[6], dy: a[7], fuel: a[8] + (b[8]-a[8])*fr };
   }
   function nearest(w, st){
     let best = null;
