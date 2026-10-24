@@ -149,7 +149,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .list li .n{color:var(--accent);flex:none;width:18px}
 .list li .tag{flex:none;font-style:normal;font-size:10px;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:1px 7px;color:var(--muted)}
 .list li .tag.good{color:var(--good);border-color:var(--good)} .list li .tag.bad{color:var(--bad);border-color:var(--bad)}
-@media (max-width:640px){.list li{flex-wrap:wrap;row-gap:2px}.list li b{max-width:none;flex:1 1 auto}.list li .tag{white-space:nowrap}.list li .r{flex:1 1 100%;padding-left:26px}}
+@media (max-width:640px){.list li{display:grid;grid-template-columns:18px minmax(0,1fr) auto;grid-template-areas:"n b r" ". tag tag";column-gap:8px;row-gap:4px;align-items:baseline;padding:6px 4px}.list li .n{grid-area:n;width:auto}.list li b{grid-area:b;max-width:none}.list li .r{grid-area:r;text-align:right}.list li .tag{grid-area:tag;justify-self:start;white-space:nowrap}}
 .dot{width:8px;height:8px;border-radius:50%;flex:none;position:relative;top:-1px;background:var(--muted)}
 .dot.good{background:var(--good)} .dot.bad{background:var(--bad)} .dot.run{background:var(--live);animation:pulse 1.2s infinite}
 .empty{color:var(--muted);font-size:13px;margin:0}
